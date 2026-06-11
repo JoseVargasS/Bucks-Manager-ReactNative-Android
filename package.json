@@ -4,14 +4,16 @@
   "main": "index.ts",
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",
+    "@react-native-google-signin/google-signin": "^16.1.2",
+    "dotenv": "^17.4.2",
     "expo": "~56.0.11",
-    "expo-auth-session": "~56.0.14",
+    "expo-constants": "^56.0.18",
+    "expo-dev-client": "~56.0.0",
     "expo-file-system": "~56.0.8",
     "expo-print": "~56.0.4",
     "expo-secure-store": "~56.0.4",
     "expo-sharing": "~56.0.17",
     "expo-status-bar": "~56.0.4",
-    "expo-web-browser": "~56.0.5",
     "react": "19.2.3",
     "react-native": "0.85.3",
     "react-native-svg": "15.15.4"
@@ -22,8 +24,11 @@
   },
   "scripts": {
     "start": "expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
+    "dev": "expo start --dev-client",
+    "android": "expo run:android",
+    "android:dev": "expo run:android",
+    "android:build-dev": "eas build -p android --profile development",
+    "ios": "expo run:ios",
     "web": "expo start --web"
   },
   "private": true

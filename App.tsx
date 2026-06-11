@@ -1,11 +1,10 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import Constants from "expo-constants";
 import { StatusBar } from "expo-status-bar";
 import * as FileSystem from "expo-file-system/legacy";
-import * as Google from "expo-auth-session/providers/google";
 import * as Print from "expo-print";
 import * as SecureStore from "expo-secure-store";
 import * as Sharing from "expo-sharing";
-import * as WebBrowser from "expo-web-browser";
 import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
@@ -20,6 +19,7 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
+import { GoogleSignin } from "@react-native-google-signin/google-signin";
 import Svg, { Circle, G, Rect } from "react-native-svg";
 import {
   applySearch,
@@ -45,10 +45,10 @@ import {
 } from "./src/api/googleWorkspace";
 import { ExportFormat, SearchFilters, SummaryRow, Transaction, TransactionDraft, TransactionType } from "./src/types";
 
-WebBrowser.maybeCompleteAuthSession();
-
-const GOOGLE_ANDROID_CLIENT_ID = "";
-const GOOGLE_WEB_CLIENT_ID = "";
+const GOOGLE_ANDROID_CLIENT_ID =
+  Constants.expoConfig?.extra?.googleAndroidClientId || "";
+const GOOGLE_WEB_CLIENT_ID =
+  Constants.expoConfig?.extra?.googleWebClientId || "";
 const TOKEN_KEY = "bucks_google_access_token";
 const SHEET_KEY = "bucks_spreadsheet_id";
 
@@ -83,6 +83,7 @@ export default function App() {
   const [searchVisible, setSearchVisible] = useState(false);
   const [exportVisible, setExportVisible] = useState(false);
   const [freqVisible, setFreqVisible] = useState(false);
+  const [menuVisible, setMenuVisible] = useState(false);
   const [detailTx, setDetailTx] = useState<Transaction | null>(null);
   const [editingTx, setEditingTx] = useState<Transaction | null>(null);
   const [draft, setDraft] = useState<TransactionDraft>(getBlankDraft());
@@ -93,26 +94,16 @@ export default function App() {
   const { width } = useWindowDimensions();
   const compact = width < 820;
 
-  const [, response, promptAsync] = Google.useAuthRequest({
-    androidClientId: GOOGLE_ANDROID_CLIENT_ID || undefined,
-    webClientId: GOOGLE_WEB_CLIENT_ID || undefined,
-    scopes: [
-      "openid",
-      "profile",
-      "email",
-      "https://www.googleapis.com/auth/drive.metadata.readonly",
-      "https://www.googleapis.com/auth/spreadsheets",
-    ],
-  });
-
   useEffect(() => {
+    GoogleSignin.configure({
+      webClientId: GOOGLE_WEB_CLIENT_ID || undefined,
+      scopes: [
+        "https://www.googleapis.com/auth/drive.metadata.readonly",
+        "https://www.googleapis.com/auth/spreadsheets",
+      ],
+    });
     restoreSession();
   }, []);
-
-  useEffect(() => {
-    const token = response?.type === "success" ? response.authentication?.accessToken : "";
-    if (token) connectGoogleWorkspace(token);
-  }, [response]);
 
   const periodTransactions = useMemo(() => {
     const source = searchActive ? applySearch(transactions, searchFilters) : filterTransactionsByPeriod(transactions, month, year);
@@ -162,6 +153,26 @@ export default function App() {
       Alert.alert("Google Sheets", error instanceof Error ? error.message : "No se pudo conectar la hoja");
       setSetupStatus("Modo demo activo");
     } finally {
+      setLoading(false);
+    }
+  }
+
+  async function signInWithGoogle() {
+    if (!GOOGLE_ANDROID_CLIENT_ID && !GOOGLE_WEB_CLIENT_ID) {
+      Alert.alert("Google OAuth", "Faltan las credenciales en .env.");
+      return;
+    }
+    setLoading(true);
+    setSetupStatus("Abriendo Google...");
+    try {
+      await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+      await GoogleSignin.signIn();
+      const tokens = await GoogleSignin.getTokens();
+      if (!tokens.accessToken) throw new Error("Google no devolvió access token.");
+      await connectGoogleWorkspace(tokens.accessToken);
+    } catch (error) {
+      Alert.alert("Google", error instanceof Error ? error.message : "No se pudo iniciar sesión con Google.");
+      setSetupStatus("Listo para conectar");
       setLoading(false);
     }
   }
@@ -299,6 +310,36 @@ export default function App() {
     return Array.from(years).sort((a, b) => b - a);
   }, [summaries]);
 
+  if (!accessToken) {
+    const canConnect = Boolean(GOOGLE_ANDROID_CLIENT_ID || GOOGLE_WEB_CLIENT_ID);
+    return (
+      <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]}>
+        <StatusBar style={theme === "dark" ? "light" : "dark"} />
+        <View style={styles.loginScreen}>
+          <View style={[styles.loginMark, { backgroundColor: colors.greenSoft, borderColor: colors.border }]}>
+            <MaterialCommunityIcons name="sack" size={38} color={colors.green} />
+          </View>
+          <Text style={[styles.loginTitle, { color: colors.text }]}>Bucks Manager</Text>
+          <TouchableOpacity
+            disabled={!canConnect || loading}
+            onPress={signInWithGoogle}
+            style={[styles.googleLoginBtn, { backgroundColor: canConnect ? colors.green : colors.disabled }]}
+          >
+            {loading ? (
+              <ActivityIndicator color="#061108" />
+            ) : (
+              <>
+                <MaterialCommunityIcons name="google" size={21} color="#061108" />
+                <Text style={styles.googleLoginText}>Acceder con Google</Text>
+              </>
+            )}
+          </TouchableOpacity>
+          {!canConnect && <Text style={[styles.loginStatus, { color: colors.muted }]}>Faltan credenciales OAuth en .env</Text>}
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]}>
       <StatusBar style={theme === "dark" ? "light" : "dark"} />
@@ -347,35 +388,63 @@ export default function App() {
         </View>
 
         <View style={[styles.content, compact && { width: "100%" }]}>
-          <View style={styles.topBar}>
-            <View>
-              <Text style={[styles.pageTitle, { color: colors.text }]}>{tab === "expenses" ? "Tabla de Gastos" : "Análisis"}</Text>
-              <Text style={[styles.pageSub, { color: colors.muted }]}>{setupStatus}</Text>
+          <View style={[styles.topBar, compact && styles.topBarMobile, { backgroundColor: compact ? colors.card : "transparent", borderColor: compact ? colors.border : "transparent" }]}>
+            <View style={styles.headerLeft}>
+              {compact && (
+                <TouchableOpacity style={[styles.headerBtn, styles.headerBtnOutlined, { backgroundColor: colors.input, borderColor: colors.border }]} onPress={() => setMenuVisible(true)}>
+                  <MaterialCommunityIcons name="menu" size={21} color={colors.text} />
+                </TouchableOpacity>
+              )}
+              <View style={styles.titleBlock}>
+                <Text numberOfLines={1} style={[styles.pageTitle, compact && styles.pageTitleMobile, { color: colors.text }]}>
+                  {tab === "expenses" ? "Tabla de Gastos" : "Análisis"}
+                </Text>
+                <Text numberOfLines={1} style={[styles.pageSub, compact && styles.pageSubMobile, { color: colors.muted }]}>
+                  {setupStatus}
+                </Text>
+              </View>
             </View>
             <View style={styles.topActions}>
-              <TouchableOpacity style={[styles.headerBtn, { backgroundColor: colors.card }]} onPress={() => setTheme(theme === "dark" ? "light" : "dark")}>
+              <TouchableOpacity style={[styles.headerBtn, compact && styles.headerBtnOutlined, { backgroundColor: compact ? colors.input : colors.card, borderColor: colors.border }]} onPress={() => setTheme(theme === "dark" ? "light" : "dark")}>
                 <MaterialCommunityIcons name={theme === "dark" ? "weather-sunny" : "weather-night"} size={20} color={colors.text} />
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.headerBtn, { backgroundColor: colors.card }]} onPress={() => setSearchVisible(true)}>
+              <TouchableOpacity style={[styles.headerBtn, compact && styles.headerBtnOutlined, { backgroundColor: compact ? colors.input : colors.card, borderColor: colors.border }]} onPress={() => setSearchVisible(true)}>
                 <MaterialCommunityIcons name="magnify" size={20} color={colors.text} />
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.headerBtn, { backgroundColor: colors.card }]} onPress={() => setExportVisible(true)}>
+              <TouchableOpacity style={[styles.headerBtn, compact && styles.headerBtnOutlined, { backgroundColor: compact ? colors.input : colors.card, borderColor: colors.border }]} onPress={() => setExportVisible(true)}>
                 <MaterialCommunityIcons name="file-export" size={20} color={colors.text} />
               </TouchableOpacity>
             </View>
           </View>
+
+          {compact && (
+            <MobileControls
+              colors={colors}
+              year={year}
+              month={month}
+              availableYears={availableYears}
+              setYear={setYear}
+              changeMonth={changeMonth}
+              goToday={() => {
+                const today = new Date();
+                setMonth(today.getMonth());
+                setYear(today.getFullYear());
+                setSearchActive(false);
+              }}
+            />
+          )}
 
           {!accessToken && (
             <View style={[styles.connectCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
               <View style={{ flex: 1 }}>
                 <Text style={[styles.connectTitle, { color: colors.text }]}>Modo demo listo</Text>
                 <Text style={[styles.connectText, { color: colors.muted }]}>
-                  Agrega tus Google OAuth client IDs en `App.tsx` para activar Drive y Sheets reales.
+                  Tus credenciales se leen desde `.env`. Al conectar se buscará o creará tu hoja privada de Google.
                 </Text>
               </View>
               <TouchableOpacity
                 disabled={!GOOGLE_ANDROID_CLIENT_ID && !GOOGLE_WEB_CLIENT_ID}
-                onPress={() => promptAsync()}
+                onPress={signInWithGoogle}
                 style={[styles.connectBtn, { backgroundColor: GOOGLE_ANDROID_CLIENT_ID || GOOGLE_WEB_CLIENT_ID ? colors.green : colors.disabled }]}
               >
                 <Text style={styles.connectBtnText}>Conectar Google</Text>
@@ -396,6 +465,7 @@ export default function App() {
               summary={currentSummary}
               transactions={periodTransactions}
               searchActive={searchActive}
+              compact={compact}
               onEditFreq={() => {
                 setFreqInput(String(currentSummary.freqIncome || 0));
                 setFreqVisible(true);
@@ -446,14 +516,85 @@ export default function App() {
       <ExportModal visible={exportVisible} colors={colors} onClose={() => setExportVisible(false)} onExport={exportRows} />
       <FreqIncomeModal visible={freqVisible} colors={colors} value={freqInput} setValue={setFreqInput} onClose={() => setFreqVisible(false)} onSubmit={saveFreqIncome} />
       <DetailModal tx={detailTx} colors={colors} onClose={() => setDetailTx(null)} />
+      <MobileMenu
+        visible={menuVisible}
+        colors={colors}
+        tab={tab}
+        setTab={setTab}
+        month={month}
+        setMonth={setMonth}
+        onClose={() => setMenuVisible(false)}
+      />
     </SafeAreaView>
   );
 }
 
-function ExpensesView({ colors, summary, transactions, searchActive, onEditFreq, onExitSearch, onOpenDetail, onEdit, onDelete }: any) {
+function MobileControls({ colors, year, month, availableYears, setYear, changeMonth, goToday }: any) {
+  return (
+    <View style={[styles.mobileControls, { backgroundColor: colors.card, borderColor: colors.border }]}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.mobileYearRail}>
+        {availableYears.map((item: number) => (
+          <TouchableOpacity
+            key={item}
+            onPress={() => setYear(item)}
+            style={[styles.mobileYearChip, { backgroundColor: colors.input, borderColor: colors.border }, item === year && { backgroundColor: colors.green, borderColor: colors.green }]}
+          >
+            <Text style={[styles.mobileYearText, { color: item === year ? "#061108" : colors.text }]}>{item}</Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+      <View style={[styles.monthNavMobile, { backgroundColor: colors.input, borderColor: colors.border }]}>
+        <TouchableOpacity style={styles.monthArrowMobile} onPress={() => changeMonth(-1)}>
+          <MaterialCommunityIcons name="chevron-left" size={22} color={colors.muted} />
+        </TouchableOpacity>
+        <Text numberOfLines={1} style={[styles.monthNavTextMobile, { color: colors.text }]}>{MONTH_NAMES[month]}</Text>
+        <TouchableOpacity style={styles.monthArrowMobile} onPress={() => changeMonth(1)}>
+          <MaterialCommunityIcons name="chevron-right" size={22} color={colors.muted} />
+        </TouchableOpacity>
+      </View>
+      <TouchableOpacity onPress={goToday} style={[styles.todayBtnMobile, { backgroundColor: colors.blue }]}>
+        <MaterialCommunityIcons name="calendar-today" size={18} color="#ffffff" />
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+function MobileMenu({ visible, colors, tab, setTab, month, setMonth, onClose }: any) {
+  return (
+    <Modal visible={visible} transparent animationType="fade">
+      <TouchableOpacity activeOpacity={1} style={styles.drawerOverlay} onPress={onClose}>
+        <View style={[styles.drawer, { backgroundColor: colors.sidebar, borderColor: colors.border }]}>
+          <View style={styles.brandRow}>
+            <View style={[styles.logo, { backgroundColor: colors.greenSoft }]}>
+              <MaterialCommunityIcons name="sack" size={28} color={colors.green} />
+            </View>
+            <View>
+              <Text style={[styles.brandTitle, { color: colors.text }]}>Bucks Manager</Text>
+              <Text style={[styles.brandSub, { color: colors.muted }]}>Control de gastos</Text>
+            </View>
+          </View>
+          <View style={styles.navBlock}>
+            <NavButton label="Tabla de Gastos" icon="table" active={tab === "expenses"} onPress={() => { setTab("expenses"); onClose(); }} colors={colors} />
+            <NavButton label="Análisis" icon="chart-bar" active={tab === "summary"} onPress={() => { setTab("summary"); onClose(); }} colors={colors} />
+          </View>
+          <View style={styles.quickGrid}>
+            {MONTH_NAMES.map((name, idx) => (
+              <TouchableOpacity key={name} onPress={() => { setMonth(idx); onClose(); }} style={[styles.monthChip, { borderColor: colors.border }, idx === month && { backgroundColor: colors.greenSoft, borderColor: colors.green }]}>
+                <Text style={[styles.monthChipText, { color: idx === month ? colors.green : colors.muted }]}>{name.slice(0, 3)}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          <Text style={[styles.storageNote, { color: colors.muted }]}>Los datos se guardan en tu hoja de Google.</Text>
+        </View>
+      </TouchableOpacity>
+    </Modal>
+  );
+}
+
+function ExpensesView({ colors, summary, transactions, searchActive, compact, onEditFreq, onExitSearch, onOpenDetail, onEdit, onDelete }: any) {
   return (
     <ScrollView showsVerticalScrollIndicator={false}>
-      <View style={styles.statsGrid}>
+      <View style={[styles.statsGrid, compact && styles.statsGridMobile]}>
         <StatCard title="Ing. Frec." value={formatMoney(summary.freqIncome)} tone="income" icon="cash" colors={colors} action={onEditFreq} />
         <StatCard title="Ing. No Frec." value={formatMoney(summary.nonFreqIncome)} tone="income" icon="trending-up" colors={colors} />
         <StatCard title="Gasto Frec." value={formatMoney(summary.freqExpense)} tone="expense" icon="credit-card" colors={colors} />
@@ -471,30 +612,34 @@ function ExpensesView({ colors, summary, transactions, searchActive, onEditFreq,
         </View>
       )}
 
-      <View style={[styles.tableCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-        <View style={[styles.tableHeader, { borderColor: colors.border }]}>
-          <Text style={[styles.th, { color: colors.muted, flex: 0.8 }]}>FECHA</Text>
-          <Text style={[styles.th, { color: colors.muted, flex: 0.9 }]}>MONTO</Text>
-          <Text style={[styles.th, { color: colors.muted, flex: 1.4 }]}>DETALLE</Text>
-          <Text style={[styles.th, { color: colors.muted, flex: 1.1 }]}>TIPO</Text>
-        </View>
-        {transactions.map((tx: Transaction) => (
-          <TouchableOpacity key={`${tx.rowId}-${tx.createdAt}`} onPress={() => onOpenDetail(tx)} style={[styles.tr, { borderColor: colors.border }]}>
-            <Text style={[styles.td, { color: colors.text, flex: 0.8 }]}>{tx.date}</Text>
-            <Text style={[styles.tdAmount, { color: tx.amount >= 0 ? colors.green : colors.red, flex: 0.9 }]}>{formatMoney(tx.amount)}</Text>
-            <Text numberOfLines={1} style={[styles.td, { color: colors.text, flex: 1.4 }]}>{tx.detail}</Text>
-            <Text numberOfLines={1} style={[styles.td, { color: colors.muted, flex: 1.1 }]}>{abbrev(tx.type)}</Text>
-            <View style={styles.rowActions}>
-              <TouchableOpacity onPress={() => onEdit(tx)}>
-                <MaterialCommunityIcons name="pencil" size={18} color={colors.blue} />
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => onDelete(tx)}>
-                <MaterialCommunityIcons name="trash-can" size={18} color={colors.red} />
-              </TouchableOpacity>
+      <View style={[styles.tableCard, compact && styles.tableCardMobile, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <ScrollView horizontal={compact} showsHorizontalScrollIndicator={compact}>
+          <View style={compact ? styles.mobileTableWide : styles.tableWide}>
+            <View style={[styles.tableHeader, { backgroundColor: colors.input, borderColor: colors.border }]}>
+              <Text style={[styles.th, { color: colors.muted, flex: 0.8 }]}>FECHA</Text>
+              <Text style={[styles.th, { color: colors.muted, flex: 0.9 }]}>MONTO</Text>
+              <Text style={[styles.th, { color: colors.muted, flex: 1.4 }]}>DETALLE</Text>
+              <Text style={[styles.th, { color: colors.muted, flex: 1.1 }]}>TIPO</Text>
             </View>
-          </TouchableOpacity>
-        ))}
-        {!transactions.length && <Text style={[styles.empty, { color: colors.muted }]}>No hay movimientos para mostrar.</Text>}
+            {transactions.map((tx: Transaction) => (
+              <TouchableOpacity key={`${tx.rowId}-${tx.createdAt}`} onPress={() => onOpenDetail(tx)} style={[styles.tr, compact && styles.trMobile, { borderColor: colors.border }]}>
+                <Text style={[styles.td, compact && styles.tdMobile, { color: colors.text, flex: 0.8 }]}>{tx.date}</Text>
+                <Text style={[styles.tdAmount, compact && styles.tdMobile, { color: tx.amount >= 0 ? colors.green : colors.red, flex: 0.9 }]}>{formatMoney(tx.amount)}</Text>
+                <Text numberOfLines={1} style={[styles.td, compact && styles.tdMobile, { color: colors.text, flex: 1.4 }]}>{tx.detail}</Text>
+                <Text numberOfLines={1} style={[styles.td, compact && styles.tdMobile, { color: colors.muted, flex: 1.1 }]}>{abbrev(tx.type)}</Text>
+                <View style={styles.rowActions}>
+                  <TouchableOpacity onPress={() => onEdit(tx)}>
+                    <MaterialCommunityIcons name="pencil" size={18} color={colors.blue} />
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => onDelete(tx)}>
+                    <MaterialCommunityIcons name="trash-can" size={18} color={colors.red} />
+                  </TouchableOpacity>
+                </View>
+              </TouchableOpacity>
+            ))}
+            {!transactions.length && <Text style={[styles.empty, { color: colors.muted }]}>No hay movimientos para mostrar.</Text>}
+          </View>
+        </ScrollView>
       </View>
     </ScrollView>
   );
@@ -826,9 +971,9 @@ const light = {
 const styles = StyleSheet.create({
   safe: { flex: 1 },
   shell: { flex: 1, flexDirection: "row", padding: 12, gap: 12 },
-  shellCompact: { flexDirection: "column", padding: 10 },
+  shellCompact: { flexDirection: "column", padding: 0, gap: 0 },
   sidebar: { width: 245, borderWidth: 1, borderRadius: 8, padding: 16 },
-  sidebarCompact: { width: "100%", padding: 12 },
+  sidebarCompact: { display: "none" },
   brandRow: { flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 24 },
   logo: { width: 46, height: 46, borderRadius: 8, alignItems: "center", justifyContent: "center" },
   brandTitle: { fontSize: 20, fontWeight: "900" },
@@ -849,11 +994,32 @@ const styles = StyleSheet.create({
   monthChipText: { fontSize: 12, fontWeight: "900" },
   storageNote: { marginTop: "auto", fontSize: 12, fontWeight: "700" },
   content: { flex: 1 },
+  loginScreen: { flex: 1, alignItems: "center", justifyContent: "center", padding: 26 },
+  loginMark: { width: 78, height: 78, borderRadius: 18, borderWidth: 1, alignItems: "center", justifyContent: "center", marginBottom: 18 },
+  loginTitle: { fontSize: 30, fontWeight: "900", textAlign: "center" },
+  loginSubtitle: { maxWidth: 310, marginTop: 9, marginBottom: 24, fontSize: 14, fontWeight: "700", lineHeight: 20, textAlign: "center" },
+  googleLoginBtn: { minWidth: 232, minHeight: 50, marginTop: 22, borderRadius: 8, paddingVertical: 13, paddingHorizontal: 18, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10 },
+  googleLoginText: { color: "#061108", fontSize: 15, fontWeight: "900" },
+  loginStatus: { marginTop: 14, fontSize: 12, fontWeight: "700", textAlign: "center" },
   topBar: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 },
+  topBarMobile: { marginBottom: 0, paddingHorizontal: 14, paddingVertical: 12, borderBottomWidth: 1 },
+  headerLeft: { flex: 1, minWidth: 0, flexDirection: "row", alignItems: "center", gap: 10 },
+  titleBlock: { flex: 1, minWidth: 0 },
   pageTitle: { fontSize: 28, fontWeight: "900" },
+  pageTitleMobile: { fontSize: 20 },
   pageSub: { fontSize: 13, fontWeight: "700" },
+  pageSubMobile: { fontSize: 14 },
   topActions: { flexDirection: "row", gap: 8 },
   headerBtn: { width: 42, height: 42, borderRadius: 8, alignItems: "center", justifyContent: "center" },
+  headerBtnOutlined: { borderWidth: 1 },
+  mobileControls: { flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 14, paddingVertical: 10, borderBottomWidth: 1 },
+  mobileYearRail: { gap: 8, paddingRight: 2 },
+  mobileYearChip: { borderWidth: 1, borderRadius: 8, paddingVertical: 8, paddingHorizontal: 12 },
+  mobileYearText: { fontSize: 13, fontWeight: "900" },
+  monthNavMobile: { flex: 1, minWidth: 128, height: 39, borderWidth: 1, borderRadius: 8, paddingHorizontal: 4, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  monthArrowMobile: { width: 31, height: 31, borderRadius: 6, alignItems: "center", justifyContent: "center" },
+  monthNavTextMobile: { flex: 1, textAlign: "center", fontSize: 14, fontWeight: "900" },
+  todayBtnMobile: { width: 39, height: 39, borderRadius: 8, alignItems: "center", justifyContent: "center" },
   connectCard: { borderWidth: 1, borderRadius: 8, padding: 14, flexDirection: "row", gap: 12, alignItems: "center", marginBottom: 12 },
   connectTitle: { fontSize: 16, fontWeight: "900" },
   connectText: { fontSize: 12, fontWeight: "700", lineHeight: 18 },
@@ -861,22 +1027,30 @@ const styles = StyleSheet.create({
   connectBtnText: { color: "#061108", fontWeight: "900" },
   loadingBar: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 10 },
   statsGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10, marginBottom: 12 },
-  statCard: { width: "32%", minWidth: 150, borderWidth: 1, borderRadius: 8, padding: 12, position: "relative" },
+  statsGridMobile: { padding: 14, gap: 8, marginBottom: 0 },
+  statCard: { width: "32%", minWidth: 136, borderWidth: 1, borderRadius: 8, padding: 12, position: "relative" },
   statIcon: { width: 34, height: 34, borderRadius: 8, alignItems: "center", justifyContent: "center", marginBottom: 8 },
   statLabel: { fontSize: 12, fontWeight: "800" },
   statValue: { fontSize: 18, fontWeight: "900", marginTop: 4 },
   editStat: { position: "absolute", right: 10, top: 10 },
   searchBanner: { borderRadius: 8, padding: 12, flexDirection: "row", justifyContent: "space-between", marginBottom: 10 },
   tableCard: { borderWidth: 1, borderRadius: 8, overflow: "hidden", marginBottom: 18 },
+  tableCardMobile: { marginHorizontal: 14, borderRadius: 18 },
+  tableWide: { width: "100%" },
+  mobileTableWide: { width: 640 },
   tableHeader: { flexDirection: "row", borderBottomWidth: 1, paddingVertical: 12, paddingHorizontal: 10 },
   th: { fontSize: 11, fontWeight: "900" },
   tr: { flexDirection: "row", alignItems: "center", borderBottomWidth: 1, paddingVertical: 13, paddingHorizontal: 10 },
+  trMobile: { paddingVertical: 12 },
   td: { fontSize: 13, fontWeight: "700" },
+  tdMobile: { fontSize: 15 },
   tdAmount: { fontSize: 13, fontWeight: "900" },
   rowActions: { width: 52, flexDirection: "row", justifyContent: "space-between" },
   empty: { padding: 18, textAlign: "center", fontWeight: "700" },
   fab: { position: "absolute", right: 22, bottom: 22, width: 58, height: 58, borderRadius: 29, alignItems: "center", justifyContent: "center" },
   undoFab: { position: "absolute", left: 270, bottom: 22, borderRadius: 999, borderWidth: 1, paddingVertical: 12, paddingHorizontal: 16, flexDirection: "row", gap: 8 },
+  drawerOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.58)" },
+  drawer: { width: 288, height: "100%", borderRightWidth: 1, padding: 18 },
   kpiGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10, marginBottom: 12 },
   kpi: { width: "24%", minWidth: 150, borderWidth: 1, borderRadius: 8, padding: 14 },
   kpiValue: { fontSize: 20, fontWeight: "900", marginTop: 5 },
