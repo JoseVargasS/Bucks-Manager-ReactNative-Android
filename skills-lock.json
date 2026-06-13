@@ -1,11 +1,29 @@
 {
   "version": 1,
   "skills": {
+    "accessibility": {
+      "source": "web-quality-skills",
+      "sourceType": "local",
+      "skillPath": ".agents/skills/accessibility/SKILL.md",
+      "computedHash": "b577b1a3f9cb700748055be01a433584de269db7f07fa248856de606a61daf0a"
+    },
     "android-cli": {
       "source": "android/skills",
       "sourceType": "github",
       "skillPath": "devtools/android-cli/SKILL.md",
       "computedHash": "9a2ade2fd7bb2ee50d0af649c7aa1944f21d21e783a03d8cf11a7daf630428f8"
+    },
+    "android-emulator-qa": {
+      "source": "test-android-apps",
+      "sourceType": "plugin-cache",
+      "skillPath": "skills/android-emulator-qa/SKILL.md",
+      "computedHash": "df71c109a221524cdf0e9d703f38afa24cf914b7e488dee2dd3a817719c7466d"
+    },
+    "android-performance": {
+      "source": "test-android-apps",
+      "sourceType": "plugin-cache",
+      "skillPath": "skills/android-performance/SKILL.md",
+      "computedHash": "dbbc2a8c9c75a20bfca4b8aca8f4d99ff3b527bbaeb3b26e0e07af3472c8d57a"
     },
     "building-native-ui": {
       "source": "expo/skills",
@@ -31,11 +49,17 @@
       "skillPath": "plugins/expo/skills/expo-dev-client/SKILL.md",
       "computedHash": "b186b8208e123a3404158f6d94061418a505f3c9ea565167dc80fce315841871"
     },
-    "mobile-android-design": {
-      "source": "wshobson/agents",
-      "sourceType": "github",
-      "skillPath": "plugins/ui-design/skills/mobile-android-design/SKILL.md",
-      "computedHash": "143a60d6a0744a5058adf984e3a64b75cd2ef3714a15557f4ff6fd95e39ff23a"
+    "frontend-design": {
+      "source": "openai-bundled",
+      "sourceType": "plugin-cache",
+      "skillPath": "skills/frontend-design/SKILL.md",
+      "computedHash": "70044bbc8e4c21d23b8c8b864956aa1515c1c6cb2f9df14148dbb8c4af6187e5"
+    },
+    "imagegen": {
+      "source": "openai-system",
+      "sourceType": "system-cache",
+      "skillPath": "imagegen/SKILL.md",
+      "computedHash": "613f892ba9259cbfcb44ee74e81587cc7ce288de86ae2f1eab5eacb190e34f58"
     },
     "native-data-fetching": {
       "source": "expo/skills",
