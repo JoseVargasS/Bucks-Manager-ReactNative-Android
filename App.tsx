@@ -4,7 +4,7 @@ import * as FileSystem from "expo-file-system/legacy";
 import * as Print from "expo-print";
 import * as SecureStore from "expo-secure-store";
 import * as Sharing from "expo-sharing";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Alert, SafeAreaView, Text, TouchableOpacity, View, StatusBar as NativeStatusBar } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { GoogleSignin } from "@react-native-google-signin/google-signin";
@@ -189,7 +189,7 @@ export default function App() {
 
   function syncAccountInfo() {
     const current = GoogleSignin.getCurrentUser();
-    const data = (current as any)?.data || current;
+    const data = ((current as { data?: { user: { name?: string; email?: string } } })?.data || current) as { user?: { name?: string; email?: string }; name?: string; email?: string };
     if (data) setAccountInfo({ name: data.user?.name || data.name, email: data.user?.email || data.email });
   }
 
@@ -226,6 +226,10 @@ export default function App() {
   function selectPeriod(nextMonth: number, nextYear: number) {
     setMonth(nextMonth); setYear(nextYear); setSearchActive(false); setLoadedMonthCount(1); setSelectedRows([]);
   }
+  const goToday = useCallback(() => {
+    const today = new Date();
+    selectPeriod(today.getMonth(), today.getFullYear());
+  }, []);
 
   function openAdd(type?: TransactionType) { setEditingTx(null); setDraft(getBlankDraft(type)); setAddVisible(true); }
 

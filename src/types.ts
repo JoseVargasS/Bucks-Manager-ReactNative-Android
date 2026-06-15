@@ -1,3 +1,5 @@
+import React from "react";
+
 export type TransactionType =
   | "INGRESO FRECUENTE"
   | "INGRESO NO FRECUENTE"
@@ -51,3 +53,7 @@ export type SheetCandidate = {
 
 export type ExportFormat = "xlsx" | "pdf";
 export type ExportRangeMode = "dates" | "months";
+
+export type MaterialIconName = React.ComponentProps<typeof import("@expo/vector-icons").MaterialCommunityIcons>["name"];
+
+export type AccountInfo = { name?: string; email?: string } | null;

@@ -2,6 +2,7 @@ import { Text, TouchableOpacity, View } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { styles } from "../../styles/globalStyles";
 import { Palette } from "../../theme/colors";
+import { MaterialIconName } from "../../types";
 
 type Tab = "expenses" | "search" | "summary" | "settings";
 
@@ -19,10 +20,10 @@ export function BottomNav({ colors, tab, setTab, onAdd }: { colors: Palette; tab
   );
 }
 
-function BottomNavItem({ colors, active, icon, label, onPress }: { colors: Palette; active: boolean; icon: string; label: string; onPress: () => void }) {
+function BottomNavItem({ colors, active, icon, label, onPress }: { colors: Palette; active: boolean; icon: MaterialIconName; label: string; onPress: () => void }) {
   return (
     <TouchableOpacity onPress={onPress} style={[styles.bottomNavItem, active && { backgroundColor: colors.primarySoft }]}>
-      <MaterialCommunityIcons name={icon as any} size={21} color={active ? colors.primary : colors.muted} />
+      <MaterialCommunityIcons name={icon} size={21} color={active ? colors.primary : colors.muted} />
       <Text numberOfLines={1} style={[styles.bottomNavLabel, { color: active ? colors.primary : colors.muted }]}>{label}</Text>
     </TouchableOpacity>
   );

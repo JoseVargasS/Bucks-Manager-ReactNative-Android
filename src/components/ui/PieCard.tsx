@@ -17,7 +17,7 @@ export function PieCard({ title, values, colors, labels, tints, danger = false }
       <Text style={[styles.sectionTitle, { color: colors.text }]}>{title} — S/ {values.reduce((a: number, b: number) => a + b, 0).toFixed(2)}</Text>
       <Svg width={128} height={128}>
         <Circle cx={64} cy={64} r={38} stroke={colors.border} strokeWidth={18} fill="none" />
-        {segments.map((seg: any, i: number) => {
+        {segments.map((seg: { value: number; pct: number; startAngle: number }, i: number) => {
           const color = tints?.[i] || (danger ? colors.red : colors.green);
           return (
             <Circle

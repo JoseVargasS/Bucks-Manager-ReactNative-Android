@@ -9,10 +9,11 @@ import { CalendarPicker } from "../ui/CalendarPicker";
 import { Palette } from "../../theme/colors";
 import { TransactionDraft, TransactionType } from "../../types";
 import { titleCaseType } from "../../utils/formats";
+import { PickerConfig } from "./OptionSheet";
 
 export function TransactionModal({ visible, colors, draft, setDraft, editing, openPicker, onClose, onSubmit }: {
   visible: boolean; colors: Palette; draft: TransactionDraft; setDraft: (d: TransactionDraft) => void;
-  editing: boolean; openPicker: (config: any) => void; onClose: () => void; onSubmit: () => void;
+  editing: boolean; openPicker: (config: PickerConfig) => void; onClose: () => void; onSubmit: () => void;
 }) {
   const [calVisible, setCalVisible] = useState(false);
   return (

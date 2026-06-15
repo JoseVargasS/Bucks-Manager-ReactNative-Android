@@ -1,4 +1,5 @@
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
+import React from "react";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { formatMoney, formatCreatedTime, abbrev, typeColor, typeFill } from "../../utils/formats";
 import { groupTransactionsByDate } from "../../utils/transactions";
@@ -6,7 +7,7 @@ import { styles } from "../../styles/globalStyles";
 import { StatCard } from "../ui/StatCard";
 import { HighlightedText } from "../ui/HighlightedText";
 import { Palette } from "../../theme/colors";
-import { SummaryRow, Transaction } from "../../types";
+import { SummaryRow, Transaction, MaterialIconName } from "../../types";
 
 export function ExpensesView({
   colors, summary, transactions, searchActive, searchText, selectedRows,
@@ -77,7 +78,7 @@ export function ExpensesView({
                     ]}
                   >
                     <View style={[styles.txIcon, { backgroundColor: selected ? colors.infoSoft : typeFill(tx.type, colors), borderColor: selected ? colors.blue : typeColor(tx.type, colors) }]}>
-                      <MaterialCommunityIcons name={selected ? "check" : (icon as any)} size={18} color={selected ? colors.blue : typeColor(tx.type, colors)} />
+                      <MaterialCommunityIcons name={selected ? "check" : (icon as MaterialIconName)} size={18} color={selected ? colors.blue : typeColor(tx.type, colors)} />
                     </View>
                     <View style={styles.groupedTxMain}>
                       <HighlightedText

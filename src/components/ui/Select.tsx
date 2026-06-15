@@ -1,11 +1,11 @@
 import { useState } from "react";
-import { Text, TouchableOpacity, View, ScrollView, StyleSheet } from "react-native";
+import { Text, TouchableOpacity, View, ScrollView, StyleSheet, ViewStyle } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { Palette } from "../../theme/colors";
 
 type SelectOption = { label: string; value: string };
 
-export function Select({ value, options, onSelect, colors, placeholder, style }: { value: string; options: SelectOption[]; onSelect: (v: string) => void; colors: Palette; placeholder?: string; style?: any }) {
+export function Select({ value, options, onSelect, colors, placeholder, style }: { value: string; options: SelectOption[]; onSelect: (v: string) => void; colors: Palette; placeholder?: string; style?: ViewStyle }) {
   const [open, setOpen] = useState(false);
   const selected = options.find((o) => o.value === value);
   return (

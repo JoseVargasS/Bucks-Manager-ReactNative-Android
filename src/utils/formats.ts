@@ -1,15 +1,17 @@
 import { MONTH_NAMES, SHORT_MONTHS, formatMoney, formatDateToISO, formatDateForSheet } from "../domain/bucksLogic";
 
-export { formatMoney, formatDateToISO, formatDateForSheet };
+export { formatMoney, formatDateToISO, formatDateForSheet, MONTH_NAMES, SHORT_MONTHS };
 
-export function formatCreatedTime(createdAt?: string) {
+/** Formatea el timestamp de creación como hora local (HH:MM:SS) */
+export function formatCreatedTime(createdAt?: string): string {
   if (!createdAt) return "-";
   const date = new Date(createdAt);
   if (Number.isNaN(date.getTime())) return createdAt;
   return date.toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false });
 }
 
-export function formatDateGroupLabel(rawDate: string) {
+/** Etiqueta de agrupación por día: "HOY", "AYER" o fecha formateada */
+export function formatDateGroupLabel(rawDate: string): string {
   const date = new Date(rawDate);
   const today = new Date();
   const yesterday = new Date();
@@ -21,7 +23,8 @@ export function formatDateGroupLabel(rawDate: string) {
   return date.toLocaleDateString("es-PE", { month: "short", day: "2-digit", year: "numeric" }).toUpperCase();
 }
 
-export function abbrev(type: string) {
+/** Abrevia nombres de tipo de transacción para UI compacta */
+export function abbrev(type: string): string {
   return type
     .replace("INGRESO", "Ing.")
     .replace("GASTO", "G.")
@@ -29,7 +32,8 @@ export function abbrev(type: string) {
     .replace("FRECUENTE", "Frec.");
 }
 
-export function titleCaseType(type: string) {
+/** Convierte tipo a Title Case (ej: "GASTO NO FRECUENTE" → "Gasto No Frecuente") */
+export function titleCaseType(type: string): string {
   return type
     .toLowerCase()
     .split(" ")
@@ -37,17 +41,16 @@ export function titleCaseType(type: string) {
     .join(" ");
 }
 
-export function typeColor(type: string, colors: Record<string, string>) {
-  if (type === "INGRESO NO FRECUENTE") return colors.green;
-  if (type === "INGRESO FRECUENTE") return colors.green;
+/** Color asociado al tipo de transacción (verde = ingreso, rojo/amarillo = gasto) */
+export function typeColor(type: string, colors: Record<string, string>): string {
+  if (type === "INGRESO NO FRECUENTE" || type === "INGRESO FRECUENTE") return colors.green;
   if (type === "GASTO FRECUENTE") return colors.red;
   return colors.yellow;
 }
 
-export function typeFill(type: string, colors: Record<string, string>) {
+/** Color de fondo suave asociado al tipo de transacción */
+export function typeFill(type: string, colors: Record<string, string>): string {
   if (type === "INGRESO NO FRECUENTE" || type === "INGRESO FRECUENTE") return colors.incomeSoft;
   if (type === "GASTO FRECUENTE") return colors.expenseSoft;
   return colors.warnSoft;
 }
-
-export { MONTH_NAMES, SHORT_MONTHS };

@@ -2,8 +2,9 @@ import { Modal, Text, TouchableOpacity, View, ScrollView } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { styles } from "../../styles/globalStyles";
 import { Palette } from "../../theme/colors";
+import { MaterialIconName } from "../../types";
 
-type PickerOption = { label: string; value: string; icon?: string; tone?: string };
+type PickerOption = { label: string; value: string; icon?: MaterialIconName; tone?: string };
 type PickerConfig = { title: string; options: PickerOption[]; selectedValue: string; onSelect: (value: string) => void } | null;
 
 export function OptionSheet({ config, colors, onClose }: { config: PickerConfig; colors: Palette; onClose: () => void }) {
@@ -36,7 +37,7 @@ export function OptionSheet({ config, colors, onClose }: { config: PickerConfig;
                   }}
                 >
                   <View style={[styles.optionIcon, { backgroundColor: selected ? colors.primarySoft : colors.card, borderColor: tone }]}>
-                    <MaterialCommunityIcons name={(option.icon || "chevron-right") as any} size={19} color={tone} />
+                    <MaterialCommunityIcons name={option.icon || "chevron-right"} size={19} color={tone} />
                   </View>
                   <Text numberOfLines={1} style={[styles.optionLabel, { color: selected ? colors.primary : colors.text }]}>{option.label}</Text>
                   {selected && <MaterialCommunityIcons name="check" size={20} color={colors.primary} />}

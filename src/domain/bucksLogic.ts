@@ -13,53 +13,41 @@ export const TRANSACTION_TYPES: TransactionType[] = [
 ];
 
 export const MONTH_NAMES = [
-  "Enero",
-  "Febrero",
-  "Marzo",
-  "Abril",
-  "Mayo",
-  "Junio",
-  "Julio",
-  "Agosto",
-  "Septiembre",
-  "Octubre",
-  "Noviembre",
-  "Diciembre",
+  "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+  "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
 ];
 
 export const SHORT_MONTHS = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
 
 export const SUMMARY_HEADERS = [
-  "MES",
-  "INGRESO FRECUENTE",
-  "INGRESO NO FRECUENTE",
-  "TOTAL INGRESOS",
-  "GASTO FRECUENTE",
-  "GASTO NO FRECUENTE",
-  "TOTAL GASTOS",
-  "NETO MENSUAL",
-  "NETO SIN ING FRECUENTE",
+  "MES", "INGRESO FRECUENTE", "INGRESO NO FRECUENTE", "TOTAL INGRESOS",
+  "GASTO FRECUENTE", "GASTO NO FRECUENTE", "TOTAL GASTOS",
+  "NETO MENSUAL", "NETO SIN ING FRECUENTE",
 ];
 
 export const TRANSACTION_HEADERS = ["Fecha", "Monto", "Detalle", "Tipo", "HORA DE CREACIÓN"];
 
-export function formatMoney(value: number) {
+/** Formatea un valor numérico como moneda con signo explícito: "+ S/ 100.00" o "- S/ 50.00" */
+export function formatMoney(value: number): string {
   const n = Number(value) || 0;
   const sign = n >= 0 ? "+ " : "- ";
   return `${sign}S/ ${Math.abs(n).toFixed(2)}`;
 }
 
-export function formatDateToISO(date: Date | string) {
+/** Convierte un Date o string ISO a formato YYYY-MM-DD */
+export function formatDateToISO(date: Date | string): string {
   const d = date instanceof Date ? date : new Date(date);
   if (Number.isNaN(d.getTime())) return "";
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-export function formatDateForSheet(date: Date) {
+/** Convierte Date al formato usado en Sheets: DD-mes-AA (ej: 15-jun-26) */
+export function formatDateForSheet(date: Date): string {
   return `${String(date.getDate()).padStart(2, "0")}-${SHORT_MONTHS[date.getMonth()]}-${String(date.getFullYear()).slice(-2)}`;
 }
 
-export function parseSpanishDate(value: string) {
+/** Parsea fecha en español "15-jun-26" → Date | null */
+export function parseSpanishDate(value: string): Date | null {
   const parts = value.split("-");
   if (parts.length !== 3) return null;
   const month = SHORT_MONTHS.indexOf(parts[1].toLowerCase());
@@ -70,15 +58,16 @@ export function parseSpanishDate(value: string) {
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
-export function getMonthYear(date: Date) {
+/** Devuelve "Mes Año" para un Date dado (ej: "Enero 2026") */
+export function getMonthYear(date: Date): string {
   return `${MONTH_NAMES[date.getMonth()]} ${date.getFullYear()}`;
 }
 
-export function calculateExpression(expression: string) {
+/** Evalúa una expresión matemática (+, -, *, /, paréntesis) con sanitización previa */
+export function calculateExpression(expression: string): number {
   const clean = expression.replace(/[^0-9+\-*/().\s]/g, "");
   if (!clean.trim()) return 0;
   try {
-    // Mirrors the existing calculator field but only after stripping unsafe characters.
     const result = Function(`"use strict"; return (${clean})`)();
     return Number.isFinite(Number(result)) ? Number(result) : 0;
   } catch {
@@ -86,21 +75,25 @@ export function calculateExpression(expression: string) {
   }
 }
 
-export function normalizeAmountExpression(value: string) {
+/** Elimina el prefijo "=" de una expresión de monto */
+export function normalizeAmountExpression(value: string): string {
   return value.trim().replace(/^=/, "").trim();
 }
 
-export function isMathExpression(value: string) {
+/** Detecta si el valor es una fórmula que debe ser evaluada */
+export function isMathExpression(value: string): boolean {
   const expression = normalizeAmountExpression(value);
   return value.trim().startsWith("=") || /[+*/()]/.test(expression) || /.\s*-/.test(expression);
 }
 
-export function normalizeDraftAmount(draft: TransactionDraft) {
+/** Aplica signo al monto según tipo: gastos → negativo, ingresos → positivo */
+export function normalizeDraftAmount(draft: TransactionDraft): number {
   const calculated = Number(calculateExpression(normalizeAmountExpression(draft.amount)));
   if (draft.type.startsWith("GASTO")) return -Math.abs(calculated);
   return Math.abs(calculated);
 }
 
+/** Construye un Transaction completo a partir de un borrador y un rowId */
 export function buildTransactionFromDraft(draft: TransactionDraft, rowId: number): Transaction {
   const date = new Date(`${draft.date}T00:00:00`);
   const amount = normalizeDraftAmount(draft);
@@ -116,7 +109,8 @@ export function buildTransactionFromDraft(draft: TransactionDraft, rowId: number
   };
 }
 
-export function filterTransactionsByPeriod(transactions: Transaction[], month: number, year: number) {
+/** Filtra transacciones por mes/año exacto, ordenadas por rowId descendente */
+export function filterTransactionsByPeriod(transactions: Transaction[], month: number, year: number): Transaction[] {
   return transactions
     .filter((tx) => {
       const date = tx.rawDate ? new Date(tx.rawDate) : parseSpanishDate(tx.date);
@@ -125,7 +119,8 @@ export function filterTransactionsByPeriod(transactions: Transaction[], month: n
     .sort((a, b) => b.rowId - a.rowId);
 }
 
-export function insertChronologically(transactions: Transaction[], tx: Transaction) {
+/** Inserta una transacción en orden cronológico y renumera todos los rowId */
+export function insertChronologically(transactions: Transaction[], tx: Transaction): Transaction[] {
   const next = [...transactions];
   const target = new Date(tx.rawDate).setHours(0, 0, 0, 0);
   const index = next.findIndex((item) => new Date(item.rawDate).setHours(0, 0, 0, 0) > target);
@@ -134,7 +129,8 @@ export function insertChronologically(transactions: Transaction[], tx: Transacti
   return next.map((item, idx) => ({ ...item, rowId: idx + 2 }));
 }
 
-export function applySearch(transactions: Transaction[], filters: SearchFilters) {
+/** Aplica filtros de búsqueda avanzada (texto, montos, fechas). Límite 150 resultados. */
+export function applySearch(transactions: Transaction[], filters: SearchFilters): Transaction[] {
   const text = filters.text.toLowerCase().trim();
   const min = filters.minAmount ? Number(filters.minAmount) : null;
   const max = filters.maxAmount ? Number(filters.maxAmount) : null;
@@ -157,25 +153,17 @@ export function applySearch(transactions: Transaction[], filters: SearchFilters)
     .slice(0, 150);
 }
 
-export function calculateSummaries(transactions: Transaction[], freqIncomeByMonth: Record<string, number>) {
+/** Agrupa transacciones por mes y calcula totales para la vista RESUMEN POR MES */
+export function calculateSummaries(transactions: Transaction[], freqIncomeByMonth: Record<string, number>): SummaryRow[] {
   const byMonth = new Map<string, SummaryRow>();
   transactions.forEach((tx) => {
     const date = new Date(tx.rawDate);
     const key = getMonthYear(date);
-    const current =
-      byMonth.get(key) ||
-      {
-        monthYear: key,
-        freqIncome: freqIncomeByMonth[key] || 0,
-        nonFreqIncome: 0,
-        totalIncome: 0,
-        freqExpense: 0,
-        nonFreqExpense: 0,
-        totalExpense: 0,
-        netMonthly: 0,
-        netNoFreq: 0,
-      };
-
+    const current = byMonth.get(key) || {
+      monthYear: key, freqIncome: freqIncomeByMonth[key] || 0, nonFreqIncome: 0,
+      totalIncome: 0, freqExpense: 0, nonFreqExpense: 0,
+      totalExpense: 0, netMonthly: 0, netNoFreq: 0,
+    };
     if (tx.type === "INGRESO NO FRECUENTE") current.nonFreqIncome += Number(tx.amount) || 0;
     if (tx.type === "GASTO FRECUENTE") current.freqExpense += Number(tx.amount) || 0;
     if (tx.type === "GASTO NO FRECUENTE") current.nonFreqExpense += Number(tx.amount) || 0;
@@ -185,15 +173,9 @@ export function calculateSummaries(transactions: Transaction[], freqIncomeByMont
   Object.keys(freqIncomeByMonth).forEach((key) => {
     if (!byMonth.has(key)) {
       byMonth.set(key, {
-        monthYear: key,
-        freqIncome: freqIncomeByMonth[key],
-        nonFreqIncome: 0,
-        totalIncome: 0,
-        freqExpense: 0,
-        nonFreqExpense: 0,
-        totalExpense: 0,
-        netMonthly: 0,
-        netNoFreq: 0,
+        monthYear: key, freqIncome: freqIncomeByMonth[key], nonFreqIncome: 0,
+        totalIncome: 0, freqExpense: 0, nonFreqExpense: 0,
+        totalExpense: 0, netMonthly: 0, netNoFreq: 0,
       });
     }
   });
@@ -202,18 +184,13 @@ export function calculateSummaries(transactions: Transaction[], freqIncomeByMont
     .map((row) => {
       const totalIncome = row.freqIncome + row.nonFreqIncome;
       const totalExpense = row.freqExpense + row.nonFreqExpense;
-      return {
-        ...row,
-        totalIncome,
-        totalExpense,
-        netMonthly: totalIncome + totalExpense,
-        netNoFreq: totalIncome + totalExpense - row.freqIncome,
-      };
+      return { ...row, totalIncome, totalExpense, netMonthly: totalIncome + totalExpense, netNoFreq: totalIncome + totalExpense - row.freqIncome };
     })
     .sort((a, b) => monthYearToDate(a.monthYear).getTime() - monthYearToDate(b.monthYear).getTime());
 }
 
-export function monthYearToDate(monthYear: string) {
+/** Convierte "Enero 2026" → Date del primer día de ese mes */
+export function monthYearToDate(monthYear: string): Date {
   const [monthName, year] = monthYear.split(" ");
   const month = MONTH_NAMES.findIndex((name) => name.toLowerCase() === monthName.toLowerCase());
   return new Date(Number(year), Math.max(0, month), 1);
