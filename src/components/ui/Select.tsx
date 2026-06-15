@@ -1,43 +1,99 @@
-import { useState } from "react";
-import { Text, TouchableOpacity, View, ScrollView, StyleSheet, ViewStyle } from "react-native";
+import { useRef, useState } from "react";
+import { Modal, Platform, ScrollView, StatusBar as NativeStatusBar, Text, TouchableOpacity, useWindowDimensions, View, ViewStyle } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { styles } from "../../styles/globalStyles";
 import { Palette } from "../../theme/colors";
 
 type SelectOption = { label: string; value: string };
 
-export function Select({ value, options, onSelect, colors, placeholder, style }: { value: string; options: SelectOption[]; onSelect: (v: string) => void; colors: Palette; placeholder?: string; style?: ViewStyle }) {
+export function Select({ value, options, onSelect, colors, placeholder, style, title }: {
+  value: string; options: SelectOption[]; onSelect: (v: string) => void; colors: Palette;
+  placeholder?: string; style?: ViewStyle; title?: string;
+}) {
   const [open, setOpen] = useState(false);
+  const [menuFrame, setMenuFrame] = useState({ left: 12, menuTop: 124, width: 180, maxHeight: 240 });
+  const triggerRef = useRef<View>(null);
+  const windowSize = useWindowDimensions();
   const selected = options.find((o) => o.value === value);
+  const label = selected ? selected.label : placeholder;
+  const openMenu = () => {
+    triggerRef.current?.measureInWindow((x, y, width, height) => {
+      const margin = 12;
+      const gap = 2;
+      const modalOffsetY = Platform.OS === "android" ? NativeStatusBar.currentHeight || 0 : 0;
+      const panelWidth = Math.min(width, windowSize.width - margin * 2);
+      const left = Math.min(Math.max(margin, x), windowSize.width - panelWidth - margin);
+      const maxAllowedHeight = Math.min(220, windowSize.height - margin * 2);
+      const anchorTop = y + modalOffsetY;
+      const belowSpace = windowSize.height - anchorTop - height - gap - margin;
+      const aboveSpace = anchorTop - gap - margin;
+      const openAbove = belowSpace < 150 && aboveSpace > belowSpace;
+      const maxHeight = Math.max(120, Math.min(maxAllowedHeight, openAbove ? aboveSpace : belowSpace));
+      const menuTop = openAbove
+        ? Math.max(margin, anchorTop - maxHeight - gap)
+        : Math.min(windowSize.height - margin - maxHeight, anchorTop + height + gap);
+      setMenuFrame({ left, menuTop, width: panelWidth, maxHeight });
+      setOpen(true);
+    });
+  };
+
   return (
-    <View style={[{ position: "relative" }, style]}>
+    <View ref={triggerRef} collapsable={false} style={style}>
       <TouchableOpacity
-        style={[{ backgroundColor: colors.input, borderColor: colors.border, borderRadius: 10, paddingHorizontal: 12, minHeight: 42, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8, borderWidth: 1 }]}
-        onPress={() => setOpen(!open)}
+        style={[styles.selectButton, { backgroundColor: colors.input, borderColor: colors.border }]}
+        onPress={openMenu}
+        activeOpacity={1}
+        accessibilityLabel={title || placeholder || label}
       >
-        <Text numberOfLines={1} style={[{ color: selected ? colors.text : colors.muted, fontWeight: "900", flex: 1 }]}>{selected ? selected.label : placeholder}</Text>
-        <MaterialCommunityIcons name={open ? "chevron-up" : "chevron-down"} size={18} color={colors.muted} />
+        <Text numberOfLines={1} style={[styles.selectButtonText, { color: selected ? colors.text : colors.muted }]}>{label}</Text>
+        <MaterialCommunityIcons name="chevron-down" size={18} color={colors.muted} />
       </TouchableOpacity>
-      {open && (
-        <>
-          <TouchableOpacity style={[StyleSheet.absoluteFill, { zIndex: 998 }]} activeOpacity={1} onPress={() => setOpen(false)} />
-          <View style={[{ position: "absolute", top: 46, left: 0, right: 0, maxHeight: 200, backgroundColor: colors.card, borderColor: colors.border, borderRadius: 10, borderWidth: 1, zIndex: 999, overflow: "hidden", elevation: 999 }]}>
-            <ScrollView nestedScrollEnabled style={{ maxHeight: 200 }} showsVerticalScrollIndicator={false}>
+
+      <Modal visible={open} transparent animationType="none" onRequestClose={() => setOpen(false)}>
+        <View style={styles.selectModalOverlay}>
+          <TouchableOpacity style={styles.optionBackdrop} activeOpacity={1} onPress={() => setOpen(false)} />
+          <View
+            style={[
+              styles.selectMenu,
+              {
+                backgroundColor: colors.card,
+                borderColor: colors.border,
+                left: menuFrame.left,
+                top: menuFrame.menuTop,
+                width: menuFrame.width,
+                maxHeight: menuFrame.maxHeight,
+              },
+            ]}
+          >
+            <ScrollView
+              style={styles.selectMenuList}
+              contentContainerStyle={styles.selectMenuContent}
+              showsVerticalScrollIndicator={false}
+              nestedScrollEnabled
+            >
               {options.map((opt) => {
                 const isSelected = opt.value === value;
                 return (
                   <TouchableOpacity
                     key={opt.value}
-                    style={[{ paddingHorizontal: 12, paddingVertical: 11, borderBottomWidth: 1, borderColor: colors.border, backgroundColor: isSelected ? colors.primarySoft : "transparent" }]}
-                    onPress={() => { onSelect(opt.value); setOpen(false); }}
+                    style={[
+                      styles.selectOptionRow,
+                      { backgroundColor: isSelected ? colors.primarySoft : "transparent" },
+                    ]}
+                    onPress={() => {
+                      onSelect(opt.value);
+                      setOpen(false);
+                    }}
                   >
-                    <Text style={[{ color: isSelected ? colors.primary : colors.text, fontWeight: "900" }]}>{opt.label}</Text>
+                    <Text numberOfLines={1} style={[styles.selectOptionLabel, { color: isSelected ? colors.primary : colors.text }]}>{opt.label}</Text>
+                    {isSelected && <MaterialCommunityIcons name="check" size={16} color={colors.primary} />}
                   </TouchableOpacity>
                 );
               })}
             </ScrollView>
           </View>
-        </>
-      )}
+        </View>
+      </Modal>
     </View>
   );
 }

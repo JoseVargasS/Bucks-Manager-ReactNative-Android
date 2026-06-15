@@ -10,9 +10,9 @@ import { Select } from "../ui/Select";
 import { Palette } from "../../theme/colors";
 import { SummaryRow, Transaction } from "../../types";
 
-export function SummaryView({ colors, summaries, transactions, freqIncome, compact, availableYears }: {
+export function SummaryView({ colors, summaries, transactions, freqIncome, compact, availableYears, topInset }: {
   colors: Palette; summaries: SummaryRow[]; transactions: Transaction[]; freqIncome: Record<string, number>;
-  compact: boolean; availableYears: number[];
+  compact: boolean; availableYears: number[]; topInset?: number;
 }) {
   const [filterYear, setFilterYear] = useState<number | null>(null);
   const computed = summaries.length ? summaries : calculateSummaries(transactions, freqIncome);
@@ -35,7 +35,7 @@ export function SummaryView({ colors, summaries, transactions, freqIncome, compa
     { label: "Gasto No Frec.", value: computed.reduce((a, r) => a + Math.abs(r.nonFreqExpense), 0), color: colors.yellow },
   ];
   return (
-    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.pageScroll, compact && styles.pageScrollMobile]}>
+    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.pageScroll, compact && styles.pageScrollMobile, topInset !== undefined && { paddingTop: topInset }]}>
       <View style={[{ flexDirection: "row", gap: 8, marginBottom: 10 }]}>
         <Select
           value={filterYear ? String(filterYear) : ""}

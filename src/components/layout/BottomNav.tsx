@@ -6,11 +6,11 @@ import { MaterialIconName } from "../../types";
 
 type Tab = "expenses" | "search" | "summary" | "settings";
 
-export function BottomNav({ colors, tab, setTab, onAdd }: { colors: Palette; tab: Tab; setTab: (tab: Tab) => void; onAdd: () => void }) {
+export function BottomNav({ colors, tab, setTab, onAdd, onSearch }: { colors: Palette; tab: Tab; setTab: (tab: Tab) => void; onAdd: () => void; onSearch: () => void }) {
   return (
     <View style={[styles.bottomNav, { backgroundColor: colors.card, borderColor: colors.border }]}>
       <BottomNavItem colors={colors} active={tab === "expenses"} icon="view-dashboard-outline" label="Gastos" onPress={() => setTab("expenses")} />
-      <BottomNavItem colors={colors} active={tab === "search"} icon="magnify" label="Buscar" onPress={() => setTab("search")} />
+      <BottomNavItem colors={colors} active={false} icon="magnify" label="Buscar" onPress={onSearch} />
       <TouchableOpacity onPress={onAdd} style={[styles.bottomAddButton, { backgroundColor: colors.primary }]}>
         <MaterialCommunityIcons name="plus" size={31} color={colors.onPrimary} />
       </TouchableOpacity>

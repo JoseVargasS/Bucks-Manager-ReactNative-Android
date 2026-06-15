@@ -1,14 +1,13 @@
 import Constants from "expo-constants";
-import { StatusBar } from "expo-status-bar";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Print from "expo-print";
 import * as SecureStore from "expo-secure-store";
 import * as Sharing from "expo-sharing";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Alert, SafeAreaView, Text, TouchableOpacity, View, StatusBar as NativeStatusBar } from "react-native";
+import { ActivityIndicator, Alert, Modal, SafeAreaView, Text, TouchableOpacity, View, StatusBar as NativeStatusBar } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { GoogleSignin } from "@react-native-google-signin/google-signin";
-import { BlurView, BlurTargetView } from "expo-blur";
+import Svg, { Defs, LinearGradient, Rect, Stop } from "react-native-svg";
 
 import {
   applySearch, buildTransactionFromDraft, calculateSummaries,
@@ -81,6 +80,7 @@ export default function App() {
   const [draft, setDraft] = useState<TransactionDraft>(getBlankDraft());
   const [searchFilters, setSearchFilters] = useState<SearchFilters>(emptySearch);
   const [searchActive, setSearchActive] = useState(false);
+  const [searchVisible, setSearchVisible] = useState(false);
   const [loadedMonthCount, setLoadedMonthCount] = useState(1);
   const [selectedRows, setSelectedRows] = useState<number[]>([]);
   const [picker, setPicker] = useState<PickerConfig>(null);
@@ -89,9 +89,13 @@ export default function App() {
   const [exportVisible, setExportVisible] = useState(false);
   const [exportConfig, setExportConfig] = useState<ExportConfig>(defaultExportConfig);
   const blurTargetRef = useRef<View | null>(null);
+  const didSetInitialPeriodRef = useRef(false);
   const compact = true;
   const statusBarInset = NativeStatusBar.currentHeight || 0;
+  const headerTopInset = statusBarInset + 6;
   const headerHeight = tab === "expenses" ? 154 : 62;
+  const contentTopInset = headerTopInset + headerHeight;
+  const headerFadeHeight = headerTopInset + 86;
 
   useEffect(() => {
     GoogleSignin.configure({
@@ -119,13 +123,14 @@ export default function App() {
   }, [summaries, month, year, freqIncome]);
 
   const availableYears = useMemo(() => {
-    const years = new Set<number>([new Date().getFullYear()]);
-    summaries.forEach((row) => { const yr = Number(row.monthYear.split(" ").pop()); if (yr) years.add(yr); });
-    return Array.from(years).sort((a, b) => b - a);
-  }, [summaries]);
+    const range = getPeriodRange(transactions);
+    return Array.from({ length: range.maxYear - range.minYear + 1 }, (_, index) => range.maxYear - index);
+  }, [transactions]);
 
-  const pageTitle = tab === "expenses" ? "Gastos" : tab === "search" ? "Buscar" : tab === "summary" ? "Análisis" : "Ajustes";
-  const pageSubtitle = tab === "expenses" ? "" : tab === "search" ? "Filtros de movimientos" : tab === "summary" ? "Resumen por mes" : "Cuenta y exportación";
+  const availableMonths = useMemo(() => getAvailableMonthsForYear(year, transactions), [year, transactions]);
+
+  const pageTitle = tab === "expenses" ? "Gastos" : tab === "summary" ? "Análisis" : "Ajustes";
+  const pageSubtitle = tab === "expenses" ? "" : tab === "summary" ? "Resumen por mes" : "Cuenta y exportación";
 
   // --- Session management ---
   async function restoreSession() {
@@ -143,17 +148,14 @@ export default function App() {
     } finally { setBootstrapping(false); }
   }
 
-  async function connectGoogleWorkspace(token: string, preferredSheetId = "") {
+  async function connectGoogleWorkspace(token: string, _preferredSheetId = "") {
     setLoading(true);
     try {
       const candidates = await findCompatibleSheets(token);
       const namedSheet = candidates.find((c) => c.name.trim().toUpperCase() === SHEET_NAMES.transactions);
-      const preferred = candidates.find((c) => c.id === preferredSheetId);
       if (namedSheet) { await selectSpreadsheet(token, namedSheet.id, namedSheet.name); return; }
-      if (preferred) { await selectSpreadsheet(token, preferred.id, preferred.name); return; }
-      if (candidates.length > 1) { setSheetCandidates(candidates); setAccessToken(token); return; }
-      const sheetId = candidates[0]?.id || (await createBucksSpreadsheet(token));
-      await selectSpreadsheet(token, sheetId, candidates[0]?.name || SHEET_NAMES.transactions);
+      const sheetId = await createBucksSpreadsheet(token);
+      await selectSpreadsheet(token, sheetId, SHEET_NAMES.transactions);
     } catch (error) {
       Alert.alert("Google Sheets", error instanceof Error ? error.message : "No se pudo conectar la hoja");
     } finally { setLoading(false); }
@@ -200,6 +202,7 @@ export default function App() {
     await Promise.all([SecureStore.deleteItemAsync(TOKEN_KEY), SecureStore.deleteItemAsync(SHEET_KEY)]);
     setAccessToken(""); setSpreadsheetId(""); setTransactions([]); setSummaries([]);
     setFreqIncome({}); setAccountInfo(null); setDeletedTx(null);
+    didSetInitialPeriodRef.current = false;
   }
 
   async function disconnectGoogle() {
@@ -223,11 +226,24 @@ export default function App() {
       const [tx, summary] = await Promise.all([readTransactions(token, sheetId), readSummaries(token, sheetId)]);
       setTransactions(tx);
       setSummaries(summary.length ? summary : calculateSummaries(tx, freqIncome));
+      if (!didSetInitialPeriodRef.current && tx.length) {
+        const latestDate = getLatestTransactionDate(tx);
+        if (latestDate) {
+          setMonth(latestDate.getMonth());
+          setYear(latestDate.getFullYear());
+          setLoadedMonthCount(1);
+        }
+        didSetInitialPeriodRef.current = true;
+      }
     } finally { setLoading(false); }
   }
 
   function selectPeriod(nextMonth: number, nextYear: number) {
-    setMonth(nextMonth); setYear(nextYear); setSearchActive(false); setLoadedMonthCount(1); setSelectedRows([]);
+    const validMonths = getAvailableMonthsForYear(nextYear, transactions);
+    const clampedMonth = validMonths.includes(nextMonth)
+      ? nextMonth
+      : validMonths.reduce((closest, item) => Math.abs(item - nextMonth) < Math.abs(closest - nextMonth) ? item : closest, validMonths[0] ?? nextMonth);
+    setMonth(clampedMonth); setYear(nextYear); setSearchActive(false); setLoadedMonthCount(1); setSelectedRows([]);
   }
   const goToday = useCallback(() => {
     const today = new Date();
@@ -358,24 +374,27 @@ export default function App() {
   async function exportRows(cfg: ExportConfig) {
     let rows: Transaction[];
     if (cfg.rangeMode === "dates") {
-      const from = cfg.startDate ? new Date(cfg.startDate + "T00:00:00").getTime() : 0;
-      const to = cfg.endDate ? new Date(cfg.endDate + "T23:59:59").getTime() : Infinity;
-      rows = transactions.filter((tx) => { const t = new Date(tx.rawDate).getTime(); return t >= from && t <= to; });
-    } else {
+      const from = cfg.startDate ? parseLocalDateTime(cfg.startDate, false) : 0;
+      const to = cfg.endDate ? parseLocalDateTime(cfg.endDate, true) : Infinity;
       rows = transactions.filter((tx) => {
-        const d = new Date(tx.rawDate);
-        const txYM = d.getFullYear() * 12 + d.getMonth();
-        const fromYM = cfg.startDate ? (new Date(cfg.startDate + "-01").getFullYear() * 12 + new Date(cfg.startDate + "-01").getMonth()) : 0;
-        const toYM = cfg.endDate ? (new Date(cfg.endDate + "-01").getFullYear() * 12 + new Date(cfg.endDate + "-01").getMonth()) : Infinity;
+        const t = parseLocalDateTime(formatDateToISO(tx.rawDate), false);
+        return t >= from && t <= to;
+      });
+    } else {
+      const fromYM = cfg.startDate ? parseMonthKey(cfg.startDate) : 0;
+      const toYM = cfg.endDate ? parseMonthKey(cfg.endDate) : Infinity;
+      rows = transactions.filter((tx) => {
+        const txYM = parseMonthKey(formatDateToISO(tx.rawDate).slice(0, 7));
         return txYM >= fromYM && txYM <= toYM;
       });
     }
     if (!rows.length) { Alert.alert("Exportar", "No hay datos para exportar."); return; }
+    const baseFileName = buildExportFileName(cfg);
     if (cfg.format === "xlsx") {
       const csv = ["Fecha,Monto,Detalle,Tipo,Hora de creacion"]
         .concat(rows.map((tx) => `${tx.date},${tx.amount},"${tx.detail.replace(/"/g, '""')}",${tx.type},${formatCreatedTime(tx.createdAt)}`))
         .join("\n");
-      const uri = `${FileSystem.cacheDirectory}bucks-manager.csv`;
+      const uri = `${FileSystem.cacheDirectory}${baseFileName}.csv`;
       await FileSystem.writeAsStringAsync(uri, csv);
       await Sharing.shareAsync(uri, { mimeType: "text/csv", dialogTitle: "Exportar movimientos" });
     } else {
@@ -383,7 +402,10 @@ export default function App() {
         .map((tx) => `<tr><td>${tx.date}</td><td>${formatMoney(tx.amount)}</td><td>${tx.detail}</td><td>${tx.type}</td><td>${formatCreatedTime(tx.createdAt)}</td></tr>`)
         .join("")}</table></body></html>`;
       const pdf = await Print.printToFileAsync({ html });
-      await Sharing.shareAsync(pdf.uri, { mimeType: "application/pdf", dialogTitle: "Exportar PDF" });
+      const uri = `${FileSystem.cacheDirectory}${baseFileName}.pdf`;
+      await FileSystem.deleteAsync(uri, { idempotent: true });
+      await FileSystem.copyAsync({ from: pdf.uri, to: uri });
+      await Sharing.shareAsync(uri, { mimeType: "application/pdf", dialogTitle: "Exportar PDF" });
     }
   }
 
@@ -391,7 +413,7 @@ export default function App() {
   if (bootstrapping) {
     return (
       <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]}>
-        <StatusBar style={theme === "dark" ? "light" : "dark"} />
+        <NativeStatusBar barStyle={theme === "dark" ? "light-content" : "dark-content"} translucent backgroundColor="transparent" />
         <SkeletonScreen colors={colors} />
       </SafeAreaView>
     );
@@ -400,7 +422,7 @@ export default function App() {
   if (!accessToken) {
     return (
       <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]}>
-        <StatusBar style={theme === "dark" ? "light" : "dark"} />
+        <NativeStatusBar barStyle={theme === "dark" ? "light-content" : "dark-content"} translucent backgroundColor="transparent" />
         <LoginScreen colors={colors} loading={loading} canConnect={Boolean(GOOGLE_ANDROID_CLIENT_ID || GOOGLE_WEB_CLIENT_ID)} onSignIn={signInWithGoogle} />
       </SafeAreaView>
     );
@@ -408,70 +430,51 @@ export default function App() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]}>
-      <StatusBar style={theme === "dark" ? "light" : "dark"} />
-      <View style={[styles.shell, styles.shellCompact, { backgroundColor: colors.bg, paddingTop: statusBarInset + 6 }]}>
+      <NativeStatusBar barStyle={theme === "dark" ? "light-content" : "dark-content"} translucent backgroundColor="transparent" />
+      <View style={[styles.shell, styles.shellCompact, { backgroundColor: colors.bg, paddingTop: 0 }]}>
         <View style={[styles.content, { width: "100%", position: "relative" }]}>
-          {tab === "expenses" ? (
-            <BlurTargetView ref={blurTargetRef} style={{ flex: 1 }}>
+          {tab === "expenses" || tab === "summary" ? (
+            <View ref={blurTargetRef} style={{ flex: 1 }}>
               {loading && (
                 <View style={styles.loadingBar}>
                   <ActivityIndicator color={colors.primary} />
                   <Text style={{ color: colors.muted }}>Sincronizando...</Text>
                 </View>
               )}
-              <ExpensesView
-                colors={colors} summary={currentSummary} transactions={visibleTransactions}
-                searchActive={searchActive} searchText={searchFilters.text} selectedRows={selectedRows}
-                onEditFreq={() => { setFreqInput(String(currentSummary.freqIncome || 0)); setFreqVisible(true); }}
-                onExitSearch={() => setSearchActive(false)}
-                onOpenDetail={handleTransactionPress} onEdit={openEdit}
-                onDeleteSelected={deleteSelectedRows} onMove={openMoveMenu}
-                onToggleSelection={toggleSelection}
-                onLoadOlder={() => setLoadedMonthCount((c) => c + 1)}
-                topInset={headerHeight}
-              />
-            </BlurTargetView>
-          ) : (
-            <View style={{ paddingTop: headerHeight, flex: 1 }}>
-              {loading && (
-                <View style={styles.loadingBar}>
-                  <ActivityIndicator color={colors.primary} />
-                  <Text style={{ color: colors.muted }}>Sincronizando...</Text>
-                </View>
-              )}
-              {tab === "search" ? (
-                <SearchPage colors={colors} filters={searchFilters} setFilters={setSearchFilters}
-                  onSubmit={() => { setSearchActive(true); setTab("expenses"); setSelectedRows([]); }}
-                  onClear={() => { setSearchFilters(emptySearch); setSearchActive(false); }}
+              {tab === "expenses" ? (
+                <ExpensesView
+                  colors={colors} summary={currentSummary} transactions={visibleTransactions}
+                  searchActive={searchActive} searchText={searchFilters.text} selectedRows={selectedRows}
+                  onEditFreq={() => { setFreqInput(String(currentSummary.freqIncome || 0)); setFreqVisible(true); }}
+                  onExitSearch={() => setSearchActive(false)}
+                  onOpenDetail={handleTransactionPress} onEdit={openEdit}
+                  onDeleteSelected={deleteSelectedRows} onMove={openMoveMenu}
+                  onToggleSelection={toggleSelection}
+                  onLoadOlder={() => setLoadedMonthCount((c) => c + 1)}
+                  topInset={contentTopInset}
                 />
-              ) : tab === "summary" ? (
-                <SummaryView colors={colors} summaries={summaries} transactions={transactions} freqIncome={freqIncome} compact={compact} availableYears={availableYears} />
               ) : (
-                <SettingsView colors={colors} theme={theme} setTheme={setTheme} accountInfo={accountInfo}
-                  onRescan={rescanDrive} onSwitch={switchGoogleAccount} onDisconnect={disconnectGoogle} onOpenExport={() => setExportVisible(true)}
-                />
+                <SummaryView colors={colors} summaries={summaries} transactions={transactions} freqIncome={freqIncome} compact={compact} availableYears={availableYears} topInset={contentTopInset} />
               )}
+            </View>
+          ) : (
+            <View style={{ paddingTop: contentTopInset, flex: 1 }}>
+              {loading && (
+                <View style={styles.loadingBar}>
+                  <ActivityIndicator color={colors.primary} />
+                  <Text style={{ color: colors.muted }}>Sincronizando...</Text>
+                </View>
+              )}
+              <SettingsView colors={colors} theme={theme} setTheme={setTheme} accountInfo={accountInfo}
+                onRescan={rescanDrive} onSwitch={switchGoogleAccount} onDisconnect={disconnectGoogle} onOpenExport={() => setExportVisible(true)}
+              />
             </View>
           )}
 
-          <View style={{ position: "absolute", top: 0, left: 0, right: 0, zIndex: 20 }}>
-            {tab === "expenses" && (
-              <BlurView
-                style={{ position: "absolute", top: 0, left: 0, right: 0, height: headerHeight }}
-                blurTarget={blurTargetRef}
-                blurMethod="dimezisBlurViewSdk31Plus"
-                intensity={12}
-                tint={theme === "dark" ? "dark" : "light"}
-                pointerEvents="none"
-              />
-            )}
-            <View style={{ position: "absolute", top: 0, left: 0, right: 0, height: headerHeight, backgroundColor: `${colors.bg}02`, pointerEvents: "none" }} />
-            <View style={{ position: "absolute", top: 0, left: 0, right: 0, height: 28, pointerEvents: "none" }}>
-              {[0.08, 0.03, 0, 0].map((opacity, i) => (
-                <View key={i} style={{ flex: 1, backgroundColor: `${colors.bg}${Math.round(opacity * 255).toString(16).padStart(2, "0")}` }} />
-              ))}
-            </View>
-            <View pointerEvents="box-none">
+          <View style={{ position: "absolute", top: 0, left: 0, right: 0, zIndex: 20 }} pointerEvents="box-none">
+            {(tab === "expenses" || tab === "summary") && <HeaderFade color={colors.bg} height={headerFadeHeight} />}
+            {/* TopBar + PeriodControls encima de todo, clickeables */}
+            <View pointerEvents="box-none" style={{ paddingTop: headerTopInset }}>
               <View style={[styles.topBar, styles.topBarMobile, { backgroundColor: "transparent" }]}>
                 <View style={styles.headerLeft}>
                   <View style={[styles.headerLogo, { backgroundColor: colors.primary }]}>
@@ -482,9 +485,9 @@ export default function App() {
                     {!!pageSubtitle && <Text numberOfLines={1} style={[styles.pageSub, styles.pageSubMobile, { color: colors.muted }]}>{pageSubtitle}</Text>}
                   </View>
                 </View>
-              </View>
+               </View>
               {tab === "expenses" && (
-                <PeriodControls colors={colors} year={year} month={month} availableYears={availableYears}
+                <PeriodControls colors={colors} year={year} month={month} availableYears={availableYears} availableMonths={availableMonths}
                   onSelectPeriod={selectPeriod} goToday={goToday}
                 />
               )}
@@ -498,7 +501,7 @@ export default function App() {
             <Text style={{ color: colors.text, fontWeight: "800" }}>Deshacer</Text>
           </TouchableOpacity>
         )}
-        <BottomNav colors={colors} tab={tab} setTab={setTab} onAdd={() => openAdd()} />
+        <BottomNav colors={colors} tab={tab} setTab={setTab} onAdd={() => openAdd()} onSearch={() => setSearchVisible(true)} />
       </View>
 
       <TransactionModal visible={addVisible} colors={colors} draft={draft} setDraft={setDraft}
@@ -512,6 +515,144 @@ export default function App() {
       <ExportModal visible={exportVisible} colors={colors} config={exportConfig} setConfig={setExportConfig}
         minDate={transactions.length ? transactions.reduce((earliest, tx) => tx.rawDate < earliest ? tx.rawDate : earliest, transactions[0].rawDate).slice(0, 10) : ""}
         onClose={() => setExportVisible(false)} onExport={(cfg: ExportConfig) => { setExportVisible(false); exportRows(cfg); }} />
+      <SearchModal visible={searchVisible} colors={colors} filters={searchFilters} setFilters={setSearchFilters}
+        onClose={() => setSearchVisible(false)}
+        onClear={() => { setSearchFilters(emptySearch); setSearchActive(false); setSearchVisible(false); }}
+        onSubmit={() => { setSearchActive(true); setTab("expenses"); setSelectedRows([]); setSearchVisible(false); }}
+      />
     </SafeAreaView>
+  );
+}
+
+function getLatestTransactionDate(transactions: Transaction[]) {
+  const today = new Date();
+  return transactions.reduce<Date | null>((latest, tx) => {
+    const date = new Date(tx.rawDate);
+    if (Number.isNaN(date.getTime()) || date > today) return latest;
+    if (!latest || date.getTime() > latest.getTime()) return date;
+    return latest;
+  }, null);
+}
+
+function parseLocalDateTime(value: string, endOfDay: boolean) {
+  const [year, month, day] = value.split("-").map(Number);
+  if (!year || !month || !day) return Number.NaN;
+  return new Date(year, month - 1, day, endOfDay ? 23 : 0, endOfDay ? 59 : 0, endOfDay ? 59 : 0, endOfDay ? 999 : 0).getTime();
+}
+
+function parseMonthKey(value: string) {
+  const [year, month] = value.split("-").map(Number);
+  if (!year || !month) return Number.NaN;
+  return year * 12 + (month - 1);
+}
+
+function buildExportFileName(cfg: ExportConfig) {
+  const range = cfg.rangeMode === "months"
+    ? buildRangeFilePart(cfg.startDate, cfg.endDate, formatMonthFilePart)
+    : buildRangeFilePart(cfg.startDate, cfg.endDate, formatDateFilePart);
+  return `bucks-manager_${range}`;
+}
+
+function buildRangeFilePart(start: string, end: string, formatter: (value: string) => string) {
+  if (start && end) return `${formatter(start)}_a_${formatter(end)}`;
+  if (start) return `desde_${formatter(start)}`;
+  if (end) return `hasta_${formatter(end)}`;
+  return "todo";
+}
+
+function formatMonthFilePart(value: string) {
+  const [year, month] = value.split("-").map(Number);
+  if (!year || !month) return "mes";
+  return `${slugify(MONTH_NAMES[month - 1] || "mes")}-${year}`;
+}
+
+function formatDateFilePart(value: string) {
+  return value;
+}
+
+function slugify(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function getPeriodRange(transactions: Transaction[]) {
+  const today = new Date();
+  const currentMonthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+  const dates = transactions
+    .map((tx) => new Date(tx.rawDate))
+    .filter((date) => !Number.isNaN(date.getTime()) && date <= today);
+  if (!dates.length) {
+    return {
+      minYear: currentMonthStart.getFullYear(),
+      minMonth: currentMonthStart.getMonth(),
+      maxYear: currentMonthStart.getFullYear(),
+      maxMonth: currentMonthStart.getMonth(),
+    };
+  }
+  const first = dates.reduce<Date>((earliest, date) => date < earliest ? date : earliest, dates[0]);
+  const last = dates.reduce<Date>((latest, date) => date > latest ? date : latest, dates[0]);
+  return {
+    minYear: first.getFullYear(),
+    minMonth: first.getMonth(),
+    maxYear: last.getFullYear(),
+    maxMonth: last.getMonth(),
+  };
+}
+
+function getAvailableMonthsForYear(year: number, transactions: Transaction[]) {
+  const range = getPeriodRange(transactions);
+  if (year < range.minYear || year > range.maxYear) return [];
+  const start = year === range.minYear ? range.minMonth : 0;
+  const end = year === range.maxYear ? range.maxMonth : 11;
+  return Array.from({ length: Math.max(0, end - start + 1) }, (_, index) => start + index);
+}
+
+function HeaderFade({ color, height }: { color: string; height: number }) {
+  return (
+    <Svg pointerEvents="none" width="100%" height={height} style={{ position: "absolute", top: 0, left: 0, right: 0 }}>
+      <Defs>
+        <LinearGradient id="headerFade" x1="0" y1="0" x2="0" y2="1">
+          <Stop offset="0" stopColor={color} stopOpacity="1" />
+          <Stop offset="0.64" stopColor={color} stopOpacity="1" />
+          <Stop offset="0.78" stopColor={color} stopOpacity="0.72" />
+          <Stop offset="0.90" stopColor={color} stopOpacity="0.24" />
+          <Stop offset="1" stopColor={color} stopOpacity="0" />
+        </LinearGradient>
+      </Defs>
+      <Rect x="0" y="0" width="100%" height="100%" fill="url(#headerFade)" />
+    </Svg>
+  );
+}
+
+function SearchModal({ visible, colors, filters, setFilters, onClose, onClear, onSubmit }: {
+  visible: boolean; colors: Palette; filters: SearchFilters; setFilters: (f: SearchFilters) => void;
+  onClose: () => void; onClear: () => void; onSubmit: () => void;
+}) {
+  return (
+    <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
+      <View style={[styles.searchOverlay, { backgroundColor: colors.overlay }]}>
+        <TouchableOpacity style={styles.optionBackdrop} activeOpacity={1} onPress={onClose} />
+        <View style={[styles.searchSheet, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View style={[styles.searchGrabber, { backgroundColor: colors.border }]} />
+          <View style={styles.searchHeader}>
+            <View style={[styles.searchHeaderIcon, { backgroundColor: colors.primarySoft }]}>
+              <MaterialCommunityIcons name="magnify" size={21} color={colors.primary} />
+            </View>
+            <View style={styles.searchTitleBlock}>
+              <Text style={[styles.searchTitle, { color: colors.text }]}>Busqueda avanzada</Text>
+              <Text style={[styles.searchSubtitle, { color: colors.muted }]}>Filtra movimientos por detalle, monto o fecha</Text>
+            </View>
+            <TouchableOpacity style={[styles.optionClose, { backgroundColor: colors.input, borderColor: colors.border }]} onPress={onClose}>
+              <MaterialCommunityIcons name="close" size={20} color={colors.text} />
+            </TouchableOpacity>
+          </View>
+          <SearchPage colors={colors} filters={filters} setFilters={setFilters} onSubmit={onSubmit} onClear={onClear} />
+        </View>
+      </View>
+    </Modal>
   );
 }
