@@ -12,17 +12,18 @@ import { SummaryRow, Transaction, MaterialIconName } from "../../types";
 export function ExpensesView({
   colors, summary, transactions, searchActive, searchText, selectedRows,
   onEditFreq, onExitSearch, onOpenDetail, onEdit, onDeleteSelected, onMove, onToggleSelection, onLoadOlder,
+  topInset,
 }: {
   colors: Palette; summary: SummaryRow; transactions: Transaction[]; searchActive: boolean; searchText: string;
   selectedRows: number[]; onEditFreq: () => void; onExitSearch: () => void; onOpenDetail: (tx: Transaction) => void;
   onEdit: (tx: Transaction) => void; onDeleteSelected: () => void; onMove: (tx: Transaction) => void;
-  onToggleSelection: (tx: Transaction) => void; onLoadOlder: () => void;
+  onToggleSelection: (tx: Transaction) => void; onLoadOlder: () => void; topInset?: number;
 }) {
   const groups = groupTransactionsByDate(transactions);
   const selectedCount = selectedRows.length;
   const selectedTx = transactions.find((tx) => tx.rowId === selectedRows[0]);
   return (
-    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.pageScroll}>
+    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.pageScroll, topInset !== undefined && { paddingTop: topInset }]}>
       <View style={[styles.statsGrid, styles.statsGridMobile]}>
         <StatCard title="Ing. Frec." value={formatMoney(summary.freqIncome)} tone="income" icon="cash" colors={colors} action={onEditFreq} />
         <StatCard title="Ing. No Frec." value={formatMoney(summary.nonFreqIncome)} tone="income" icon="trending-up" colors={colors} />

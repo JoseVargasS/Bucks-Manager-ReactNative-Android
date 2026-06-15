@@ -4,10 +4,11 @@ import * as FileSystem from "expo-file-system/legacy";
 import * as Print from "expo-print";
 import * as SecureStore from "expo-secure-store";
 import * as Sharing from "expo-sharing";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Alert, SafeAreaView, Text, TouchableOpacity, View, StatusBar as NativeStatusBar } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { GoogleSignin } from "@react-native-google-signin/google-signin";
+import { BlurView, BlurTargetView } from "expo-blur";
 
 import {
   applySearch, buildTransactionFromDraft, calculateSummaries,
@@ -87,8 +88,10 @@ export default function App() {
   const [freqInput, setFreqInput] = useState("");
   const [exportVisible, setExportVisible] = useState(false);
   const [exportConfig, setExportConfig] = useState<ExportConfig>(defaultExportConfig);
+  const blurTargetRef = useRef<View | null>(null);
   const compact = true;
   const statusBarInset = NativeStatusBar.currentHeight || 0;
+  const headerHeight = tab === "expenses" ? 154 : 62;
 
   useEffect(() => {
     GoogleSignin.configure({
@@ -408,14 +411,14 @@ export default function App() {
       <StatusBar style={theme === "dark" ? "light" : "dark"} />
       <View style={[styles.shell, styles.shellCompact, { backgroundColor: colors.bg, paddingTop: statusBarInset + 6 }]}>
         <View style={[styles.content, { width: "100%", position: "relative" }]}>
-          <View style={{ paddingTop: tab === "expenses" ? 154 : 62, flex: 1 }}>
-            {loading && (
-              <View style={styles.loadingBar}>
-                <ActivityIndicator color={colors.primary} />
-                <Text style={{ color: colors.muted }}>Sincronizando...</Text>
-              </View>
-            )}
-            {tab === "expenses" ? (
+          {tab === "expenses" ? (
+            <BlurTargetView ref={blurTargetRef} style={{ flex: 1 }}>
+              {loading && (
+                <View style={styles.loadingBar}>
+                  <ActivityIndicator color={colors.primary} />
+                  <Text style={{ color: colors.muted }}>Sincronizando...</Text>
+                </View>
+              )}
               <ExpensesView
                 colors={colors} summary={currentSummary} transactions={visibleTransactions}
                 searchActive={searchActive} searchText={searchFilters.text} selectedRows={selectedRows}
@@ -425,29 +428,50 @@ export default function App() {
                 onDeleteSelected={deleteSelectedRows} onMove={openMoveMenu}
                 onToggleSelection={toggleSelection}
                 onLoadOlder={() => setLoadedMonthCount((c) => c + 1)}
+                topInset={headerHeight}
               />
-            ) : tab === "search" ? (
-              <SearchPage colors={colors} filters={searchFilters} setFilters={setSearchFilters}
-                onSubmit={() => { setSearchActive(true); setTab("expenses"); setSelectedRows([]); }}
-                onClear={() => { setSearchFilters(emptySearch); setSearchActive(false); }}
-              />
-            ) : tab === "summary" ? (
-              <SummaryView colors={colors} summaries={summaries} transactions={transactions} freqIncome={freqIncome} compact={compact} availableYears={availableYears} />
-            ) : (
-              <SettingsView colors={colors} theme={theme} setTheme={setTheme} accountInfo={accountInfo}
-                onRescan={rescanDrive} onSwitch={switchGoogleAccount} onDisconnect={disconnectGoogle} onOpenExport={() => setExportVisible(true)}
-              />
-            )}
-          </View>
+            </BlurTargetView>
+          ) : (
+            <View style={{ paddingTop: headerHeight, flex: 1 }}>
+              {loading && (
+                <View style={styles.loadingBar}>
+                  <ActivityIndicator color={colors.primary} />
+                  <Text style={{ color: colors.muted }}>Sincronizando...</Text>
+                </View>
+              )}
+              {tab === "search" ? (
+                <SearchPage colors={colors} filters={searchFilters} setFilters={setSearchFilters}
+                  onSubmit={() => { setSearchActive(true); setTab("expenses"); setSelectedRows([]); }}
+                  onClear={() => { setSearchFilters(emptySearch); setSearchActive(false); }}
+                />
+              ) : tab === "summary" ? (
+                <SummaryView colors={colors} summaries={summaries} transactions={transactions} freqIncome={freqIncome} compact={compact} availableYears={availableYears} />
+              ) : (
+                <SettingsView colors={colors} theme={theme} setTheme={setTheme} accountInfo={accountInfo}
+                  onRescan={rescanDrive} onSwitch={switchGoogleAccount} onDisconnect={disconnectGoogle} onOpenExport={() => setExportVisible(true)}
+                />
+              )}
+            </View>
+          )}
 
           <View style={{ position: "absolute", top: 0, left: 0, right: 0, zIndex: 20 }}>
-            <View style={{ position: "absolute", top: 0, left: 0, right: 0, height: tab === "expenses" ? 154 : 62, backgroundColor: `${colors.bg}0a` }} />
+            {tab === "expenses" && (
+              <BlurView
+                style={{ position: "absolute", top: 0, left: 0, right: 0, height: headerHeight }}
+                blurTarget={blurTargetRef}
+                blurMethod="dimezisBlurViewSdk31Plus"
+                intensity={12}
+                tint={theme === "dark" ? "dark" : "light"}
+                pointerEvents="none"
+              />
+            )}
+            <View style={{ position: "absolute", top: 0, left: 0, right: 0, height: headerHeight, backgroundColor: `${colors.bg}02`, pointerEvents: "none" }} />
             <View style={{ position: "absolute", top: 0, left: 0, right: 0, height: 28, pointerEvents: "none" }}>
-              {[0.45, 0.2, 0.06, 0].map((opacity, i) => (
+              {[0.08, 0.03, 0, 0].map((opacity, i) => (
                 <View key={i} style={{ flex: 1, backgroundColor: `${colors.bg}${Math.round(opacity * 255).toString(16).padStart(2, "0")}` }} />
               ))}
             </View>
-            <View>
+            <View pointerEvents="box-none">
               <View style={[styles.topBar, styles.topBarMobile, { backgroundColor: "transparent" }]}>
                 <View style={styles.headerLeft}>
                   <View style={[styles.headerLogo, { backgroundColor: colors.primary }]}>
@@ -461,7 +485,7 @@ export default function App() {
               </View>
               {tab === "expenses" && (
                 <PeriodControls colors={colors} year={year} month={month} availableYears={availableYears}
-                  onSelectPeriod={selectPeriod} goToday={() => { const today = new Date(); selectPeriod(today.getMonth(), today.getFullYear()); }}
+                  onSelectPeriod={selectPeriod} goToday={goToday}
                 />
               )}
             </View>
