@@ -1,0 +1,30 @@
+import { ActivityIndicator, Text, TouchableOpacity, View } from "react-native";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { styles } from "../../styles/globalStyles";
+import { Palette } from "../../theme/colors";
+
+export function LoginScreen({ colors, loading, canConnect, onSignIn }: { colors: Palette; loading: boolean; canConnect: boolean; onSignIn: () => void }) {
+  return (
+    <View style={styles.loginScreen}>
+      <View style={[styles.loginMark, { backgroundColor: colors.primary, borderColor: colors.primary }]}>
+        <MaterialCommunityIcons name="sack" size={38} color={colors.onPrimary} />
+      </View>
+      <Text style={[styles.loginTitle, { color: colors.text }]}>Bucks Manager</Text>
+      <TouchableOpacity
+        disabled={!canConnect || loading}
+        onPress={onSignIn}
+        style={[styles.googleLoginBtn, { backgroundColor: canConnect ? colors.primary : colors.disabled }]}
+      >
+        {loading ? (
+          <ActivityIndicator color={colors.onPrimary} />
+        ) : (
+          <>
+            <MaterialCommunityIcons name="google" size={21} color={colors.onPrimary} />
+            <Text style={[styles.googleLoginText, { color: colors.onPrimary }]}>Acceder con Google</Text>
+          </>
+        )}
+      </TouchableOpacity>
+      {!canConnect && <Text style={[styles.loginStatus, { color: colors.muted }]}>Faltan credenciales OAuth en .env</Text>}
+    </View>
+  );
+}
