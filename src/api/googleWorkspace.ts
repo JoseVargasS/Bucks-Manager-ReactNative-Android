@@ -39,6 +39,10 @@ function readValuesUrl(spreadsheetId: string, range: string) {
   return `${valuesUrl(spreadsheetId, range)}?valueRenderOption=FORMATTED_VALUE&dateTimeRenderOption=FORMATTED_STRING`;
 }
 
+function formulaValuesUrl(spreadsheetId: string, range: string) {
+  return `${valuesUrl(spreadsheetId, range)}?valueRenderOption=FORMULA&dateTimeRenderOption=FORMATTED_STRING`;
+}
+
 export async function findCompatibleSheets(token: string) {
   const query = encodeURIComponent(`mimeType='${GOOGLE_SHEET_MIME}' and trashed=false`);
   const url = `${DRIVE}/files?q=${query}&pageSize=100&orderBy=modifiedTime desc&fields=files(id,name,modifiedTime)`;
@@ -152,7 +156,11 @@ export async function initializeSpreadsheet(token: string, spreadsheetId: string
 }
 
 export async function readTransactions(token: string, spreadsheetId: string) {
-  const data = await googleFetch<{ values?: unknown[][] }>(token, readValuesUrl(spreadsheetId, `${SHEET_NAMES.transactions}!A1:E`));
+  const range = `${SHEET_NAMES.transactions}!A1:E`;
+  const [data, formulaData] = await Promise.all([
+    googleFetch<{ values?: unknown[][] }>(token, readValuesUrl(spreadsheetId, range)),
+    googleFetch<{ values?: unknown[][] }>(token, formulaValuesUrl(spreadsheetId, range)),
+  ]);
   const rows = data.values || [];
   const headerIndex = Math.max(0, findHeaderIndex(rows, TRANSACTION_HEADERS.slice(0, 4)));
   return (data.values || [])
@@ -160,13 +168,15 @@ export async function readTransactions(token: string, spreadsheetId: string) {
       if (index <= headerIndex) return null;
       const date = parseSheetDate(row[0]);
       if (!date) return null;
+      const type = normalizeType(String(row[3] || ""));
       return {
         rowId: index + 1,
         date: formatDateLabel(date),
         rawDate: date.toISOString(),
         amount: parseNumber(row[1]),
         detail: String(row[2] || ""),
-        type: normalizeType(String(row[3] || "")),
+        formula: parseAmountFormula(formulaData.values?.[index]?.[1], type),
+        type,
         createdAt: parseCreatedAt(row[4]),
       };
     })
@@ -239,13 +249,46 @@ export async function rewriteTransactions(token: string, spreadsheetId: string, 
     body: JSON.stringify({
       values: transactions.map((tx) => [
         formatDateToISO(tx.rawDate),
-        tx.formula || tx.amount,
+        formatAmountForSheet(tx),
         tx.detail,
         tx.type,
         tx.createdAt ? new Date(tx.createdAt).toLocaleTimeString("es-PE", { hour12: false }) : "",
       ]),
     }),
   });
+}
+
+function formatAmountForSheet(tx: Transaction) {
+  const expression = sanitizeAmountExpression(tx.formula || "");
+  if (!expression) return tx.amount;
+  return tx.type.startsWith("GASTO") ? `=-ABS(${expression})` : `=ABS(${expression})`;
+}
+
+function sanitizeAmountExpression(value: string) {
+  return String(value || "")
+    .trim()
+    .replace(/^=/, "")
+    .replace(/[^0-9+\-*/().\s]/g, "")
+    .trim();
+}
+
+function parseAmountFormula(value: unknown, type: Transaction["type"]) {
+  const raw = String(value || "").trim();
+  if (!raw.startsWith("=")) return "";
+  let expression = raw.replace(/^=/, "").trim();
+  expression = unwrapAmountFormula(expression, type);
+  return sanitizeAmountExpression(expression);
+}
+
+function unwrapAmountFormula(expression: string, type: Transaction["type"]) {
+  const trimmed = expression.trim();
+  const absMatch = trimmed.match(/^ABS\((.*)\)$/i);
+  if (absMatch) return absMatch[1];
+  const negativeAbsMatch = trimmed.match(/^-ABS\((.*)\)$/i);
+  if (negativeAbsMatch) return negativeAbsMatch[1];
+  const negativeWrappedMatch = trimmed.match(/^-\((.*)\)$/);
+  if (type.startsWith("GASTO") && negativeWrappedMatch) return negativeWrappedMatch[1];
+  return trimmed;
 }
 
 export async function updateFreqIncome(token: string, spreadsheetId: string, monthYear: string, amount: number) {

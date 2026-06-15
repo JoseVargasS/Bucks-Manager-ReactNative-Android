@@ -16,7 +16,6 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  useWindowDimensions,
   View,
   StatusBar as NativeStatusBar,
 } from "react-native";
@@ -26,7 +25,6 @@ import {
   applySearch,
   buildTransactionFromDraft,
   calculateSummaries,
-  filterTransactionsByPeriod,
   formatDateToISO,
   formatMoney,
   getMonthYear,
@@ -54,8 +52,10 @@ const GOOGLE_WEB_CLIENT_ID =
 const TOKEN_KEY = "bucks_google_access_token";
 const SHEET_KEY = "bucks_spreadsheet_id";
 
-type Tab = "expenses" | "summary";
+type Tab = "expenses" | "search" | "summary" | "settings";
 type ThemeMode = "dark" | "light";
+type PickerOption = { label: string; value: string; icon?: string; tone?: string };
+type PickerConfig = { title: string; options: PickerOption[]; selectedValue: string; onSelect: (value: string) => void } | null;
 
 const emptySearch: SearchFilters = { text: "", minAmount: "", maxAmount: "", startDate: "", endDate: "" };
 
@@ -68,6 +68,44 @@ function getBlankDraft(type: TransactionType = "GASTO NO FRECUENTE"): Transactio
   };
 }
 
+function compareTransactionsDesc(a: Transaction, b: Transaction) {
+  const dateDiff = new Date(b.rawDate).getTime() - new Date(a.rawDate).getTime();
+  if (dateDiff) return dateDiff;
+  return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+}
+
+function filterTransactionsByRollingPeriod(transactions: Transaction[], month: number, year: number, monthCount: number) {
+  const end = new Date(year, month + 1, 1).getTime();
+  const start = new Date(year, month - Math.max(1, monthCount) + 1, 1).getTime();
+  return transactions.filter((tx) => {
+    const time = new Date(tx.rawDate).getTime();
+    return time >= start && time < end;
+  });
+}
+
+function groupTransactionsByDate(transactions: Transaction[]) {
+  return transactions.reduce<Array<{ key: string; label: string; items: Transaction[] }>>((groups, tx) => {
+    const key = formatDateToISO(new Date(tx.rawDate));
+    let group = groups.find((item) => item.key === key);
+    if (!group) {
+      group = { key, label: formatDateGroupLabel(tx.rawDate), items: [] };
+      groups.push(group);
+    }
+    group.items.push(tx);
+    return groups;
+  }, []);
+}
+
+function formatDateGroupLabel(rawDate: string) {
+  const date = new Date(rawDate);
+  const today = new Date();
+  const yesterday = new Date();
+  yesterday.setDate(today.getDate() - 1);
+  if (formatDateToISO(date) === formatDateToISO(today)) return `HOY · ${date.toLocaleDateString("es-PE", { month: "short", day: "2-digit" }).toUpperCase()}`;
+  if (formatDateToISO(date) === formatDateToISO(yesterday)) return `AYER · ${date.toLocaleDateString("es-PE", { month: "short", day: "2-digit" }).toUpperCase()}`;
+  return date.toLocaleDateString("es-PE", { month: "short", day: "2-digit", year: "numeric" }).toUpperCase();
+}
+
 export default function App() {
   const [theme, setTheme] = useState<ThemeMode>("dark");
   const colors = theme === "dark" ? dark : light;
@@ -76,30 +114,26 @@ export default function App() {
   const [year, setYear] = useState(new Date().getFullYear());
   const [accessToken, setAccessToken] = useState("");
   const [spreadsheetId, setSpreadsheetId] = useState("");
-  const [setupStatus, setSetupStatus] = useState("Modo demo activo");
   const [bootstrapping, setBootstrapping] = useState(true);
   const [loading, setLoading] = useState(false);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [summaries, setSummaries] = useState<SummaryRow[]>([]);
   const [freqIncome, setFreqIncome] = useState<Record<string, number>>({});
   const [addVisible, setAddVisible] = useState(false);
-  const [searchVisible, setSearchVisible] = useState(false);
-  const [exportVisible, setExportVisible] = useState(false);
   const [freqVisible, setFreqVisible] = useState(false);
-  const [menuVisible, setMenuVisible] = useState(false);
-  const [accountVisible, setAccountVisible] = useState(false);
   const [sheetCandidates, setSheetCandidates] = useState<SheetCandidate[]>([]);
   const [accountInfo, setAccountInfo] = useState<{ name?: string; email?: string } | null>(null);
-  const [expandedRows, setExpandedRows] = useState<Record<number, boolean>>({});
   const [detailTx, setDetailTx] = useState<Transaction | null>(null);
   const [editingTx, setEditingTx] = useState<Transaction | null>(null);
   const [draft, setDraft] = useState<TransactionDraft>(getBlankDraft());
   const [searchFilters, setSearchFilters] = useState<SearchFilters>(emptySearch);
   const [searchActive, setSearchActive] = useState(false);
+  const [loadedMonthCount, setLoadedMonthCount] = useState(1);
+  const [selectedRows, setSelectedRows] = useState<number[]>([]);
+  const [picker, setPicker] = useState<PickerConfig>(null);
   const [deletedTx, setDeletedTx] = useState<Transaction | null>(null);
   const [freqInput, setFreqInput] = useState("");
-  const { width } = useWindowDimensions();
-  const compact = width < 820;
+  const compact = true;
   const statusBarInset = NativeStatusBar.currentHeight || 0;
 
   useEffect(() => {
@@ -113,10 +147,10 @@ export default function App() {
     restoreSession();
   }, []);
 
-  const periodTransactions = useMemo(() => {
-    const source = searchActive ? applySearch(transactions, searchFilters) : filterTransactionsByPeriod(transactions, month, year);
-    return source;
-  }, [transactions, month, year, searchActive, searchFilters]);
+  const visibleTransactions = useMemo(() => {
+    const source = searchActive ? applySearch(transactions, searchFilters) : filterTransactionsByRollingPeriod(transactions, month, year, loadedMonthCount);
+    return [...source].sort(compareTransactionsDesc);
+  }, [transactions, month, year, loadedMonthCount, searchActive, searchFilters]);
 
   const currentSummary = useMemo(() => {
     const key = `${MONTH_NAMES[month]} ${year}`;
@@ -147,7 +181,6 @@ export default function App() {
           await connectGoogleWorkspace(activeToken, sheetId);
         } catch {
           await clearGoogleSession();
-          setSetupStatus("Listo para conectar");
         }
       }
     } finally {
@@ -157,7 +190,6 @@ export default function App() {
 
   async function connectGoogleWorkspace(token: string, preferredSheetId = "") {
     setLoading(true);
-    setSetupStatus("Buscando hojas compatibles en Drive...");
     try {
       const candidates = await findCompatibleSheets(token);
       const namedSheet = candidates.find((candidate) => candidate.name.trim().toUpperCase() === SHEET_NAMES.transactions);
@@ -173,14 +205,12 @@ export default function App() {
       if (candidates.length > 1) {
         setSheetCandidates(candidates);
         setAccessToken(token);
-        setSetupStatus("Elige tu hoja de gastos");
         return;
       }
       const sheetId = candidates[0]?.id || (await createBucksSpreadsheet(token));
       await selectSpreadsheet(token, sheetId, candidates[0]?.name || SHEET_NAMES.transactions);
     } catch (error) {
       Alert.alert("Google Sheets", error instanceof Error ? error.message : "No se pudo conectar la hoja");
-      setSetupStatus("Modo demo activo");
     } finally {
       setLoading(false);
     }
@@ -194,7 +224,6 @@ export default function App() {
       setAccessToken(token);
       setSpreadsheetId(sheetId);
       setSheetCandidates([]);
-      setSetupStatus(`Hoja conectada: ${name}`);
       await reloadFromGoogle(token, sheetId);
     } finally {
       setLoading(false);
@@ -203,7 +232,6 @@ export default function App() {
 
   async function rescanDrive() {
     if (!accessToken) return;
-    setMenuVisible(false);
     await connectGoogleWorkspace(accessToken);
   }
 
@@ -213,7 +241,6 @@ export default function App() {
       return;
     }
     setLoading(true);
-    setSetupStatus("Abriendo Google...");
     try {
       await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
       await GoogleSignin.signIn();
@@ -230,7 +257,6 @@ export default function App() {
           ? "Google rechazó la configuración OAuth. En Google Cloud revisa que el cliente Android use package com.josev.bucksmanager y el SHA-1 debug actual. También confirma que GOOGLE_WEB_CLIENT_ID sea tipo Web application."
           : message,
       );
-      setSetupStatus("Listo para conectar");
       setLoading(false);
     }
   }
@@ -250,11 +276,9 @@ export default function App() {
     setFreqIncome({});
     setAccountInfo(null);
     setDeletedTx(null);
-    setSetupStatus("Listo para conectar");
   }
 
   async function disconnectGoogle() {
-    setAccountVisible(false);
     try {
       await GoogleSignin.signOut();
     } catch {
@@ -264,7 +288,6 @@ export default function App() {
   }
 
   async function switchGoogleAccount() {
-    setAccountVisible(false);
     try {
       await GoogleSignin.signOut();
     } catch {
@@ -286,11 +309,12 @@ export default function App() {
     }
   }
 
-  function changeMonth(delta: number) {
-    const next = new Date(year, month + delta, 1);
-    setMonth(next.getMonth());
-    setYear(next.getFullYear());
+  function selectPeriod(nextMonth: number, nextYear: number) {
+    setMonth(nextMonth);
+    setYear(nextYear);
     setSearchActive(false);
+    setLoadedMonthCount(1);
+    setSelectedRows([]);
   }
 
   function openAdd(type?: TransactionType) {
@@ -300,6 +324,8 @@ export default function App() {
   }
 
   function openEdit(tx: Transaction) {
+    setDetailTx(null);
+    setSelectedRows([]);
     setEditingTx(tx);
     setDraft({
       date: formatDateToISO(tx.rawDate),
@@ -343,6 +369,8 @@ export default function App() {
 
   async function deleteTx(tx: Transaction) {
     setDeletedTx(tx);
+    setDetailTx(null);
+    setSelectedRows((current) => current.filter((rowId) => rowId !== tx.rowId));
     if (accessToken && spreadsheetId) {
       await deleteGoogleTransaction(accessToken, spreadsheetId, tx.rowId);
       await reloadFromGoogle();
@@ -351,6 +379,41 @@ export default function App() {
     const next = transactions.filter((item) => item.rowId !== tx.rowId).map((item, idx) => ({ ...item, rowId: idx + 2 }));
     setTransactions(next);
     setSummaries(calculateSummaries(next, freqIncome));
+  }
+
+  async function deleteSelectedRows() {
+    const selected = transactions.filter((tx) => selectedRows.includes(tx.rowId)).sort((a, b) => b.rowId - a.rowId);
+    if (!selected.length) return;
+    setDeletedTx(selected[0]);
+    setLoading(true);
+    try {
+      if (accessToken && spreadsheetId) {
+        for (const tx of selected) await deleteGoogleTransaction(accessToken, spreadsheetId, tx.rowId);
+        await reloadFromGoogle();
+      } else {
+        const selectedIds = new Set(selected.map((tx) => tx.rowId));
+        const next = transactions.filter((item) => !selectedIds.has(item.rowId)).map((item, idx) => ({ ...item, rowId: idx + 2 }));
+        setTransactions(next);
+        setSummaries(calculateSummaries(next, freqIncome));
+      }
+      setSelectedRows([]);
+    } catch (error) {
+      Alert.alert("Eliminar", error instanceof Error ? error.message : "No se pudo eliminar la selección.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function toggleSelection(tx: Transaction) {
+    setSelectedRows((current) => (current.includes(tx.rowId) ? current.filter((rowId) => rowId !== tx.rowId) : [...current, tx.rowId]));
+  }
+
+  function handleTransactionPress(tx: Transaction) {
+    if (selectedRows.length) {
+      toggleSelection(tx);
+      return;
+    }
+    setDetailTx(tx);
   }
 
   async function moveTx(tx: Transaction, direction: "up" | "down") {
@@ -375,11 +438,15 @@ export default function App() {
   }
 
   function openMoveMenu(tx: Transaction) {
-    Alert.alert("Mover registro", "Elige la nueva posición para reflejarla también en Google Sheets.", [
-      { text: "Subir", onPress: () => moveTx(tx, "up") },
-      { text: "Bajar", onPress: () => moveTx(tx, "down") },
-      { text: "Cancelar", style: "cancel" },
-    ]);
+    setPicker({
+      title: "Mover registro",
+      selectedValue: "",
+      options: [
+        { label: "Subir una posición", value: "up", icon: "arrow-up", tone: colors.blue },
+        { label: "Bajar una posición", value: "down", icon: "arrow-down", tone: colors.yellow },
+      ],
+      onSelect: (direction: string) => moveTx(tx, direction as "up" | "down"),
+    });
   }
 
   async function undoDelete() {
@@ -405,7 +472,7 @@ export default function App() {
   }
 
   async function exportRows(format: ExportFormat) {
-    const rows = searchActive ? periodTransactions : transactions.filter((tx) => new Date(tx.rawDate).getFullYear() === year);
+    const rows = searchActive ? visibleTransactions : transactions.filter((tx) => new Date(tx.rawDate).getFullYear() === year);
     if (!rows.length) {
       Alert.alert("Exportar", "No hay datos para exportar.");
       return;
@@ -424,7 +491,6 @@ export default function App() {
       const pdf = await Print.printToFileAsync({ html });
       await Sharing.shareAsync(pdf.uri, { mimeType: "application/pdf", dialogTitle: "Exportar PDF" });
     }
-    setExportVisible(false);
   }
 
   const availableYears = useMemo(() => {
@@ -435,6 +501,9 @@ export default function App() {
     });
     return Array.from(years).sort((a, b) => b - a);
   }, [summaries]);
+
+  const pageTitle = tab === "expenses" ? "Gastos" : tab === "search" ? "Buscar" : tab === "summary" ? "Análisis" : "Ajustes";
+  const pageSubtitle = tab === "expenses" ? "" : tab === "search" ? "Filtros de movimientos" : tab === "summary" ? "Resumen por mes" : "Cuenta y exportación";
 
   if (bootstrapping) {
     return (
@@ -451,21 +520,21 @@ export default function App() {
       <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]}>
         <StatusBar style={theme === "dark" ? "light" : "dark"} />
         <View style={styles.loginScreen}>
-          <View style={[styles.loginMark, { backgroundColor: colors.green, borderColor: colors.green }]}>
-            <MaterialCommunityIcons name="sack" size={38} color="#061108" />
+          <View style={[styles.loginMark, { backgroundColor: colors.primary, borderColor: colors.primary }]}>
+            <MaterialCommunityIcons name="sack" size={38} color={colors.onPrimary} />
           </View>
           <Text style={[styles.loginTitle, { color: colors.text }]}>Bucks Manager</Text>
           <TouchableOpacity
             disabled={!canConnect || loading}
             onPress={signInWithGoogle}
-            style={[styles.googleLoginBtn, { backgroundColor: canConnect ? colors.green : colors.disabled }]}
+            style={[styles.googleLoginBtn, { backgroundColor: canConnect ? colors.primary : colors.disabled }]}
           >
             {loading ? (
-              <ActivityIndicator color="#061108" />
+              <ActivityIndicator color={colors.onPrimary} />
             ) : (
               <>
-                <MaterialCommunityIcons name="google" size={21} color="#061108" />
-                <Text style={styles.googleLoginText}>Acceder con Google</Text>
+                <MaterialCommunityIcons name="google" size={21} color={colors.onPrimary} />
+                <Text style={[styles.googleLoginText, { color: colors.onPrimary }]}>Acceder con Google</Text>
               </>
             )}
           </TouchableOpacity>
@@ -478,128 +547,45 @@ export default function App() {
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]}>
       <StatusBar style={theme === "dark" ? "light" : "dark"} />
-      <View style={[styles.shell, compact && styles.shellCompact, { backgroundColor: colors.bg, paddingTop: compact ? statusBarInset + 6 : 12 }]}>
-        <View style={[styles.sidebar, compact && styles.sidebarCompact, { backgroundColor: colors.sidebar, borderColor: colors.border }]}>
-          <View style={styles.brandRow}>
-            <View style={[styles.logo, { backgroundColor: colors.green }]}>
-              <MaterialCommunityIcons name="sack" size={28} color="#061108" />
-            </View>
-            <View>
-              <Text style={[styles.brandTitle, { color: colors.text }]}>Bucks Manager</Text>
-              <Text style={[styles.brandSub, { color: colors.muted }]}>Control de gastos</Text>
-            </View>
-          </View>
+      <View style={[styles.shell, styles.shellCompact, { backgroundColor: colors.bg, paddingTop: statusBarInset + 6 }]}>
 
-          <View style={styles.periodBox}>
-            <Text style={[styles.kicker, { color: colors.muted }]}>PERIODO</Text>
-            <View style={styles.yearRow}>
-              {availableYears.map((item) => (
-                <TouchableOpacity key={item} onPress={() => setYear(item)} style={[styles.yearChip, item === year && { backgroundColor: colors.green }]}>
-                  <Text style={[styles.yearText, { color: item === year ? "#07130c" : colors.text }]}>{item}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-            <View style={styles.monthRow}>
-              <IconButton name="chevron-left" onPress={() => changeMonth(-1)} colors={colors} />
-              <Text style={[styles.monthLabel, { color: colors.text }]}>{MONTH_NAMES[month]}</Text>
-              <IconButton name="chevron-right" onPress={() => changeMonth(1)} colors={colors} />
-            </View>
-          </View>
-
-          <View style={styles.navBlock}>
-            <NavButton label="Tabla de Gastos" icon="table" active={tab === "expenses"} onPress={() => setTab("expenses")} colors={colors} />
-            <NavButton label="Análisis" icon="chart-bar" active={tab === "summary"} onPress={() => setTab("summary")} colors={colors} />
-          </View>
-
-          <View style={[styles.quickGrid, compact && { display: "none" }]}>
-            {MONTH_NAMES.map((name, idx) => (
-              <TouchableOpacity key={name} onPress={() => setMonth(idx)} style={[styles.monthChip, { borderColor: colors.border }, idx === month && { backgroundColor: colors.green, borderColor: colors.green }]}>
-                <Text style={[styles.monthChipText, { color: idx === month ? "#061108" : colors.muted }]}>{name.slice(0, 3)}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          <View style={styles.sidebarBottom}>
-            <TouchableOpacity onPress={() => setAccountVisible(true)} style={[styles.accountBtn, { backgroundColor: colors.input, borderColor: colors.border }]}>
-              <MaterialCommunityIcons name="account-circle" size={20} color={colors.green} />
-              <View style={{ flex: 1, minWidth: 0 }}>
-                <Text numberOfLines={1} style={[styles.accountName, { color: colors.text }]}>{accountInfo?.name || "Cuenta Google"}</Text>
-                <Text numberOfLines={1} style={[styles.accountEmail, { color: colors.muted }]}>{accountInfo?.email || "Gestionar cuenta"}</Text>
-              </View>
-            </TouchableOpacity>
-            <Text style={[styles.storageNote, { color: colors.muted }]}>Los datos se guardan en tu hoja de Google</Text>
-          </View>
-        </View>
-
-        <View style={[styles.content, compact && { width: "100%" }]}>
-          <View style={[styles.topBar, compact && styles.topBarMobile, { backgroundColor: compact ? colors.card : "transparent", borderColor: compact ? colors.border : "transparent" }]}>
+        <View style={[styles.content, { width: "100%" }]}>
+          <View style={[styles.topBar, styles.topBarMobile, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <View style={styles.headerLeft}>
-              {compact && (
-                <TouchableOpacity style={[styles.headerBtn, styles.headerBtnOutlined, { backgroundColor: colors.input, borderColor: colors.border }]} onPress={() => setMenuVisible(true)}>
-                  <MaterialCommunityIcons name="menu" size={21} color={colors.text} />
-                </TouchableOpacity>
-              )}
-              <View style={styles.titleBlock}>
-                <Text numberOfLines={1} style={[styles.pageTitle, compact && styles.pageTitleMobile, { color: colors.text }]}>
-                  {tab === "expenses" ? "Tabla de Gastos" : "Análisis"}
-                </Text>
-                <Text numberOfLines={1} style={[styles.pageSub, compact && styles.pageSubMobile, { color: colors.muted }]}>
-                  {`${MONTH_NAMES[month]} ${year}`}
-                </Text>
+              <View style={[styles.headerLogo, { backgroundColor: colors.primary }]}>
+                <MaterialCommunityIcons name="sack" size={19} color={colors.onPrimary} />
               </View>
-            </View>
-            <View style={styles.topActions}>
-              <TouchableOpacity style={[styles.themeToggle, { backgroundColor: theme === "dark" ? colors.blue : colors.green }]} onPress={() => setTheme(theme === "dark" ? "light" : "dark")}>
-                <View style={styles.themeThumb} />
-                <MaterialCommunityIcons name={theme === "dark" ? "weather-night" : "weather-sunny"} size={18} color="#ffffff" />
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.headerBtn, compact && styles.headerBtnOutlined, { backgroundColor: compact ? colors.input : colors.card, borderColor: colors.border }]} onPress={() => setSearchVisible(true)}>
-                <MaterialCommunityIcons name="magnify" size={20} color={colors.text} />
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.headerBtn, compact && styles.headerBtnOutlined, { backgroundColor: compact ? colors.input : colors.card, borderColor: colors.border }]} onPress={() => setExportVisible(true)}>
-                <MaterialCommunityIcons name="file-export" size={20} color={colors.blue} />
-              </TouchableOpacity>
+              <View style={styles.titleBlock}>
+                <Text numberOfLines={1} style={[styles.pageTitle, styles.pageTitleMobile, { color: colors.text }]}>
+                  {pageTitle}
+                </Text>
+                {!!pageSubtitle && (
+                  <Text numberOfLines={1} style={[styles.pageSub, styles.pageSubMobile, { color: colors.muted }]}>
+                    {pageSubtitle}
+                  </Text>
+                )}
+              </View>
             </View>
           </View>
 
-          {compact && (
-            <MobileControls
+          {tab === "expenses" && (
+            <PeriodControls
               colors={colors}
               year={year}
               month={month}
               availableYears={availableYears}
-              setYear={setYear}
-              changeMonth={changeMonth}
+              onSelectPeriod={selectPeriod}
+              openPicker={setPicker}
               goToday={() => {
                 const today = new Date();
-                setMonth(today.getMonth());
-                setYear(today.getFullYear());
-                setSearchActive(false);
+                selectPeriod(today.getMonth(), today.getFullYear());
               }}
             />
           )}
 
-          {!accessToken && (
-            <View style={[styles.connectCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.connectTitle, { color: colors.text }]}>Modo demo listo</Text>
-                <Text style={[styles.connectText, { color: colors.muted }]}>
-                  Tus credenciales se leen desde `.env`. Al conectar se buscará o creará tu hoja privada de Google.
-                </Text>
-              </View>
-              <TouchableOpacity
-                disabled={!GOOGLE_ANDROID_CLIENT_ID && !GOOGLE_WEB_CLIENT_ID}
-                onPress={signInWithGoogle}
-                style={[styles.connectBtn, { backgroundColor: GOOGLE_ANDROID_CLIENT_ID || GOOGLE_WEB_CLIENT_ID ? colors.green : colors.disabled }]}
-              >
-                <Text style={styles.connectBtnText}>Conectar Google</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-
           {loading && (
             <View style={styles.loadingBar}>
-              <ActivityIndicator color={colors.green} />
+              <ActivityIndicator color={colors.primary} />
               <Text style={{ color: colors.muted }}>Sincronizando...</Text>
             </View>
           )}
@@ -608,35 +594,65 @@ export default function App() {
             <ExpensesView
               colors={colors}
               summary={currentSummary}
-              transactions={periodTransactions}
+              transactions={visibleTransactions}
               searchActive={searchActive}
-              compact={compact}
+              searchText={searchFilters.text}
+              selectedRows={selectedRows}
               onEditFreq={() => {
                 setFreqInput(String(currentSummary.freqIncome || 0));
                 setFreqVisible(true);
               }}
               onExitSearch={() => setSearchActive(false)}
-              onOpenDetail={setDetailTx}
+              onOpenDetail={handleTransactionPress}
               onEdit={openEdit}
-              onDelete={deleteTx}
+              onDeleteSelected={deleteSelectedRows}
               onMove={openMoveMenu}
-              expandedRows={expandedRows}
-              onToggleRow={(rowId: number) => setExpandedRows((current) => ({ ...current, [rowId]: !current[rowId] }))}
+              onToggleSelection={toggleSelection}
+              onLoadOlder={() => setLoadedMonthCount((current) => current + 1)}
             />
-          ) : (
+          ) : tab === "search" ? (
+            <SearchPage
+              colors={colors}
+              filters={searchFilters}
+              setFilters={setSearchFilters}
+              onSubmit={() => {
+                setSearchActive(true);
+                setTab("expenses");
+                setSelectedRows([]);
+              }}
+              onClear={() => {
+                setSearchFilters(emptySearch);
+                setSearchActive(false);
+              }}
+            />
+          ) : tab === "summary" ? (
             <SummaryView colors={colors} summaries={summaries} compact={compact} />
+          ) : (
+            <SettingsView
+              colors={colors}
+              theme={theme}
+              setTheme={setTheme}
+              accountInfo={accountInfo}
+              onRescan={rescanDrive}
+              onSwitch={switchGoogleAccount}
+              onDisconnect={disconnectGoogle}
+              onExport={exportRows}
+            />
           )}
         </View>
 
-        <TouchableOpacity style={[styles.fab, { backgroundColor: colors.green }]} onPress={() => openAdd()}>
-          <MaterialCommunityIcons name="plus" size={28} color="#061108" />
-        </TouchableOpacity>
         {deletedTx && (
           <TouchableOpacity style={[styles.undoFab, compact && { left: 18 }, { backgroundColor: colors.card, borderColor: colors.border }]} onPress={undoDelete}>
-            <MaterialCommunityIcons name="undo" size={20} color={colors.green} />
+            <MaterialCommunityIcons name="undo" size={20} color={colors.blue} />
             <Text style={{ color: colors.text, fontWeight: "800" }}>Deshacer</Text>
           </TouchableOpacity>
         )}
+        <BottomNav
+          colors={colors}
+          tab={tab}
+          setTab={setTab}
+          onAdd={() => openAdd()}
+        />
       </View>
 
       <TransactionModal
@@ -645,45 +661,12 @@ export default function App() {
         draft={draft}
         editing={!!editingTx}
         setDraft={setDraft}
+        openPicker={setPicker}
         onClose={() => setAddVisible(false)}
         onSubmit={submitDraft}
       />
-      <SearchModal
-        visible={searchVisible}
-        colors={colors}
-        filters={searchFilters}
-        setFilters={setSearchFilters}
-        onClose={() => setSearchVisible(false)}
-        onSubmit={() => {
-          setSearchActive(true);
-          setSearchVisible(false);
-          setTab("expenses");
-        }}
-        onClear={() => setSearchFilters(emptySearch)}
-      />
-      <ExportModal visible={exportVisible} colors={colors} onClose={() => setExportVisible(false)} onExport={exportRows} />
       <FreqIncomeModal visible={freqVisible} colors={colors} value={freqInput} setValue={setFreqInput} onClose={() => setFreqVisible(false)} onSubmit={saveFreqIncome} />
-      <DetailModal tx={detailTx} colors={colors} onClose={() => setDetailTx(null)} />
-      <MobileMenu
-        visible={menuVisible}
-        colors={colors}
-        tab={tab}
-        setTab={setTab}
-        month={month}
-        setMonth={setMonth}
-        onRescan={rescanDrive}
-        onAccount={() => setAccountVisible(true)}
-        accountInfo={accountInfo}
-        onClose={() => setMenuVisible(false)}
-      />
-      <AccountModal
-        visible={accountVisible}
-        colors={colors}
-        accountInfo={accountInfo}
-        onClose={() => setAccountVisible(false)}
-        onSwitch={switchGoogleAccount}
-        onDisconnect={disconnectGoogle}
-      />
+      <DetailModal tx={detailTx} colors={colors} onClose={() => setDetailTx(null)} onEdit={openEdit} onDelete={deleteTx} />
       <SheetChooser
         visible={sheetCandidates.length > 1}
         colors={colors}
@@ -691,6 +674,7 @@ export default function App() {
         onClose={() => setSheetCandidates([])}
         onSelect={(candidate: SheetCandidate) => selectSpreadsheet(accessToken, candidate.id, candidate.name)}
       />
+      <OptionSheet config={picker} colors={colors} onClose={() => setPicker(null)} />
     </SafeAreaView>
   );
 }
@@ -723,102 +707,66 @@ function SkeletonScreen({ colors }: { colors: Palette }) {
   );
 }
 
-function MobileControls({ colors, year, month, availableYears, setYear, changeMonth, goToday }: any) {
+function BottomNav({ colors, tab, setTab, onAdd }: { colors: Palette; tab: Tab; setTab: (tab: Tab) => void; onAdd: () => void }) {
   return (
-    <View style={[styles.mobileControls, { backgroundColor: colors.card, borderColor: colors.border }]}>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.mobileYearScroll} contentContainerStyle={styles.mobileYearRail}>
-        {availableYears.map((item: number) => (
-          <TouchableOpacity
-            key={item}
-            onPress={() => setYear(item)}
-            style={[styles.mobileYearChip, { backgroundColor: colors.input, borderColor: colors.border }, item === year && { backgroundColor: colors.green, borderColor: colors.green }]}
-          >
-            <Text style={[styles.mobileYearText, { color: item === year ? "#061108" : colors.text }]}>{item}</Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
-      <View style={[styles.monthNavMobile, { backgroundColor: colors.input, borderColor: colors.border }]}>
-        <TouchableOpacity style={styles.monthArrowMobile} onPress={() => changeMonth(-1)}>
-          <MaterialCommunityIcons name="chevron-left" size={22} color={colors.muted} />
-        </TouchableOpacity>
-        <Text numberOfLines={1} style={[styles.monthNavTextMobile, { color: colors.text }]}>{MONTH_NAMES[month]}</Text>
-        <TouchableOpacity style={styles.monthArrowMobile} onPress={() => changeMonth(1)}>
-          <MaterialCommunityIcons name="chevron-right" size={22} color={colors.muted} />
-        </TouchableOpacity>
-      </View>
-      <TouchableOpacity onPress={goToday} style={[styles.todayBtnMobile, { backgroundColor: colors.blue }]}>
-        <MaterialCommunityIcons name="calendar-today" size={18} color="#ffffff" />
+    <View style={[styles.bottomNav, { backgroundColor: colors.card, borderColor: colors.border }]}>
+      <BottomNavItem colors={colors} active={tab === "expenses"} icon="view-dashboard-outline" label="Gastos" onPress={() => setTab("expenses")} />
+      <BottomNavItem colors={colors} active={tab === "search"} icon="magnify" label="Buscar" onPress={() => setTab("search")} />
+      <TouchableOpacity onPress={onAdd} style={[styles.bottomAddButton, { backgroundColor: colors.primary }]}>
+        <MaterialCommunityIcons name="plus" size={31} color={colors.onPrimary} />
       </TouchableOpacity>
+      <BottomNavItem colors={colors} active={tab === "summary"} icon="chart-line" label="Análisis" onPress={() => setTab("summary")} />
+      <BottomNavItem colors={colors} active={tab === "settings"} icon="cog-outline" label="Ajustes" onPress={() => setTab("settings")} />
     </View>
   );
 }
 
-function MobileMenu({ visible, colors, tab, setTab, month, setMonth, onRescan, onAccount, accountInfo, onClose }: any) {
+function BottomNavItem({ colors, active, icon, label, onPress }: any) {
   return (
-    <Modal visible={visible} transparent animationType="fade">
-      <TouchableOpacity activeOpacity={1} style={styles.drawerOverlay} onPress={onClose}>
-        <View style={[styles.drawer, { backgroundColor: colors.sidebar, borderColor: colors.border }]}>
-          <View style={styles.brandRow}>
-            <View style={[styles.logo, { backgroundColor: colors.green }]}>
-              <MaterialCommunityIcons name="sack" size={28} color="#061108" />
-            </View>
-            <View>
-              <Text style={[styles.brandTitle, { color: colors.text }]}>Bucks Manager</Text>
-              <Text style={[styles.brandSub, { color: colors.muted }]}>Control de gastos</Text>
-            </View>
-          </View>
-          <View style={styles.navBlock}>
-            <NavButton label="Tabla de Gastos" icon="table" active={tab === "expenses"} onPress={() => { setTab("expenses"); onClose(); }} colors={colors} />
-            <NavButton label="Análisis" icon="chart-bar" active={tab === "summary"} onPress={() => { setTab("summary"); onClose(); }} colors={colors} />
-            <NavButton label="Buscar hoja en Drive" icon="google-drive" active={false} onPress={onRescan} colors={colors} />
-          </View>
-          <View style={styles.quickGrid}>
-            {MONTH_NAMES.map((name, idx) => (
-              <TouchableOpacity key={name} onPress={() => { setMonth(idx); onClose(); }} style={[styles.monthChip, { borderColor: colors.border }, idx === month && { backgroundColor: colors.green, borderColor: colors.green }]}>
-                <Text style={[styles.monthChipText, { color: idx === month ? "#061108" : colors.muted }]}>{name.slice(0, 3)}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-          <View style={styles.sidebarBottom}>
-            <TouchableOpacity onPress={() => { onClose(); onAccount(); }} style={[styles.accountBtn, { backgroundColor: colors.input, borderColor: colors.border }]}>
-              <MaterialCommunityIcons name="account-circle" size={20} color={colors.green} />
-              <View style={{ flex: 1, minWidth: 0 }}>
-                <Text numberOfLines={1} style={[styles.accountName, { color: colors.text }]}>{accountInfo?.name || "Cuenta Google"}</Text>
-                <Text numberOfLines={1} style={[styles.accountEmail, { color: colors.muted }]}>{accountInfo?.email || "Gestionar cuenta"}</Text>
-              </View>
-            </TouchableOpacity>
-            <Text style={[styles.storageNote, { color: colors.muted }]}>Los datos se guardan en tu hoja de Google.</Text>
-          </View>
-        </View>
-      </TouchableOpacity>
-    </Modal>
+    <TouchableOpacity onPress={onPress} style={[styles.bottomNavItem, active && { backgroundColor: colors.primarySoft }]}>
+      <MaterialCommunityIcons name={icon} size={21} color={active ? colors.primary : colors.muted} />
+      <Text numberOfLines={1} style={[styles.bottomNavLabel, { color: active ? colors.primary : colors.muted }]}>{label}</Text>
+    </TouchableOpacity>
   );
 }
 
-function AccountModal({ visible, colors, accountInfo, onClose, onSwitch, onDisconnect }: any) {
+function PeriodControls({ colors, year, month, availableYears, onSelectPeriod, openPicker, goToday }: any) {
+  const chooseYear = () => {
+    openPicker({
+      title: "Año",
+      selectedValue: String(year),
+      options: availableYears.map((item: number) => ({ label: String(item), value: String(item), icon: "calendar-range", tone: colors.blue })),
+      onSelect: (value: string) => onSelectPeriod(month, Number(value)),
+    });
+  };
+  const chooseMonth = () => {
+    openPicker({
+      title: "Mes",
+      selectedValue: String(month),
+      options: MONTH_NAMES.map((name, index) => ({ label: name, value: String(index), icon: "calendar-month", tone: colors.yellow })),
+      onSelect: (value: string) => onSelectPeriod(Number(value), year),
+    });
+  };
   return (
-    <Modal visible={visible} transparent animationType="fade">
-      <View style={styles.modalOverlay}>
-        <View style={[styles.accountModal, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <ModalHeader title="Cuenta Google" icon="account-circle" colors={colors} onClose={onClose} />
-          <View style={[styles.accountHero, { backgroundColor: colors.input, borderColor: colors.border }]}>
-            <View style={[styles.accountAvatar, { backgroundColor: colors.green }]}>
-              <Text style={styles.accountInitial}>{(accountInfo?.email || accountInfo?.name || "G").slice(0, 1).toUpperCase()}</Text>
-            </View>
-            <Text numberOfLines={1} style={[styles.accountHeroName, { color: colors.text }]}>{accountInfo?.name || "Cuenta conectada"}</Text>
-            <Text numberOfLines={1} style={[styles.accountHeroEmail, { color: colors.muted }]}>{accountInfo?.email || "Google"}</Text>
-          </View>
-          <TouchableOpacity style={[styles.accountAction, { borderColor: colors.border }]} onPress={onSwitch}>
-            <MaterialCommunityIcons name="account-switch" size={20} color={colors.blue} />
-            <Text style={[styles.accountActionText, { color: colors.text }]}>Cambiar o agregar cuenta</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.accountAction, { borderColor: colors.border }]} onPress={onDisconnect}>
-            <MaterialCommunityIcons name="logout" size={20} color={colors.red} />
-            <Text style={[styles.accountActionText, { color: colors.red }]}>Desconectar cuenta actual</Text>
-          </TouchableOpacity>
-        </View>
+    <View style={[styles.periodControls, { backgroundColor: colors.card, borderColor: colors.border }]}>
+      <View style={styles.periodTitleBlock}>
+        <Text style={[styles.periodEyebrow, { color: colors.muted }]}>PERIODO</Text>
+        <Text numberOfLines={1} style={[styles.periodTitle, { color: colors.text }]}>{`${MONTH_NAMES[month]} ${year}`}</Text>
       </View>
-    </Modal>
+      <View style={styles.periodActions}>
+        <TouchableOpacity style={[styles.periodSelect, { backgroundColor: colors.input, borderColor: colors.border }]} onPress={chooseYear}>
+          <Text style={[styles.periodSelectText, { color: colors.text }]}>{year}</Text>
+          <MaterialCommunityIcons name="chevron-down" size={18} color={colors.muted} />
+        </TouchableOpacity>
+        <TouchableOpacity style={[styles.periodSelect, styles.periodMonthSelect, { backgroundColor: colors.input, borderColor: colors.border }]} onPress={chooseMonth}>
+          <Text numberOfLines={1} style={[styles.periodSelectText, { color: colors.text }]}>{MONTH_NAMES[month]}</Text>
+          <MaterialCommunityIcons name="chevron-down" size={18} color={colors.muted} />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={goToday} style={[styles.periodToday, { backgroundColor: colors.infoSoft, borderColor: colors.blue }]}>
+          <MaterialCommunityIcons name="calendar-today" size={18} color={colors.blue} />
+        </TouchableOpacity>
+      </View>
+    </View>
   );
 }
 
@@ -851,19 +799,23 @@ function ExpensesView({
   summary,
   transactions,
   searchActive,
-  compact,
+  searchText,
+  selectedRows,
   onEditFreq,
   onExitSearch,
   onOpenDetail,
   onEdit,
-  onDelete,
+  onDeleteSelected,
   onMove,
-  expandedRows,
-  onToggleRow,
+  onToggleSelection,
+  onLoadOlder,
 }: any) {
+  const groups = groupTransactionsByDate(transactions);
+  const selectedCount = selectedRows.length;
+  const selectedTx = transactions.find((tx: Transaction) => tx.rowId === selectedRows[0]);
   return (
     <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.pageScroll}>
-      <View style={[styles.statsGrid, compact && styles.statsGridMobile]}>
+      <View style={[styles.statsGrid, styles.statsGridMobile]}>
         <StatCard title="Ing. Frec." value={formatMoney(summary.freqIncome)} tone="income" icon="cash" colors={colors} action={onEditFreq} />
         <StatCard title="Ing. No Frec." value={formatMoney(summary.nonFreqIncome)} tone="income" icon="trending-up" colors={colors} />
         <StatCard title="Gasto Frec." value={formatMoney(summary.freqExpense)} tone="expense" icon="credit-card" colors={colors} />
@@ -873,120 +825,83 @@ function ExpensesView({
       </View>
 
       {searchActive && (
-        <View style={[styles.searchBanner, compact && styles.searchBannerMobile, { backgroundColor: colors.greenSoft }]}>
-          <Text style={{ color: colors.green, fontWeight: "800" }}>Mostrando resultados de búsqueda avanzada</Text>
+        <View style={[styles.searchBanner, styles.searchBannerMobile, { backgroundColor: colors.infoSoft, borderColor: colors.blue }]}>
+          <Text style={{ color: colors.blue, fontWeight: "800" }}>Mostrando resultados de busqueda avanzada</Text>
           <TouchableOpacity onPress={onExitSearch}>
-            <Text style={{ color: colors.green, fontWeight: "900" }}>Salir</Text>
+            <Text style={{ color: colors.blue, fontWeight: "900" }}>Salir</Text>
           </TouchableOpacity>
         </View>
       )}
 
-      {compact ? (
-        <View style={styles.mobileTxList}>
-          {transactions.map((tx: Transaction) => (
-            <TouchableOpacity
-              key={`${tx.rowId}-${tx.createdAt}`}
-              onPress={() => onOpenDetail(tx)}
-              style={[
-                styles.mobileTxCard,
-                expandedRows[tx.rowId] && { backgroundColor: colors.expandedRow },
-                tx.type === "GASTO FRECUENTE" && { backgroundColor: colors.freqExpenseRow },
-                { backgroundColor: colors.card, borderColor: colors.border },
-              ]}
-            >
-              <View style={styles.mobileTxTop}>
-                <TouchableOpacity style={[styles.mobileGripBtn, { backgroundColor: colors.input, borderColor: colors.border }]} onPress={() => onMove(tx)}>
-                  <MaterialCommunityIcons name="drag-horizontal-variant" size={20} color={colors.muted} />
-                </TouchableOpacity>
-                <View style={styles.mobileTxMain}>
-                  <Text style={[styles.mobileTxDate, { color: colors.muted }]}>{tx.date}</Text>
-                  <Text numberOfLines={1} style={[styles.mobileTxDetail, { color: colors.text }]}>{tx.detail}</Text>
-                </View>
-                <Text numberOfLines={1} style={[styles.mobileTxAmount, { color: tx.amount >= 0 ? colors.green : colors.red }]}>{formatMoney(tx.amount)}</Text>
-              </View>
-              {expandedRows[tx.rowId] && (
-                <Text style={[styles.mobileTxExpandedDetail, { color: colors.text }]}>{tx.detail}</Text>
-              )}
-              <View style={styles.mobileTxBottom}>
-                <View style={[styles.mobileTypePill, { borderColor: typeColor(tx.type, colors), backgroundColor: typeFill(tx.type, colors) }]}>
-                  <Text numberOfLines={1} style={[styles.typePillText, { color: typeTextColor(tx.type, colors) }]}>{abbrev(tx.type).toUpperCase()}</Text>
-                </View>
-                <View style={styles.mobileActionCluster}>
-                  <TouchableOpacity style={[styles.actionBtn, { backgroundColor: colors.input, borderColor: colors.border }]} onPress={() => onToggleRow(tx.rowId)}>
-                    <MaterialCommunityIcons name={expandedRows[tx.rowId] ? "chevron-up" : "chevron-down"} size={19} color={colors.blue} />
-                  </TouchableOpacity>
-                  <TouchableOpacity style={[styles.actionBtn, { backgroundColor: colors.editBg, borderColor: colors.editBorder }]} onPress={() => onEdit(tx)}>
-                    <MaterialCommunityIcons name="pencil" size={18} color={colors.green} />
-                  </TouchableOpacity>
-                  <TouchableOpacity style={[styles.actionBtn, { backgroundColor: colors.actionDark, borderColor: colors.border }]} onPress={() => onDelete(tx)}>
-                    <MaterialCommunityIcons name="trash-can" size={18} color={colors.red} />
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </TouchableOpacity>
-          ))}
-          {!transactions.length && (
-            <View style={[styles.mobileEmptyCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-              <Text style={[styles.empty, { color: colors.muted }]}>No hay movimientos para mostrar.</Text>
-            </View>
-          )}
-        </View>
-      ) : (
-        <View style={[styles.tableCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <ScrollView horizontal={false} showsHorizontalScrollIndicator={false}>
-            <View style={styles.tableWide}>
-            <View style={[styles.tableHeader, { backgroundColor: colors.input, borderColor: colors.border }]}>
-              <Text style={styles.rowGripHeader} />
-              <Text style={[styles.th, { color: colors.text, flex: 0.78 }]}>FECHA</Text>
-              <Text style={[styles.th, { color: colors.muted, flex: 0.9 }]}>MONTO</Text>
-              <Text style={[styles.th, { color: colors.text, flex: 1.4 }]}>DETALLE</Text>
-              <Text style={[styles.th, { color: colors.muted, flex: 1.1 }]}>TIPO</Text>
-              <Text style={[styles.th, { color: colors.text, width: 94, textAlign: "center" }]}>ACCIÓN</Text>
-            </View>
-            {transactions.map((tx: Transaction) => (
-              <TouchableOpacity
-                key={`${tx.rowId}-${tx.createdAt}`}
-                onPress={() => onOpenDetail(tx)}
-                style={[
-                  styles.tr,
-                  compact && styles.trMobile,
-                  expandedRows[tx.rowId] && { backgroundColor: colors.expandedRow },
-                  tx.type === "GASTO FRECUENTE" && { backgroundColor: colors.freqExpenseRow },
-                  { borderColor: colors.border },
-                ]}
-              >
-                <TouchableOpacity style={styles.rowGrip} onPress={() => onMove(tx)}>
-                  <MaterialCommunityIcons name="drag-horizontal-variant" size={20} color={colors.muted} />
-                </TouchableOpacity>
-                <Text style={[styles.td, compact && styles.tdMobile, { color: colors.text, flex: 0.78 }]}>{tx.date}</Text>
-                <Text style={[styles.tdAmount, compact && styles.tdMobile, { color: tx.amount >= 0 ? colors.green : colors.red, flex: 0.9 }]}>{formatMoney(tx.amount)}</Text>
-                <View style={[styles.detailCell, { flex: 1.4 }]}>
-                  <Text style={[styles.td, compact && styles.tdMobile, expandedRows[tx.rowId] ? styles.detailExpanded : styles.detailClipped, { color: colors.text }]}>
-                    {tx.detail}
-                  </Text>
-                  {!expandedRows[tx.rowId] && <View style={[styles.detailFade, { backgroundColor: colors.card }]} />}
-                  <TouchableOpacity style={[styles.expandBtn, { backgroundColor: expandedRows[tx.rowId] ? colors.blue : colors.expandBlue, borderColor: colors.expandBorder }]} onPress={() => onToggleRow(tx.rowId)}>
-                    <MaterialCommunityIcons name={expandedRows[tx.rowId] ? "minus" : "plus"} size={15} color="#ffffff" />
-                  </TouchableOpacity>
-                </View>
-                <View style={[styles.typePill, { borderColor: typeColor(tx.type, colors), backgroundColor: typeFill(tx.type, colors), flex: 1.1 }]}>
-                  <Text numberOfLines={1} style={[styles.typePillText, { color: typeTextColor(tx.type, colors) }]}>{abbrev(tx.type).toUpperCase()}</Text>
-                </View>
-                <View style={styles.rowActions}>
-                  <TouchableOpacity style={[styles.actionBtn, { backgroundColor: colors.editBg, borderColor: colors.editBorder }]} onPress={() => onEdit(tx)}>
-                    <MaterialCommunityIcons name="pencil" size={18} color={colors.green} />
-                  </TouchableOpacity>
-                  <TouchableOpacity style={[styles.actionBtn, { backgroundColor: colors.actionDark, borderColor: colors.border }]} onPress={() => onDelete(tx)}>
-                    <MaterialCommunityIcons name="trash-can" size={18} color={colors.red} />
-                  </TouchableOpacity>
-                </View>
+      {selectedCount > 0 && (
+        <View style={[styles.selectionBar, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <Text style={[styles.selectionText, { color: colors.text }]}>{selectedCount === 1 ? "1 seleccionado" : `${selectedCount} seleccionados`}</Text>
+          <View style={styles.selectionActions}>
+            {selectedCount === 1 && selectedTx && (
+              <TouchableOpacity style={[styles.selectionBtn, { backgroundColor: colors.editBg, borderColor: colors.editBorder }]} onPress={() => onEdit(selectedTx)}>
+                <MaterialCommunityIcons name="pencil" size={18} color={colors.blue} />
               </TouchableOpacity>
-            ))}
-            {!transactions.length && <Text style={[styles.empty, { color: colors.muted }]}>No hay movimientos para mostrar.</Text>}
-            </View>
-          </ScrollView>
+            )}
+            <TouchableOpacity style={[styles.selectionBtn, { backgroundColor: colors.expenseSoft, borderColor: colors.red }]} onPress={onDeleteSelected}>
+              <MaterialCommunityIcons name="trash-can" size={18} color={colors.red} />
+            </TouchableOpacity>
+          </View>
         </View>
       )}
+
+      <View style={styles.groupedList}>
+        {groups.map((group) => (
+          <View key={group.key} style={styles.dateGroup}>
+            <Text style={[styles.dateGroupLabel, { color: colors.muted }]}>{group.label}</Text>
+            <View style={[styles.txGroupCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              {group.items.map((tx: Transaction, index: number) => {
+                const selected = selectedRows.includes(tx.rowId);
+                const icon = tx.amount >= 0 ? "bank-transfer-in" : tx.type === "GASTO FRECUENTE" ? "credit-card-outline" : "basket-outline";
+                return (
+                  <TouchableOpacity
+                    key={`${tx.rowId}-${tx.createdAt}`}
+                    onPress={() => onOpenDetail(tx)}
+                    onLongPress={() => (selected ? onMove(tx) : onToggleSelection(tx))}
+                    style={[
+                      styles.groupedTxRow,
+                      index > 0 && { borderTopWidth: 1, borderColor: colors.border },
+                      tx.type === "GASTO FRECUENTE" && { backgroundColor: colors.freqExpenseRow },
+                      selected && { backgroundColor: colors.primarySoft },
+                    ]}
+                  >
+                    <View style={[styles.txIcon, { backgroundColor: typeFill(tx.type, colors), borderColor: typeColor(tx.type, colors) }]}>
+                      <MaterialCommunityIcons name={selected ? "check" : icon} size={18} color={typeColor(tx.type, colors)} />
+                    </View>
+                    <View style={styles.groupedTxMain}>
+                      <HighlightedText
+                        text={tx.detail}
+                        query={searchActive ? searchText : ""}
+                        style={[styles.groupedTxTitle, { color: colors.text }]}
+                        highlightStyle={{ color: colors.onPrimary, backgroundColor: colors.primary, borderRadius: 4 }}
+                      />
+                      <Text numberOfLines={1} style={[styles.groupedTxMeta, { color: colors.muted }]}>
+                        {`${abbrev(tx.type)} · ${formatCreatedTime(tx.createdAt).slice(0, 5)}`}
+                      </Text>
+                    </View>
+                    <Text numberOfLines={1} style={[styles.groupedTxAmount, { color: tx.amount >= 0 ? colors.green : colors.red }]}>{formatMoney(tx.amount)}</Text>
+                    {selected && <MaterialCommunityIcons name="drag-vertical" size={18} color={colors.muted} />}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+        ))}
+        {!transactions.length && (
+          <View style={[styles.mobileEmptyCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[styles.empty, { color: colors.muted }]}>No hay movimientos para mostrar.</Text>
+          </View>
+        )}
+        {!searchActive && (
+          <TouchableOpacity style={[styles.loadOlderBtn, { backgroundColor: colors.card, borderColor: colors.border }]} onPress={onLoadOlder}>
+            <Text style={[styles.loadOlderText, { color: colors.text }]}>CARGAR MOVIMIENTOS ANTERIORES</Text>
+          </TouchableOpacity>
+        )}
+      </View>
     </ScrollView>
   );
 }
@@ -1029,13 +944,19 @@ function SummaryView({ colors, summaries, compact }: { colors: Palette; summarie
   );
 }
 
-function TransactionModal({ visible, colors, draft, setDraft, editing, onClose, onSubmit }: any) {
+function TransactionModal({ visible, colors, draft, setDraft, editing, openPicker, onClose, onSubmit }: any) {
   const chooseType = () => {
-    Alert.alert(
-      "Tipo",
-      "Selecciona el tipo de movimiento.",
-      [...TRANSACTION_TYPES.map((type) => ({ text: titleCaseType(type), onPress: () => setDraft({ ...draft, type }) })), { text: "Cancelar", style: "cancel" as const }],
-    );
+    openPicker({
+      title: "Tipo de movimiento",
+      selectedValue: draft.type,
+      options: TRANSACTION_TYPES.map((type) => ({
+        label: titleCaseType(type),
+        value: type,
+        icon: type.startsWith("INGRESO") ? "trending-up" : "trending-down",
+        tone: typeColor(type, colors),
+      })),
+      onSelect: (type: string) => setDraft({ ...draft, type: type as TransactionType }),
+    });
   };
   return (
     <Modal visible={visible} transparent animationType="slide">
@@ -1078,9 +999,9 @@ function TransactionModal({ visible, colors, draft, setDraft, editing, onClose, 
                 <MaterialCommunityIcons name="close" size={18} color={colors.text} />
                 <Text style={[styles.recordCancelText, { color: colors.text }]}>Cancelar</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.recordSubmit, { backgroundColor: colors.green }]} onPress={onSubmit}>
-                <MaterialCommunityIcons name="plus" size={20} color="#061108" />
-                <Text style={styles.recordSubmitText}>{editing ? "Guardar" : "Agregar"}</Text>
+              <TouchableOpacity style={[styles.recordSubmit, { backgroundColor: colors.primary }]} onPress={onSubmit}>
+                <MaterialCommunityIcons name="plus" size={20} color={colors.onPrimary} />
+                <Text style={[styles.recordSubmitText, { color: colors.onPrimary }]}>{editing ? "Guardar" : "Agregar"}</Text>
               </TouchableOpacity>
             </View>
           </ScrollView>
@@ -1090,45 +1011,127 @@ function TransactionModal({ visible, colors, draft, setDraft, editing, onClose, 
   );
 }
 
-function SearchModal({ visible, colors, filters, setFilters, onClose, onSubmit, onClear }: any) {
+function SearchPage({ colors, filters, setFilters, onSubmit, onClear }: any) {
   return (
-    <Modal visible={visible} transparent animationType="slide">
-      <View style={styles.modalOverlay}>
-        <View style={[styles.modal, { backgroundColor: colors.card }]}>
-          <ModalHeader title="Búsqueda avanzada" icon="magnify" colors={colors} onClose={onClose} />
-          <Field label="Descripción / Detalle" value={filters.text} onChangeText={(text: string) => setFilters({ ...filters, text })} colors={colors} />
-          <View style={styles.twoCols}>
-            <Field label="Monto mínimo" value={filters.minAmount} onChangeText={(minAmount: string) => setFilters({ ...filters, minAmount })} colors={colors} />
-            <Field label="Monto máximo" value={filters.maxAmount} onChangeText={(maxAmount: string) => setFilters({ ...filters, maxAmount })} colors={colors} />
-          </View>
-          <View style={styles.twoCols}>
-            <Field label="Desde" value={filters.startDate} onChangeText={(startDate: string) => setFilters({ ...filters, startDate })} colors={colors} placeholder="YYYY-MM-DD" />
-            <Field label="Hasta" value={filters.endDate} onChangeText={(endDate: string) => setFilters({ ...filters, endDate })} colors={colors} placeholder="YYYY-MM-DD" />
-          </View>
-          <ActionRow colors={colors} onCancel={onClear} onSubmit={onSubmit} submitLabel="Buscar" cancelLabel="Limpiar" />
+    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.pageScroll, styles.pageScrollMobile]}>
+      <View style={[styles.pagePanel, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <View style={styles.pagePanelHeader}>
+          <MaterialCommunityIcons name="magnify" size={22} color={colors.primary} />
+        <Text style={[styles.pagePanelTitle, { color: colors.text }]}>Búsqueda avanzada</Text>
         </View>
+        <Field label="Descripción / Detalle" value={filters.text} onChangeText={(text: string) => setFilters({ ...filters, text })} colors={colors} />
+        <View style={styles.twoCols}>
+          <Field label="Monto mínimo" value={filters.minAmount} onChangeText={(minAmount: string) => setFilters({ ...filters, minAmount })} colors={colors} />
+          <Field label="Monto máximo" value={filters.maxAmount} onChangeText={(maxAmount: string) => setFilters({ ...filters, maxAmount })} colors={colors} />
+        </View>
+        <View style={styles.twoCols}>
+          <Field label="Desde" value={filters.startDate} onChangeText={(startDate: string) => setFilters({ ...filters, startDate })} colors={colors} placeholder="YYYY-MM-DD" />
+          <Field label="Hasta" value={filters.endDate} onChangeText={(endDate: string) => setFilters({ ...filters, endDate })} colors={colors} placeholder="YYYY-MM-DD" />
+        </View>
+        <ActionRow colors={colors} onCancel={onClear} onSubmit={onSubmit} submitLabel="Buscar" cancelLabel="Limpiar" />
       </View>
-    </Modal>
+    </ScrollView>
   );
 }
 
-function ExportModal({ visible, colors, onClose, onExport }: any) {
+function SettingsView({ colors, theme, setTheme, accountInfo, onRescan, onSwitch, onDisconnect, onExport }: any) {
+  const initial = (accountInfo?.email || accountInfo?.name || "B").slice(0, 1).toUpperCase();
   return (
-    <Modal visible={visible} transparent animationType="slide">
-      <View style={styles.modalOverlay}>
-        <View style={[styles.modal, { backgroundColor: colors.card }]}>
-          <ModalHeader title="Exportar movimientos" icon="file-export" colors={colors} onClose={onClose} />
-          <Text style={[styles.connectText, { color: colors.muted }]}>Exporta el rango visible o los movimientos del año actual.</Text>
-          <View style={styles.twoCols}>
-            <TouchableOpacity style={[styles.exportChoice, { backgroundColor: colors.input, borderColor: colors.border }]} onPress={() => onExport("xlsx")}>
-              <MaterialCommunityIcons name="file-excel" size={28} color={colors.green} />
-              <Text style={[styles.exportLabel, { color: colors.text }]}>Excel / CSV</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.exportChoice, { backgroundColor: colors.input, borderColor: colors.border }]} onPress={() => onExport("pdf")}>
-              <MaterialCommunityIcons name="file-pdf-box" size={28} color={colors.red} />
-              <Text style={[styles.exportLabel, { color: colors.text }]}>PDF</Text>
+    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.pageScroll, styles.pageScrollMobile]}>
+      <View style={styles.settingsSection}>
+        <Text style={[styles.settingsLabel, { color: colors.muted }]}>CUENTA</Text>
+        <View style={[styles.settingsGroup, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <TouchableOpacity style={[styles.settingsRow, { borderColor: colors.border }]} onPress={onSwitch}>
+            <View style={[styles.settingsAvatar, { backgroundColor: colors.primarySoft, borderColor: colors.primary }]}>
+              <Text style={[styles.accountInitial, { color: colors.primary }]}>{initial}</Text>
+            </View>
+            <View style={styles.settingsRowText}>
+              <Text numberOfLines={1} style={[styles.accountHeroName, { color: colors.text }]}>{accountInfo?.name || "Cuenta conectada"}</Text>
+              <Text numberOfLines={1} style={[styles.accountHeroEmail, { color: colors.muted }]}>{accountInfo?.email || "Google"}</Text>
+            </View>
+            <MaterialCommunityIcons name="chevron-right" size={22} color={colors.muted} />
+          </TouchableOpacity>
+          <SettingsRow colors={colors} icon="google-drive" label="Buscar hoja en Drive" onPress={onRescan} />
+          <SettingsRow colors={colors} icon="account-switch" label="Cambiar o agregar cuenta" onPress={onSwitch} last />
+        </View>
+      </View>
+
+      <View style={styles.settingsSection}>
+        <Text style={[styles.settingsLabel, { color: colors.muted }]}>TEMA</Text>
+        <View style={[styles.settingsGroup, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <TouchableOpacity style={[styles.settingsRow, { borderColor: colors.border }]} onPress={() => setTheme(theme === "dark" ? "light" : "dark")}>
+            <MaterialCommunityIcons name={theme === "dark" ? "weather-night" : "white-balance-sunny"} size={22} color={colors.yellow} />
+            <Text style={[styles.settingsRowLabel, { color: colors.text }]}>Modo oscuro</Text>
+            <View style={[styles.themeToggle, { backgroundColor: theme === "dark" ? colors.primary : colors.switchTrack }]}>
+              <View style={[styles.themeThumb, theme === "dark" ? { marginLeft: 23 } : { marginLeft: 0 }]} />
+            </View>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      <View style={styles.settingsSection}>
+        <Text style={[styles.settingsLabel, { color: colors.muted }]}>EXPORTAR</Text>
+        <View style={[styles.settingsGroup, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <SettingsRow colors={colors} icon="file-excel" label="Exportar CSV" onPress={() => onExport("xlsx")} />
+          <SettingsRow colors={colors} icon="file-pdf-box" label="Exportar PDF" onPress={() => onExport("pdf")} last />
+        </View>
+      </View>
+
+      <TouchableOpacity style={styles.signOutBtn} onPress={onDisconnect}>
+        <Text style={[styles.signOutText, { color: colors.red }]}>Cerrar sesión</Text>
+      </TouchableOpacity>
+    </ScrollView>
+  );
+}
+
+function SettingsRow({ colors, icon, label, onPress, last = false }: any) {
+  return (
+    <TouchableOpacity style={[styles.settingsRow, !last && { borderBottomWidth: 1, borderColor: colors.border }]} onPress={onPress}>
+      <MaterialCommunityIcons name={icon} size={22} color={colors.blue} />
+      <Text style={[styles.settingsRowLabel, { color: colors.text }]}>{label}</Text>
+      <MaterialCommunityIcons name="chevron-right" size={22} color={colors.muted} />
+    </TouchableOpacity>
+  );
+}
+
+function OptionSheet({ config, colors, onClose }: { config: PickerConfig; colors: Palette; onClose: () => void }) {
+  if (!config) return null;
+  return (
+    <Modal visible transparent animationType="fade" onRequestClose={onClose}>
+      <View style={styles.optionOverlay}>
+        <TouchableOpacity style={styles.optionBackdrop} activeOpacity={1} onPress={onClose} />
+        <View style={[styles.optionSheet, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View style={[styles.optionHeader, { borderColor: colors.border }]}>
+            <Text style={[styles.optionTitle, { color: colors.text }]}>{config.title}</Text>
+            <TouchableOpacity style={[styles.optionClose, { backgroundColor: colors.input, borderColor: colors.border }]} onPress={onClose}>
+              <MaterialCommunityIcons name="close" size={20} color={colors.text} />
             </TouchableOpacity>
           </View>
+          <ScrollView style={styles.optionList} contentContainerStyle={styles.optionListContent} showsVerticalScrollIndicator={false}>
+            {config.options.map((option) => {
+              const selected = option.value === config.selectedValue;
+              const tone = option.tone || colors.primary;
+              return (
+                <TouchableOpacity
+                  key={option.value}
+                  style={[
+                    styles.optionRow,
+                    { backgroundColor: selected ? colors.primarySoft : colors.input, borderColor: selected ? colors.primary : colors.border },
+                  ]}
+                  onPress={() => {
+                    config.onSelect(option.value);
+                    onClose();
+                  }}
+                >
+                  <View style={[styles.optionIcon, { backgroundColor: selected ? colors.primarySoft : colors.card, borderColor: tone }]}>
+                    <MaterialCommunityIcons name={(option.icon || "chevron-right") as any} size={19} color={tone} />
+                  </View>
+                  <Text numberOfLines={1} style={[styles.optionLabel, { color: selected ? colors.primary : colors.text }]}>{option.label}</Text>
+                  {selected && <MaterialCommunityIcons name="check" size={20} color={colors.primary} />}
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
         </View>
       </View>
     </Modal>
@@ -1149,12 +1152,11 @@ function FreqIncomeModal({ visible, colors, value, setValue, onClose, onSubmit }
   );
 }
 
-function DetailModal({ tx, colors, onClose }: { tx: Transaction | null; colors: Palette; onClose: () => void }) {
+function DetailModal({ tx, colors, onClose, onEdit, onDelete }: { tx: Transaction | null; colors: Palette; onClose: () => void; onEdit: (tx: Transaction) => void; onDelete: (tx: Transaction) => void }) {
   return (
     <Modal visible={!!tx} transparent animationType="fade">
       <View style={styles.modalOverlay}>
         <View style={[styles.detailModal, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <View style={[styles.detailModalAccent, { backgroundColor: colors.yellow }]} />
           <View style={[styles.recordHeader, { borderColor: colors.border }]}>
             <Text style={[styles.recordTitle, { color: colors.text }]}>
               <MaterialCommunityIcons name="receipt-text" size={20} color={colors.yellow} /> Detalle del gasto
@@ -1164,12 +1166,37 @@ function DetailModal({ tx, colors, onClose }: { tx: Transaction | null; colors: 
             </TouchableOpacity>
           </View>
           {tx && (
-            <ScrollView style={styles.detailScroll} contentContainerStyle={styles.detailStack} showsVerticalScrollIndicator={false}>
-              <Detail label="Fecha" value={tx.date} tone={colors.blue} colors={colors} wide />
-              <Detail label="Hora de creación" value={formatCreatedTime(tx.createdAt)} colors={colors} />
-              <Detail label="Monto" value={formatMoney(tx.amount)} tone={colors.red} colors={colors} wide />
-              <Detail label="Tipo" value={tx.type} tone={colors.yellow} colors={colors} wide />
-              <Detail label="Detalle" value={tx.detail} tone={colors.yellow} colors={colors} wide />
+            <ScrollView style={styles.detailScroll} contentContainerStyle={styles.detailBody} showsVerticalScrollIndicator={false}>
+              <View style={[styles.detailHero, { backgroundColor: tx.amount >= 0 ? colors.incomeSoft : colors.expenseSoft, borderColor: tx.amount >= 0 ? colors.green : colors.red }]}>
+                <View style={[styles.detailHeroIcon, { backgroundColor: colors.card, borderColor: tx.amount >= 0 ? colors.green : colors.red }]}>
+                  <MaterialCommunityIcons name={tx.amount >= 0 ? "bank-transfer-in" : "receipt-text-outline"} size={24} color={tx.amount >= 0 ? colors.green : colors.red} />
+                </View>
+                <View style={styles.detailHeroText}>
+                  <Text style={[styles.detailHeroLabel, { color: colors.muted }]}>{titleCaseType(tx.type)}</Text>
+                  <Text numberOfLines={1} style={[styles.detailHeroAmount, { color: tx.amount >= 0 ? colors.green : colors.red }]}>{formatMoney(tx.amount)}</Text>
+                </View>
+              </View>
+
+              <View style={[styles.detailDescription, { backgroundColor: colors.input, borderColor: colors.border }]}>
+                <Text style={[styles.detailSectionLabel, { color: colors.yellow }]}>Detalle</Text>
+                <Text selectable style={[styles.detailDescriptionText, { color: colors.text }]}>{tx.detail}</Text>
+              </View>
+
+              <View style={styles.detailMetaGrid}>
+                <DetailMeta icon="calendar" label="Fecha" value={tx.date} tone={colors.blue} colors={colors} />
+                <DetailMeta icon="clock-outline" label="Hora" value={formatCreatedTime(tx.createdAt)} tone={colors.muted} colors={colors} />
+              </View>
+
+              <View style={styles.detailActions}>
+                <TouchableOpacity style={[styles.detailActionBtn, { backgroundColor: colors.editBg, borderColor: colors.editBorder }]} onPress={() => onEdit(tx)}>
+                  <MaterialCommunityIcons name="pencil" size={18} color={colors.blue} />
+                  <Text style={[styles.detailActionText, { color: colors.blue }]}>Editar</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.detailActionBtn, { backgroundColor: colors.expenseSoft, borderColor: colors.red }]} onPress={() => onDelete(tx)}>
+                  <MaterialCommunityIcons name="trash-can" size={18} color={colors.red} />
+                  <Text style={[styles.detailActionText, { color: colors.red }]}>Eliminar</Text>
+                </TouchableOpacity>
+              </View>
             </ScrollView>
           )}
         </View>
@@ -1182,7 +1209,7 @@ function ModalHeader({ title, icon, colors, onClose }: any) {
   return (
     <View style={styles.modalHeader}>
       <Text style={[styles.modalTitle, { color: colors.text }]}>
-        <MaterialCommunityIcons name={icon} size={20} color={colors.green} /> {title}
+        <MaterialCommunityIcons name={icon} size={20} color={colors.blue} /> {title}
       </Text>
       <TouchableOpacity onPress={onClose}>
         <MaterialCommunityIcons name="close" size={24} color={colors.muted} />
@@ -1209,8 +1236,8 @@ function ActionRow({ colors, onCancel, onSubmit, submitLabel, cancelLabel = "Can
       <TouchableOpacity style={[styles.cancelBtn, { backgroundColor: colors.input }]} onPress={onCancel}>
         <Text style={{ color: colors.text, fontWeight: "800" }}>{cancelLabel}</Text>
       </TouchableOpacity>
-      <TouchableOpacity style={[styles.saveBtn, { backgroundColor: colors.green }]} onPress={onSubmit}>
-        <Text style={styles.saveText}>{submitLabel}</Text>
+      <TouchableOpacity style={[styles.saveBtn, { backgroundColor: colors.primary }]} onPress={onSubmit}>
+        <Text style={[styles.saveText, { color: colors.onPrimary }]}>{submitLabel}</Text>
       </TouchableOpacity>
     </View>
   );
@@ -1281,29 +1308,42 @@ function BarChart({ rows, colors }: { rows: SummaryRow[]; colors: Palette }) {
   );
 }
 
-function Detail({ label, value, colors, wide, tone }: any) {
+function DetailMeta({ icon, label, value, tone, colors }: any) {
   return (
-    <View style={[styles.detailItem, wide && { width: "100%" }, { backgroundColor: colors.input, borderColor: colors.border }]}>
-      <Text style={[styles.detailLabel, { color: tone || colors.muted }]}>{label}</Text>
-      <Text style={[styles.detailValue, { color: colors.text }]}>{value}</Text>
+    <View style={[styles.detailMetaItem, { backgroundColor: colors.input, borderColor: colors.border }]}>
+      <MaterialCommunityIcons name={icon as any} size={18} color={tone} />
+      <View style={styles.detailMetaText}>
+        <Text style={[styles.detailMetaLabel, { color: colors.muted }]}>{label}</Text>
+        <Text numberOfLines={1} selectable style={[styles.detailMetaValue, { color: colors.text }]}>{value}</Text>
+      </View>
     </View>
   );
 }
 
-function IconButton({ name, onPress, colors }: any) {
+function HighlightedText({ text, query, style, highlightStyle }: any) {
+  const value = String(text || "");
+  const needle = String(query || "").trim();
+  if (!needle) return <Text numberOfLines={1} style={style}>{value}</Text>;
+  const lowerValue = value.toLowerCase();
+  const lowerNeedle = needle.toLowerCase();
+  const parts: Array<{ text: string; match: boolean }> = [];
+  let cursor = 0;
+  let index = lowerValue.indexOf(lowerNeedle);
+  while (index >= 0) {
+    if (index > cursor) parts.push({ text: value.slice(cursor, index), match: false });
+    parts.push({ text: value.slice(index, index + needle.length), match: true });
+    cursor = index + needle.length;
+    index = lowerValue.indexOf(lowerNeedle, cursor);
+  }
+  if (cursor < value.length) parts.push({ text: value.slice(cursor), match: false });
   return (
-    <TouchableOpacity onPress={onPress} style={[styles.iconBtn, { backgroundColor: colors.card }]}>
-      <MaterialCommunityIcons name={name} size={22} color={colors.text} />
-    </TouchableOpacity>
-  );
-}
-
-function NavButton({ label, icon, active, onPress, colors }: any) {
-  return (
-    <TouchableOpacity onPress={onPress} style={[styles.navBtn, active && { backgroundColor: colors.green }]}>
-      <MaterialCommunityIcons name={icon} size={18} color={active ? "#061108" : colors.muted} />
-      <Text style={[styles.navText, { color: active ? "#061108" : colors.text }]}>{label}</Text>
-    </TouchableOpacity>
+    <Text numberOfLines={1} style={style}>
+      {parts.map((part, indexPart) => (
+        <Text key={`${part.text}-${indexPart}`} style={part.match ? highlightStyle : undefined}>
+          {part.text}
+        </Text>
+      ))}
+    </Text>
   );
 }
 
@@ -1331,14 +1371,13 @@ function typeColor(type: string, colors: Palette) {
 }
 
 function typeFill(type: string, colors: Palette) {
-  if (type === "INGRESO NO FRECUENTE") return colors.green;
-  if (type === "GASTO FRECUENTE") return colors.red;
-  return "transparent";
+  if (type === "INGRESO NO FRECUENTE" || type === "INGRESO FRECUENTE") return colors.incomeSoft;
+  if (type === "GASTO FRECUENTE") return colors.expenseSoft;
+  return colors.warnSoft;
 }
 
 function typeTextColor(type: string, colors: Palette) {
-  if (type === "INGRESO NO FRECUENTE" || type === "GASTO FRECUENTE") return "#061108";
-  return colors.text;
+  return typeColor(type, colors);
 }
 
 function formatCreatedTime(createdAt?: string) {
@@ -1351,117 +1390,89 @@ function formatCreatedTime(createdAt?: string) {
 type Palette = typeof dark;
 
 const dark = {
-  bg: "#020403",
-  sidebar: "#07100d",
-  card: "#0b1110",
-  input: "#050908",
-  border: "#27322e",
-  text: "#ffffff",
-  muted: "#8f9b95",
-  green: "#c8ff00",
-  greenSoft: "rgba(200,255,0,0.15)",
-  red: "#ff4d57",
-  yellow: "#ffc145",
-  blue: "#2d9cdb",
-  disabled: "#405047",
-  actionDark: "#030706",
-  editBg: "#063f22",
-  editBorder: "#087a3c",
-  expandBlue: "#0a5678",
-  expandBorder: "#1b80aa",
-  expandedRow: "#202216",
-  freqExpenseRow: "#341718",
+  bg: "#0b0f0d",
+  card: "#151b17",
+  input: "#0f1512",
+  border: "#2d3933",
+  text: "#f1f4ee",
+  muted: "#9aa69e",
+  primary: "#c9dc58",
+  primarySoft: "rgba(201,220,88,0.14)",
+  onPrimary: "#17200f",
+  green: "#69b77a",
+  incomeSoft: "rgba(105,183,122,0.14)",
+  red: "#e1665f",
+  expenseSoft: "rgba(225,102,95,0.14)",
+  yellow: "#d9a94d",
+  warnSoft: "rgba(217,169,77,0.15)",
+  blue: "#62a8c7",
+  infoSoft: "rgba(98,168,199,0.14)",
+  disabled: "#3d4741",
+  switchTrack: "#22302b",
+  editBg: "#10252a",
+  editBorder: "#2e6f82",
+  freqExpenseRow: "#241817",
 };
 
 const light = {
-  bg: "#f7faef",
-  sidebar: "#ffffff",
-  card: "#ffffff",
-  input: "#eaf1e4",
-  border: "#b8c9ae",
-  text: "#06110b",
-  muted: "#66736c",
-  green: "#c8ff00",
-  greenSoft: "rgba(200,255,0,0.24)",
-  red: "#e53935",
-  yellow: "#f9a825",
-  blue: "#1976d2",
+  bg: "#f4f6ef",
+  card: "#fffef9",
+  input: "#edf1e7",
+  border: "#c8d2c4",
+  text: "#172118",
+  muted: "#667168",
+  primary: "#6f821e",
+  primarySoft: "rgba(111,130,30,0.13)",
+  onPrimary: "#ffffff",
+  green: "#347f55",
+  incomeSoft: "rgba(52,127,85,0.12)",
+  red: "#c84f47",
+  expenseSoft: "rgba(200,79,71,0.12)",
+  yellow: "#a36f20",
+  warnSoft: "rgba(163,111,32,0.13)",
+  blue: "#347c95",
+  infoSoft: "rgba(52,124,149,0.12)",
   disabled: "#c9d2cb",
-  actionDark: "#eef3ed",
-  editBg: "#dff8e9",
-  editBorder: "#7ad99e",
-  expandBlue: "#1976d2",
-  expandBorder: "#6db7ea",
-  expandedRow: "#eef3dc",
-  freqExpenseRow: "#ffe6e6",
+  switchTrack: "#dbe5d5",
+  editBg: "#e4eff0",
+  editBorder: "#9ec7d2",
+  freqExpenseRow: "#fae9e7",
 };
 
 const styles = StyleSheet.create({
   safe: { flex: 1 },
   shell: { flex: 1, flexDirection: "row", padding: 12, gap: 12 },
   shellCompact: { flexDirection: "column", padding: 0, gap: 0 },
-  sidebar: { width: 245, borderWidth: 1, borderRadius: 8, padding: 16 },
-  sidebarCompact: { display: "none" },
-  brandRow: { flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 24 },
-  logo: { width: 61, height: 61, borderRadius: 10, alignItems: "center", justifyContent: "center" },
-  brandTitle: { fontSize: 24, fontWeight: "900" },
-  brandSub: { fontSize: 16, fontWeight: "700" },
-  kicker: { fontSize: 11, fontWeight: "900", marginBottom: 14, textTransform: "uppercase", letterSpacing: 2 },
-  periodBox: { marginBottom: 20 },
-  yearRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  yearChip: { borderRadius: 8, paddingVertical: 7, paddingHorizontal: 10 },
-  yearText: { fontSize: 12, fontWeight: "900" },
-  monthRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 14 },
-  monthLabel: { fontSize: 16, fontWeight: "900" },
-  iconBtn: { width: 38, height: 38, borderRadius: 8, alignItems: "center", justifyContent: "center" },
-  navBlock: { gap: 10, marginBottom: 28 },
-  navBtn: { flexDirection: "row", gap: 14, alignItems: "center", paddingVertical: 16, paddingHorizontal: 18, borderRadius: 12 },
-  navText: { fontWeight: "900", fontSize: 18 },
-  quickGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  monthChip: { width: 59, paddingVertical: 13, borderRadius: 9, borderWidth: 1, alignItems: "center" },
-  monthChipText: { fontSize: 16, fontWeight: "900" },
-  sidebarBottom: { marginTop: "auto", gap: 12 },
-  storageNote: { fontSize: 12, fontWeight: "700" },
-  accountBtn: { minHeight: 54, borderRadius: 12, borderWidth: 1, paddingHorizontal: 12, flexDirection: "row", alignItems: "center", gap: 10 },
-  accountName: { fontSize: 13, fontWeight: "900" },
-  accountEmail: { fontSize: 11, fontWeight: "700", marginTop: 2 },
   content: { flex: 1 },
-  pageScroll: { paddingBottom: 98 },
+  pageScroll: { paddingBottom: 172 },
   pageScrollMobile: { paddingHorizontal: 14 },
   loginScreen: { flex: 1, alignItems: "center", justifyContent: "center", padding: 26 },
   loginMark: { width: 78, height: 78, borderRadius: 18, borderWidth: 1, alignItems: "center", justifyContent: "center", marginBottom: 18 },
   loginTitle: { fontSize: 30, fontWeight: "900", textAlign: "center" },
-  loginSubtitle: { maxWidth: 310, marginTop: 9, marginBottom: 24, fontSize: 14, fontWeight: "700", lineHeight: 20, textAlign: "center" },
   googleLoginBtn: { minWidth: 232, minHeight: 50, marginTop: 22, borderRadius: 8, paddingVertical: 13, paddingHorizontal: 18, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10 },
-  googleLoginText: { color: "#061108", fontSize: 15, fontWeight: "900" },
+  googleLoginText: { fontSize: 15, fontWeight: "900" },
   loginStatus: { marginTop: 14, fontSize: 12, fontWeight: "700", textAlign: "center" },
   topBar: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 },
   topBarMobile: { marginBottom: 0, paddingHorizontal: 12, paddingVertical: 10, borderBottomWidth: 1 },
   headerLeft: { flex: 1, minWidth: 0, flexDirection: "row", alignItems: "center", gap: 10 },
+  headerLogo: { width: 40, height: 40, borderRadius: 10, alignItems: "center", justifyContent: "center" },
   titleBlock: { flex: 1, minWidth: 0 },
   pageTitle: { fontSize: 28, fontWeight: "900" },
   pageTitleMobile: { fontSize: 20 },
   pageSub: { fontSize: 13, fontWeight: "700" },
   pageSubMobile: { fontSize: 14 },
-  topActions: { flexDirection: "row", alignItems: "center", gap: 6 },
-  headerBtn: { width: 40, height: 40, borderRadius: 8, alignItems: "center", justifyContent: "center" },
-  headerBtnOutlined: { borderWidth: 1 },
   themeToggle: { width: 58, height: 34, borderRadius: 999, paddingHorizontal: 4, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   themeThumb: { width: 29, height: 29, borderRadius: 15, backgroundColor: "#ffffff" },
-  mobileControls: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 8, paddingHorizontal: 12, paddingVertical: 10, borderBottomWidth: 1 },
-  mobileYearScroll: { flex: 1, minWidth: 0 },
-  mobileYearRail: { gap: 8, paddingRight: 2 },
-  mobileYearChip: { minWidth: 76, height: 42, borderWidth: 1, borderRadius: 10, paddingVertical: 9, paddingHorizontal: 12, alignItems: "center", justifyContent: "center" },
-  mobileYearText: { fontSize: 15, fontWeight: "900" },
-  monthNavMobile: { flexGrow: 1, flexBasis: 184, minWidth: 0, height: 42, borderWidth: 1, borderRadius: 10, paddingHorizontal: 6, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  monthArrowMobile: { width: 34, height: 34, borderRadius: 7, alignItems: "center", justifyContent: "center" },
-  monthNavTextMobile: { flex: 1, textAlign: "center", fontSize: 15, fontWeight: "900" },
-  todayBtnMobile: { width: 42, height: 42, borderRadius: 10, alignItems: "center", justifyContent: "center" },
-  connectCard: { borderWidth: 1, borderRadius: 8, padding: 14, flexDirection: "row", gap: 12, alignItems: "center", marginBottom: 12 },
-  connectTitle: { fontSize: 16, fontWeight: "900" },
+  periodControls: { borderBottomWidth: 1, paddingHorizontal: 14, paddingTop: 12, paddingBottom: 12, gap: 10 },
+  periodTitleBlock: { gap: 3 },
+  periodEyebrow: { fontSize: 10, fontWeight: "900", letterSpacing: 0 },
+  periodTitle: { fontSize: 18, fontWeight: "900" },
+  periodActions: { flexDirection: "row", alignItems: "center", gap: 8 },
+  periodSelect: { minHeight: 42, borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 },
+  periodMonthSelect: { flex: 1, minWidth: 0 },
+  periodSelectText: { fontSize: 14, fontWeight: "900" },
+  periodToday: { width: 42, height: 42, borderRadius: 10, borderWidth: 1, alignItems: "center", justifyContent: "center" },
   connectText: { fontSize: 12, fontWeight: "700", lineHeight: 18 },
-  connectBtn: { borderRadius: 8, paddingVertical: 11, paddingHorizontal: 14 },
-  connectBtnText: { color: "#061108", fontWeight: "900" },
   loadingBar: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 10 },
   skeletonScreen: { flex: 1, padding: 14, gap: 14 },
   skeletonHeader: { borderWidth: 1, borderRadius: 12, padding: 14, flexDirection: "row", alignItems: "center", gap: 12 },
@@ -1478,59 +1489,39 @@ const styles = StyleSheet.create({
   statLabel: { fontSize: 10, fontWeight: "900", textTransform: "uppercase" },
   statValue: { fontSize: 15, fontWeight: "900", marginTop: 4 },
   editStat: { position: "absolute", right: 10, top: 10 },
-  searchBanner: { borderRadius: 8, padding: 12, flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", gap: 8, marginBottom: 10 },
+  searchBanner: { borderRadius: 8, borderWidth: 1, padding: 12, flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", gap: 8, marginBottom: 10 },
   searchBannerMobile: { marginHorizontal: 14 },
   tableCard: { borderWidth: 1, borderRadius: 8, overflow: "hidden", marginBottom: 18 },
-  tableCardMobile: { marginHorizontal: 14, borderRadius: 18 },
   summaryTableMobile: { borderRadius: 14 },
-  tableWide: { width: "100%" },
-  tableHeader: { flexDirection: "row", borderBottomWidth: 1, paddingVertical: 12, paddingHorizontal: 10 },
-  th: { fontSize: 14, fontWeight: "900" },
-  tr: { flexDirection: "row", alignItems: "center", borderBottomWidth: 1, paddingVertical: 13, paddingHorizontal: 10 },
-  trMobile: { paddingVertical: 12 },
-  td: { fontSize: 13, fontWeight: "700" },
-  tdMobile: { fontSize: 16 },
-  tdAmount: { fontSize: 13, fontWeight: "900" },
-  detailCell: { minHeight: 26, justifyContent: "center", paddingRight: 32, overflow: "hidden" },
-  detailClipped: { maxHeight: 24, lineHeight: 22 },
-  detailExpanded: { lineHeight: 24 },
-  detailFade: { position: "absolute", right: 25, top: 0, bottom: 0, width: 34, opacity: 0.86 },
-  expandBtn: { position: "absolute", right: 0, top: 1, width: 24, height: 24, borderRadius: 7, borderWidth: 1, alignItems: "center", justifyContent: "center" },
-  typePill: { minHeight: 38, borderRadius: 999, borderWidth: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 10, marginHorizontal: 8 },
-  typePillText: { fontSize: 12, fontWeight: "900" },
-  rowActions: { width: 94, flexDirection: "row", justifyContent: "space-between", gap: 8 },
-  actionBtn: { width: 38, height: 38, borderRadius: 8, borderWidth: 1, alignItems: "center", justifyContent: "center" },
-  rowGripHeader: { width: 28 },
-  rowGrip: { width: 28, alignItems: "flex-start", justifyContent: "center" },
   empty: { padding: 18, textAlign: "center", fontWeight: "700" },
-  mobileTxList: { paddingHorizontal: 14, gap: 10 },
-  mobileTxCard: { borderWidth: 1, borderRadius: 14, padding: 12, gap: 10 },
-  mobileTxTop: { flexDirection: "row", alignItems: "center", gap: 10 },
-  mobileGripBtn: { width: 34, height: 34, borderRadius: 8, borderWidth: 1, alignItems: "center", justifyContent: "center" },
-  mobileTxMain: { flex: 1, minWidth: 0 },
-  mobileTxDate: { fontSize: 12, fontWeight: "900" },
-  mobileTxDetail: { fontSize: 15, fontWeight: "900", marginTop: 2 },
-  mobileTxAmount: { maxWidth: 112, fontSize: 15, fontWeight: "900", textAlign: "right" },
-  mobileTxExpandedDetail: { fontSize: 14, fontWeight: "700", lineHeight: 20 },
-  mobileTxBottom: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 },
-  mobileTypePill: { flex: 1, minHeight: 34, borderRadius: 999, borderWidth: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 10 },
-  mobileActionCluster: { flexDirection: "row", alignItems: "center", gap: 8 },
   mobileEmptyCard: { borderWidth: 1, borderRadius: 14 },
-  fab: { position: "absolute", right: 22, bottom: 22, width: 62, height: 62, borderRadius: 31, alignItems: "center", justifyContent: "center" },
-  undoFab: { position: "absolute", left: 270, bottom: 22, borderRadius: 999, borderWidth: 1, paddingVertical: 12, paddingHorizontal: 16, flexDirection: "row", gap: 8 },
-  drawerOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.58)" },
-  drawer: { width: 306, height: "100%", borderRightWidth: 1, padding: 19 },
+  selectionBar: { marginHorizontal: 14, marginBottom: 10, borderWidth: 1, borderRadius: 12, padding: 10, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 },
+  selectionText: { flex: 1, minWidth: 0, fontSize: 14, fontWeight: "900" },
+  selectionActions: { flexDirection: "row", alignItems: "center", gap: 8 },
+  selectionBtn: { width: 42, height: 42, borderRadius: 10, borderWidth: 1, alignItems: "center", justifyContent: "center" },
+  groupedList: { paddingHorizontal: 14, gap: 18 },
+  dateGroup: { gap: 8 },
+  dateGroupLabel: { paddingHorizontal: 4, fontSize: 11, fontWeight: "900", letterSpacing: 0 },
+  txGroupCard: { borderWidth: 1, borderRadius: 8, overflow: "hidden" },
+  groupedTxRow: { minHeight: 60, paddingHorizontal: 12, paddingVertical: 10, flexDirection: "row", alignItems: "center", gap: 11 },
+  txIcon: { width: 38, height: 38, borderRadius: 19, borderWidth: 1, alignItems: "center", justifyContent: "center" },
+  groupedTxMain: { flex: 1, minWidth: 0 },
+  groupedTxTitle: { fontSize: 14, fontWeight: "900" },
+  groupedTxMeta: { marginTop: 2, fontSize: 11, fontWeight: "800" },
+  groupedTxAmount: { maxWidth: 110, fontSize: 14, fontWeight: "900", textAlign: "right" },
+  loadOlderBtn: { minHeight: 48, borderWidth: 1, borderRadius: 8, alignItems: "center", justifyContent: "center", marginBottom: 12 },
+  loadOlderText: { fontSize: 11, fontWeight: "900", letterSpacing: 0 },
+  undoFab: { position: "absolute", left: 18, bottom: 96, borderRadius: 999, borderWidth: 1, paddingVertical: 12, paddingHorizontal: 16, flexDirection: "row", gap: 8 },
+  bottomNav: { position: "absolute", left: 0, right: 0, bottom: 0, minHeight: 78, borderTopWidth: 1, paddingTop: 8, paddingBottom: 10, paddingHorizontal: 8, flexDirection: "row", alignItems: "center", gap: 4 },
+  bottomNavItem: { flex: 1, minWidth: 0, minHeight: 56, borderRadius: 14, alignItems: "center", justifyContent: "center", gap: 4 },
+  bottomAddButton: { width: 64, height: 64, borderRadius: 32, alignItems: "center", justifyContent: "center", marginTop: -24 },
+  bottomNavLabel: { fontSize: 11, fontWeight: "900" },
   sheetChoice: { borderWidth: 1, borderRadius: 10, padding: 12, flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 10 },
   sheetChoiceTitle: { fontSize: 15, fontWeight: "900" },
   sheetChoiceMeta: { fontSize: 12, fontWeight: "700", marginTop: 3 },
-  accountModal: { borderRadius: 16, borderWidth: 1, padding: 16, width: "100%", maxWidth: 420, alignSelf: "center" },
-  accountHero: { borderRadius: 14, borderWidth: 1, padding: 16, alignItems: "center", marginBottom: 12 },
-  accountAvatar: { width: 58, height: 58, borderRadius: 29, alignItems: "center", justifyContent: "center", marginBottom: 10 },
-  accountInitial: { color: "#061108", fontSize: 24, fontWeight: "900" },
+  accountInitial: { fontSize: 24, fontWeight: "900" },
   accountHeroName: { fontSize: 18, fontWeight: "900" },
   accountHeroEmail: { fontSize: 13, fontWeight: "700", marginTop: 4 },
-  accountAction: { borderTopWidth: 1, paddingVertical: 14, flexDirection: "row", alignItems: "center", gap: 12 },
-  accountActionText: { fontSize: 15, fontWeight: "900" },
   kpiGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10, marginBottom: 12 },
   kpiGridMobile: { gap: 8, marginBottom: 10 },
   kpi: { flexGrow: 1, flexBasis: "23%", minWidth: 150, borderWidth: 1, borderRadius: 8, padding: 14 },
@@ -1562,29 +1553,57 @@ const styles = StyleSheet.create({
   recordCancel: { flex: 1, height: 52, borderRadius: 12, borderWidth: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7 },
   recordSubmit: { flex: 1, height: 52, borderRadius: 12, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7 },
   recordCancelText: { fontSize: 15, fontWeight: "900" },
-  recordSubmitText: { color: "#061108", fontSize: 15, fontWeight: "900" },
+  recordSubmitText: { fontSize: 15, fontWeight: "900" },
   modalHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 14 },
   modalTitle: { fontSize: 18, fontWeight: "900" },
   label: { fontSize: 12, fontWeight: "900", marginBottom: 6 },
   input: { borderWidth: 1, borderRadius: 8, paddingVertical: 11, paddingHorizontal: 12, fontWeight: "800" },
   inputIcon: { position: "absolute", right: 14, top: 12 },
-  typeGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 12 },
-  typeChip: { borderWidth: 1, borderRadius: 8, paddingVertical: 9, paddingHorizontal: 10 },
-  calcGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 12 },
-  calcKey: { width: "23%", borderRadius: 8, alignItems: "center", paddingVertical: 10 },
   twoCols: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
   modalActions: { flexDirection: "row", flexWrap: "wrap", justifyContent: "flex-end", gap: 10, marginTop: 8 },
   cancelBtn: { borderRadius: 8, paddingVertical: 12, paddingHorizontal: 14 },
   saveBtn: { borderRadius: 8, paddingVertical: 12, paddingHorizontal: 18 },
-  saveText: { color: "#061108", fontWeight: "900" },
-  exportChoice: { flex: 1, minWidth: 130, borderWidth: 1, borderRadius: 8, padding: 18, alignItems: "center", gap: 8 },
-  exportLabel: { fontWeight: "900" },
+  saveText: { fontWeight: "900" },
+  pagePanel: { borderWidth: 1, borderRadius: 8, padding: 16 },
+  pagePanelHeader: { flexDirection: "row", alignItems: "center", gap: 9, marginBottom: 14 },
+  pagePanelTitle: { fontSize: 18, fontWeight: "900" },
+  settingsSection: { marginBottom: 22 },
+  settingsLabel: { fontSize: 11, fontWeight: "900", marginBottom: 8, paddingHorizontal: 3, letterSpacing: 0 },
+  settingsGroup: { borderWidth: 1, borderRadius: 8, overflow: "hidden" },
+  settingsRow: { minHeight: 52, paddingHorizontal: 13, paddingVertical: 11, flexDirection: "row", alignItems: "center", gap: 12 },
+  settingsAvatar: { width: 44, height: 44, borderRadius: 22, borderWidth: 1, alignItems: "center", justifyContent: "center" },
+  settingsRowText: { flex: 1, minWidth: 0 },
+  settingsRowLabel: { flex: 1, minWidth: 0, fontSize: 14, fontWeight: "900" },
+  signOutBtn: { alignSelf: "center", paddingHorizontal: 18, paddingVertical: 14 },
+  signOutText: { fontSize: 14, fontWeight: "900" },
+  optionOverlay: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.58)" },
+  optionBackdrop: { ...StyleSheet.absoluteFill },
+  optionSheet: { width: "100%", maxHeight: "70%", borderTopWidth: 1, borderTopLeftRadius: 20, borderTopRightRadius: 20, overflow: "hidden" },
+  optionHeader: { minHeight: 62, borderBottomWidth: 1, paddingHorizontal: 18, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 },
+  optionTitle: { flex: 1, minWidth: 0, fontSize: 19, fontWeight: "900" },
+  optionClose: { width: 40, height: 40, borderRadius: 12, borderWidth: 1, alignItems: "center", justifyContent: "center" },
+  optionList: { flexShrink: 1 },
+  optionListContent: { padding: 14, gap: 8, paddingBottom: 22 },
+  optionRow: { minHeight: 54, borderRadius: 12, borderWidth: 1, paddingHorizontal: 12, flexDirection: "row", alignItems: "center", gap: 11 },
+  optionIcon: { width: 34, height: 34, borderRadius: 17, borderWidth: 1, alignItems: "center", justifyContent: "center" },
+  optionLabel: { flex: 1, minWidth: 0, fontSize: 15, fontWeight: "900" },
   detailModal: { borderRadius: 20, borderWidth: 1, width: "100%", maxWidth: 390, maxHeight: "90%", alignSelf: "center", overflow: "hidden" },
-  detailModalAccent: { position: "absolute", left: 0, top: 14, bottom: 0, width: 4 },
   detailScroll: { flexShrink: 1 },
-  detailStack: { gap: 16, padding: 22 },
-  detailGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
-  detailItem: { flexGrow: 1, flexBasis: "47%", minWidth: 0, borderRadius: 14, borderWidth: 1, padding: 15, minHeight: 82, justifyContent: "center" },
-  detailLabel: { fontSize: 13, fontWeight: "900" },
-  detailValue: { fontSize: 17, fontWeight: "900", marginTop: 10, lineHeight: 24 },
+  detailBody: { gap: 12, padding: 18 },
+  detailHero: { borderWidth: 1, borderRadius: 16, padding: 14, flexDirection: "row", alignItems: "center", gap: 12 },
+  detailHeroIcon: { width: 48, height: 48, borderRadius: 24, borderWidth: 1, alignItems: "center", justifyContent: "center" },
+  detailHeroText: { flex: 1, minWidth: 0 },
+  detailHeroLabel: { fontSize: 11, fontWeight: "900", textTransform: "uppercase" },
+  detailHeroAmount: { marginTop: 4, fontSize: 24, fontWeight: "900" },
+  detailDescription: { borderWidth: 1, borderRadius: 14, padding: 14, gap: 7 },
+  detailSectionLabel: { fontSize: 12, fontWeight: "900", textTransform: "uppercase" },
+  detailDescriptionText: { fontSize: 16, fontWeight: "800", lineHeight: 22 },
+  detailMetaGrid: { flexDirection: "row", gap: 10 },
+  detailMetaItem: { flex: 1, minWidth: 0, borderWidth: 1, borderRadius: 14, padding: 12, flexDirection: "row", alignItems: "center", gap: 9 },
+  detailMetaText: { flex: 1, minWidth: 0 },
+  detailMetaLabel: { fontSize: 11, fontWeight: "900", textTransform: "uppercase" },
+  detailMetaValue: { marginTop: 3, fontSize: 13, fontWeight: "900" },
+  detailActions: { flexDirection: "row", gap: 10 },
+  detailActionBtn: { flex: 1, height: 48, borderRadius: 12, borderWidth: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 },
+  detailActionText: { fontSize: 14, fontWeight: "900" },
 });

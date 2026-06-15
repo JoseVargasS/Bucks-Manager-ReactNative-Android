@@ -86,10 +86,17 @@ export function calculateExpression(expression: string) {
   }
 }
 
+export function normalizeAmountExpression(value: string) {
+  return value.trim().replace(/^=/, "").trim();
+}
+
+export function isMathExpression(value: string) {
+  const expression = normalizeAmountExpression(value);
+  return value.trim().startsWith("=") || /[+*/()]/.test(expression) || /.\s*-/.test(expression);
+}
+
 export function normalizeDraftAmount(draft: TransactionDraft) {
-  const calculated = draft.amount.trim().startsWith("=")
-    ? Number(calculateExpression(draft.amount.slice(1)))
-    : Number(calculateExpression(draft.amount));
+  const calculated = Number(calculateExpression(normalizeAmountExpression(draft.amount)));
   if (draft.type.startsWith("GASTO")) return -Math.abs(calculated);
   return Math.abs(calculated);
 }
@@ -102,7 +109,7 @@ export function buildTransactionFromDraft(draft: TransactionDraft, rowId: number
     date: formatDateForSheet(date),
     rawDate: date.toISOString(),
     amount,
-    formula: draft.amount.trim().startsWith("=") ? draft.amount : "",
+    formula: isMathExpression(draft.amount) ? normalizeAmountExpression(draft.amount) : "",
     detail: draft.detail.trim(),
     type: draft.type,
     createdAt: draft.createdAt || new Date().toISOString(),
