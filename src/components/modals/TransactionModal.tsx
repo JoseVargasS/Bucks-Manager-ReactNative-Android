@@ -1,14 +1,14 @@
 import { useState } from "react";
 import { Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { TRANSACTION_TYPES } from "../../domain/bucksLogic";
+import { calculateExpression, normalizeAmountExpression, TRANSACTION_TYPES } from "../../domain/bucksLogic";
 import { styles } from "../../styles/globalStyles";
 import { Field } from "../ui/Field";
 import { Select } from "../ui/Select";
 import { CalendarPicker } from "../ui/CalendarPicker";
 import { Palette } from "../../theme/colors";
 import { TransactionDraft, TransactionType } from "../../types";
-import { titleCaseType } from "../../utils/formats";
+import { titleCaseType, typeColor, typeFill } from "../../utils/formats";
 import { PickerConfig } from "./OptionSheet";
 
 export function TransactionModal({ visible, colors, draft, setDraft, editing, openPicker, onClose, onSubmit }: {
@@ -16,8 +16,16 @@ export function TransactionModal({ visible, colors, draft, setDraft, editing, op
   editing: boolean; openPicker: (config: PickerConfig) => void; onClose: () => void; onSubmit: () => void;
 }) {
   const [calVisible, setCalVisible] = useState(false);
+  const cleanAmount = normalizeAmountExpression(draft.amount);
+  const openParens = (cleanAmount.match(/\(/g) || []).length;
+  const closeParens = (cleanAmount.match(/\)/g) || []).length;
+  const amountLooksComplete = Boolean(cleanAmount) && !/[+\-*/.(\s]$/.test(cleanAmount) && openParens === closeParens;
+  const amountPreview = cleanAmount ? calculateExpression(cleanAmount) : 0;
+  const hasAmountPreview = amountLooksComplete && Number.isFinite(amountPreview);
+  const amountPreviewText = `${amountPreview < 0 ? "- " : ""}S/ ${Math.abs(amountPreview).toFixed(2)}`;
+  const appendAmountToken = (token: string) => setDraft({ ...draft, amount: `${draft.amount}${token}` });
   return (
-    <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={[styles.modalOverlay, { backgroundColor: colors.overlay }]}>
         <TouchableOpacity style={styles.optionBackdrop} activeOpacity={1} onPress={onClose} />
         <View style={[styles.recordModal, { backgroundColor: colors.card }]}>
@@ -35,14 +43,14 @@ export function TransactionModal({ visible, colors, draft, setDraft, editing, op
               style={[{ backgroundColor: colors.input, borderColor: colors.border, borderRadius: 10, paddingHorizontal: 12, minHeight: 42, flexDirection: "row", alignItems: "center", gap: 10, borderWidth: 1, marginBottom: 12 }]}
               onPress={() => setCalVisible(true)}
             >
-              <MaterialCommunityIcons name="calendar" size={20} color={colors.blue} />
               <Text style={[{ color: colors.text, fontWeight: "600", flex: 1 }]}>{draft.date || "Seleccionar fecha"}</Text>
+              <MaterialCommunityIcons name="calendar" size={20} color={colors.blue} />
             </TouchableOpacity>
             <CalendarPicker visible={calVisible} value={draft.date} onSelect={(v: string) => setDraft({ ...draft, date: v })} onClose={() => setCalVisible(false)} colors={colors} />
             <Text style={[styles.label, { color: colors.text }]}>Tipo</Text>
             <Select
               value={draft.type}
-              options={TRANSACTION_TYPES.map((type) => ({ label: titleCaseType(type), value: type }))}
+              options={TRANSACTION_TYPES.map((type) => ({ label: titleCaseType(type), value: type, color: typeColor(type, colors), softBg: typeFill(type, colors) }))}
               onSelect={(type: string) => setDraft({ ...draft, type: type as TransactionType })}
               colors={colors}
               placeholder="Seleccionar tipo"
@@ -58,8 +66,23 @@ export function TransactionModal({ visible, colors, draft, setDraft, editing, op
                 onChangeText={(amount: string) => setDraft({ ...draft, amount })}
                 placeholder="Ej: (100+50)*25-10/2"
                 placeholderTextColor={colors.muted}
+                keyboardType="decimal-pad"
+                inputMode="decimal"
                 style={[styles.moneyInput, { color: colors.text }]}
               />
+              {hasAmountPreview && (
+                <Text numberOfLines={1} style={[styles.moneyPreview, { color: colors.blue }]}>{amountPreviewText}</Text>
+              )}
+            </View>
+            <View style={styles.calcToolbar}>
+              {["+", "-", "*", "/", "(", ")"].map((token) => (
+                <TouchableOpacity key={token} style={[styles.calcChip, { backgroundColor: colors.infoSoft }]} onPress={() => appendAmountToken(token)}>
+                  <Text style={[styles.calcChipText, { color: colors.blue }]}>{token === "*" ? "×" : token}</Text>
+                </TouchableOpacity>
+              ))}
+              <TouchableOpacity style={[styles.calcChip, { backgroundColor: colors.expenseSoft }]} onPress={() => setDraft({ ...draft, amount: draft.amount.slice(0, -1) })}>
+                <MaterialCommunityIcons name="backspace-outline" size={17} color={colors.red} />
+              </TouchableOpacity>
             </View>
             <Field label="Detalle" value={draft.detail} onChangeText={(detail: string) => setDraft({ ...draft, detail })} colors={colors} placeholder="Ej: Compra en supermercado" />
             <View style={styles.recordActions}>

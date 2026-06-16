@@ -21,7 +21,7 @@ export function DetailModal({ tx, colors, onClose, onEdit, onDelete }: { tx: Tra
   }, [enterProgress, tx]);
 
   return (
-    <Modal visible={!!tx} transparent animationType="none" onRequestClose={onClose}>
+    <Modal visible={!!tx} transparent animationType="fade" onRequestClose={onClose}>
       <View style={[styles.modalOverlay, { backgroundColor: colors.overlay }]}>
         <TouchableOpacity style={styles.optionBackdrop} activeOpacity={1} onPress={onClose} />
         <Animated.View
@@ -29,7 +29,6 @@ export function DetailModal({ tx, colors, onClose, onEdit, onDelete }: { tx: Tra
             styles.detailModal,
             {
               backgroundColor: colors.card,
-              opacity: enterProgress,
               transform: [
                 { translateY: enterProgress.interpolate({ inputRange: [0, 1], outputRange: [6, 0] }) },
                 { scale: enterProgress.interpolate({ inputRange: [0, 1], outputRange: [0.985, 1] }) },

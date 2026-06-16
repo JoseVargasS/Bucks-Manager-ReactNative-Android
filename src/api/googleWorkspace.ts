@@ -14,6 +14,7 @@ const DRIVE = "https://www.googleapis.com/drive/v3";
 const SHEETS = "https://sheets.googleapis.com/v4/spreadsheets";
 const GOOGLE_SHEET_MIME = "application/vnd.google-apps.spreadsheet";
 const HEADER_SCAN_ROWS = 12;
+type FormulaDialect = { sumifs: string; eomonth: string; sep: string };
 
 async function googleFetch<T>(token: string, url: string, init: RequestInit = {}): Promise<T> {
   const res = await fetch(url, {
@@ -26,13 +27,20 @@ async function googleFetch<T>(token: string, url: string, init: RequestInit = {}
   });
   if (!res.ok) {
     const body = await res.text();
-    throw new Error(`Google API ${res.status}: ${body}`);
+    const message = body.trim().startsWith("<")
+      ? "Google devolvio una pagina HTML en vez de JSON. Revisa que la URL de la API sea valida."
+      : body;
+    throw new Error(`Google API ${res.status}: ${message}`);
   }
   return (await res.json()) as T;
 }
 
 function valuesUrl(spreadsheetId: string, range: string) {
   return `${SHEETS}/${spreadsheetId}/values/${encodeURIComponent(range)}`;
+}
+
+function clearValuesUrl(spreadsheetId: string, range: string) {
+  return `${valuesUrl(spreadsheetId, range)}:clear`;
 }
 
 function readValuesUrl(spreadsheetId: string, range: string) {
@@ -130,7 +138,7 @@ export async function createBucksSpreadsheet(token: string) {
   const created = await googleFetch<{ spreadsheetId: string }>(token, SHEETS, {
     method: "POST",
     body: JSON.stringify({
-      properties: { title: SHEET_NAMES.transactions },
+      properties: { title: SHEET_NAMES.transactions, locale: "es_PE" },
       sheets: [
         { properties: { title: SHEET_NAMES.transactions } },
         { properties: { title: SHEET_NAMES.summary } },
@@ -144,13 +152,14 @@ export async function createBucksSpreadsheet(token: string) {
 export async function initializeSpreadsheet(token: string, spreadsheetId: string) {
   const currentMonth = new Date();
   const firstDay = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, "0")}-01`;
+  const locale = await getSpreadsheetLocale(token, spreadsheetId);
   await googleFetch(token, `${SHEETS}/${spreadsheetId}/values:batchUpdate`, {
     method: "POST",
     body: JSON.stringify({
       valueInputOption: "USER_ENTERED",
       data: [
         { range: `${SHEET_NAMES.transactions}!A1:E1`, values: [TRANSACTION_HEADERS] },
-        { range: `${SHEET_NAMES.summary}!A1:I2`, values: [SUMMARY_HEADERS, buildSummaryRowFormulas(2, firstDay)] },
+        { range: `${SHEET_NAMES.summary}!A1:I2`, values: [SUMMARY_HEADERS, buildSummaryRowFormulas(2, firstDay, locale)] },
       ],
     }),
   });
@@ -244,7 +253,7 @@ export async function moveTransaction(token: string, spreadsheetId: string, rowI
 }
 
 export async function rewriteTransactions(token: string, spreadsheetId: string, transactions: Transaction[]) {
-  await googleFetch(token, valuesUrl(spreadsheetId, `${SHEET_NAMES.transactions}!A2:E`), { method: "DELETE" });
+  await googleFetch(token, clearValuesUrl(spreadsheetId, `${SHEET_NAMES.transactions}!A2:E`), { method: "POST" });
   if (!transactions.length) return;
   await googleFetch(token, `${valuesUrl(spreadsheetId, `${SHEET_NAMES.transactions}!A2:E`)}?valueInputOption=USER_ENTERED`, {
     method: "PUT",
@@ -254,10 +263,18 @@ export async function rewriteTransactions(token: string, spreadsheetId: string, 
         formatAmountForSheet(tx),
         tx.detail,
         tx.type,
-        tx.createdAt ? new Date(tx.createdAt).toLocaleTimeString("es-PE", { hour12: false }) : "",
+        formatCreatedAtForSheet(tx.createdAt),
       ]),
     }),
   });
+}
+
+function formatCreatedAtForSheet(value?: string) {
+  const raw = String(value || "").trim();
+  if (!raw || raw === "Invalid Date") return "";
+  if (/^\d{1,2}:\d{2}(:\d{2})?$/.test(raw)) return raw;
+  const date = new Date(raw);
+  return Number.isNaN(date.getTime()) ? raw : date.toLocaleTimeString("es-PE", { hour12: false });
 }
 
 function formatAmountForSheet(tx: Transaction) {
@@ -326,31 +343,57 @@ async function ensureMonthlySummaryRowByMonthYear(token: string, spreadsheetId: 
 }
 
 async function ensureMonthlySummaryRowByDate(token: string, spreadsheetId: string, date: Date) {
-  const data = await googleFetch<{ values?: unknown[][] }>(token, valuesUrl(spreadsheetId, `${SHEET_NAMES.summary}!A1:I`));
+  const [data, locale] = await Promise.all([
+    googleFetch<{ values?: unknown[][] }>(token, valuesUrl(spreadsheetId, `${SHEET_NAMES.summary}!A1:I`)),
+    getSpreadsheetLocale(token, spreadsheetId),
+  ]);
   const rows = data.values || [];
   const headerIndex = Math.max(0, findHeaderIndex(rows, SUMMARY_HEADERS));
   const monthYear = getMonthYear(date);
   for (let i = headerIndex + 1; i < rows.length; i += 1) {
     const rowDate = parseSheetDate(rows[i]?.[0]);
-    if (rowDate && getMonthYear(rowDate) === monthYear) return i + 1;
+    if (rowDate && getMonthYear(rowDate) === monthYear) {
+      const rowNumber = i + 1;
+      const firstDay = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-01`;
+      await googleFetch(token, `${valuesUrl(spreadsheetId, `${SHEET_NAMES.summary}!C${rowNumber}:I${rowNumber}`)}?valueInputOption=USER_ENTERED`, {
+        method: "PUT",
+        body: JSON.stringify({ values: [buildSummaryRowFormulas(rowNumber, firstDay, locale).slice(2)] }),
+      });
+      return rowNumber;
+    }
   }
   const rowNumber = Math.max(rows.length + 1, headerIndex + 2);
   const firstDay = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-01`;
   await googleFetch(token, `${valuesUrl(spreadsheetId, `${SHEET_NAMES.summary}!A${rowNumber}:I${rowNumber}`)}?valueInputOption=USER_ENTERED`, {
     method: "PUT",
-    body: JSON.stringify({ values: [buildSummaryRowFormulas(rowNumber, firstDay)] }),
+    body: JSON.stringify({ values: [buildSummaryRowFormulas(rowNumber, firstDay, locale)] }),
   });
   return rowNumber;
 }
 
-function buildSummaryRowFormulas(rowNumber: number, firstDay: string) {
+async function getSpreadsheetLocale(token: string, spreadsheetId: string) {
+  const meta = await googleFetch<{ properties?: { locale?: string } }>(token, `${SHEETS}/${spreadsheetId}?fields=properties.locale`);
+  return meta.properties?.locale || "es_PE";
+}
+
+function formulaDialect(locale: string): FormulaDialect {
+  const normalized = locale.toLowerCase();
+  if (normalized.startsWith("es")) return { sumifs: "SUMAR.SI.CONJUNTO", eomonth: "FIN.MES", sep: ";" };
+  return { sumifs: "SUMIFS", eomonth: "EOMONTH", sep: "," };
+}
+
+function buildSummaryRowFormulas(rowNumber: number, firstDay: string, locale: string) {
+  const dialect = formulaDialect(locale);
+  const txSheet = `'${SHEET_NAMES.transactions}'`;
+  const sumByType = (type: string) =>
+    `=${dialect.sumifs}(${txSheet}!$B:$B${dialect.sep}${txSheet}!$A:$A${dialect.sep}">="&$A${rowNumber}${dialect.sep}${txSheet}!$A:$A${dialect.sep}"<="&${dialect.eomonth}($A${rowNumber}${dialect.sep}0)${dialect.sep}${txSheet}!$D:$D${dialect.sep}"${type}")`;
   return [
     firstDay,
     0,
-    `=SUMIFS('${SHEET_NAMES.transactions}'!$B:$B,'${SHEET_NAMES.transactions}'!$A:$A,">="&$A${rowNumber},'${SHEET_NAMES.transactions}'!$A:$A,"<="&EOMONTH($A${rowNumber},0),'${SHEET_NAMES.transactions}'!$D:$D,"INGRESO NO FRECUENTE")`,
+    sumByType("INGRESO NO FRECUENTE"),
     `=B${rowNumber}+C${rowNumber}`,
-    `=SUMIFS('${SHEET_NAMES.transactions}'!$B:$B,'${SHEET_NAMES.transactions}'!$A:$A,">="&$A${rowNumber},'${SHEET_NAMES.transactions}'!$A:$A,"<="&EOMONTH($A${rowNumber},0),'${SHEET_NAMES.transactions}'!$D:$D,"GASTO FRECUENTE")`,
-    `=SUMIFS('${SHEET_NAMES.transactions}'!$B:$B,'${SHEET_NAMES.transactions}'!$A:$A,">="&$A${rowNumber},'${SHEET_NAMES.transactions}'!$A:$A,"<="&EOMONTH($A${rowNumber},0),'${SHEET_NAMES.transactions}'!$D:$D,"GASTO NO FRECUENTE")`,
+    sumByType("GASTO FRECUENTE"),
+    sumByType("GASTO NO FRECUENTE"),
     `=E${rowNumber}+F${rowNumber}`,
     `=D${rowNumber}+G${rowNumber}`,
     `=H${rowNumber}-B${rowNumber}`,

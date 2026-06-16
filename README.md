@@ -107,6 +107,8 @@ Required scopes:
 - `https://www.googleapis.com/auth/drive.metadata.readonly`
 - `https://www.googleapis.com/auth/spreadsheets`
 
+The app requests these Drive/Sheets scopes incrementally after the user chooses a Google account. Do not add them to the initial `GoogleSignin.configure()` call; keep the first login as basic identity and request Workspace access only when connecting the private spreadsheet.
+
 The Android OAuth client must use package:
 
 ```text

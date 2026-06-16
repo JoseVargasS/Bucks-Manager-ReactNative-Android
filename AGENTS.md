@@ -34,6 +34,14 @@ The app must accept the legacy GAS headers used by existing sheets:
 
 When no compatible spreadsheet exists, create a new spreadsheet named `INGRESOS Y GASTOS`, not `Bucks Manager`.
 
+## OAuth Scope Flow
+
+- Configure Google Sign-In without Drive/Sheets scopes for the initial account login.
+- Request Google Workspace scopes incrementally with `GoogleSignin.addScopes()` immediately before reading or writing Drive/Sheets.
+- Keep the required scopes limited to Drive metadata read-only and Google Sheets access:
+  - `https://www.googleapis.com/auth/drive.metadata.readonly`
+  - `https://www.googleapis.com/auth/spreadsheets`
+
 ## Android Development
 
 Use:

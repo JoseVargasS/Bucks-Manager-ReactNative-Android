@@ -11,7 +11,7 @@ import Svg, { Defs, LinearGradient, Rect, Stop } from "react-native-svg";
 
 import {
   applySearch, buildTransactionFromDraft, calculateSummaries,
-  formatDateToISO, getMonthYear, MONTH_NAMES, SHEET_NAMES,
+  formatDateToISO, getMonthYear, insertChronologically, MONTH_NAMES, SHEET_NAMES,
 } from "./src/domain/bucksLogic";
 import {
   createBucksSpreadsheet, findCompatibleSheets, moveTransaction as moveGoogleTransaction,
@@ -42,6 +42,10 @@ const GOOGLE_ANDROID_CLIENT_ID = Constants.expoConfig?.extra?.googleAndroidClien
 const GOOGLE_WEB_CLIENT_ID = Constants.expoConfig?.extra?.googleWebClientId || "";
 const TOKEN_KEY = "bucks_google_access_token";
 const SHEET_KEY = "bucks_spreadsheet_id";
+const GOOGLE_WORKSPACE_SCOPES = [
+  "https://www.googleapis.com/auth/drive.metadata.readonly",
+  "https://www.googleapis.com/auth/spreadsheets",
+];
 
 type Tab = "expenses" | "search" | "summary" | "settings";
 type ThemeMode = "dark" | "light";
@@ -100,7 +104,6 @@ export default function App() {
   useEffect(() => {
     GoogleSignin.configure({
       webClientId: GOOGLE_WEB_CLIENT_ID || undefined,
-      scopes: ["https://www.googleapis.com/auth/drive.metadata.readonly", "https://www.googleapis.com/auth/spreadsheets"],
     });
     restoreSession();
   }, []);
@@ -134,11 +137,12 @@ export default function App() {
 
   // --- Session management ---
   async function restoreSession() {
+    setBootstrapping(true);
     try {
       const [token, sheetId] = await Promise.all([SecureStore.getItemAsync(TOKEN_KEY), SecureStore.getItemAsync(SHEET_KEY)]);
       if (token && sheetId) {
         try {
-          const fresh = await GoogleSignin.getTokens();
+          const fresh = await getWorkspaceAccessToken(false);
           const activeToken = fresh.accessToken || token;
           setAccessToken(activeToken);
           syncAccountInfo();
@@ -146,6 +150,22 @@ export default function App() {
         } catch { await clearGoogleSession(); }
       }
     } finally { setBootstrapping(false); }
+  }
+
+  async function getWorkspaceAccessToken(interactive: boolean) {
+    let current = GoogleSignin.getCurrentUser();
+    if (!current) {
+      const silent = await GoogleSignin.signInSilently();
+      current = silent.type === "success" ? silent.data : null;
+    }
+    const grantedScopes = new Set(current?.scopes || []);
+    const hasWorkspaceScopes = GOOGLE_WORKSPACE_SCOPES.every((scope) => grantedScopes.has(scope));
+    if (!hasWorkspaceScopes) {
+      if (!interactive) throw new Error("Faltan permisos de Google Workspace.");
+      const response = await GoogleSignin.addScopes({ scopes: GOOGLE_WORKSPACE_SCOPES });
+      if (!response || response.type !== "success") throw new Error("No se autorizaron los permisos de Drive y Sheets.");
+    }
+    return GoogleSignin.getTokens();
   }
 
   async function connectGoogleWorkspace(token: string, _preferredSheetId = "") {
@@ -179,7 +199,7 @@ export default function App() {
     try {
       await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
       await GoogleSignin.signIn();
-      const tokens = await GoogleSignin.getTokens();
+      const tokens = await getWorkspaceAccessToken(true);
       if (!tokens.accessToken) throw new Error("Google no devolvió access token.");
       syncAccountInfo();
       await connectGoogleWorkspace(tokens.accessToken);
@@ -219,9 +239,9 @@ export default function App() {
   async function rescanDrive() { if (accessToken) await connectGoogleWorkspace(accessToken); }
 
   // --- Data operations ---
-  async function reloadFromGoogle(token = accessToken, sheetId = spreadsheetId) {
+  async function reloadFromGoogle(token = accessToken, sheetId = spreadsheetId, showLoader = true) {
     if (!token || !sheetId) return;
-    setLoading(true);
+    if (showLoader) setLoading(true);
     try {
       const [tx, summary] = await Promise.all([readTransactions(token, sheetId), readSummaries(token, sheetId)]);
       setTransactions(tx);
@@ -235,7 +255,7 @@ export default function App() {
         }
         didSetInitialPeriodRef.current = true;
       }
-    } finally { setLoading(false); }
+    } finally { if (showLoader) setLoading(false); }
   }
 
   function selectPeriod(nextMonth: number, nextYear: number) {
@@ -258,60 +278,68 @@ export default function App() {
     setAddVisible(true);
   }
 
+  function renumberTransactions(items: Transaction[]) {
+    return items.map((item, idx) => ({ ...item, rowId: idx + 2 }));
+  }
+
+  function syncGoogleInBackground(task: () => Promise<void>, title: string) {
+    task().catch((error) => {
+      Alert.alert(title, error instanceof Error ? error.message : "No se pudo sincronizar con Google Sheets.");
+    });
+  }
+
   async function submitDraft() {
     if (!draft.date || !draft.amount || !draft.detail.trim()) {
       Alert.alert("Datos incompletos", "Completa fecha, monto y detalle."); return;
     }
-    setLoading(true);
-    try {
-      if (accessToken && spreadsheetId) {
-        if (editingTx) await updateGoogleTransaction(accessToken, spreadsheetId, editingTx.rowId, draft);
-        else await saveTransaction(accessToken, spreadsheetId, draft);
-        await reloadFromGoogle();
-      } else if (editingTx) {
-        const updated = buildTransactionFromDraft(draft, editingTx.rowId);
-        const next = transactions.map((tx) => (tx.rowId === editingTx.rowId ? updated : tx));
-        setTransactions(next); setSummaries(calculateSummaries(next, freqIncome));
-      } else {
-        const tx = buildTransactionFromDraft(draft, transactions.length + 2);
-        const next = [...transactions, tx].sort((a, b) => new Date(a.rawDate).getTime() - new Date(b.rawDate).getTime());
-        setTransactions(next.map((item, idx) => ({ ...item, rowId: idx + 2 })));
-        setSummaries(calculateSummaries(next, freqIncome));
-      }
-      setAddVisible(false);
-    } catch (error) {
-      Alert.alert("Error", error instanceof Error ? error.message : "No se pudo guardar");
-    } finally { setLoading(false); }
+    const currentDraft = draft;
+    const currentEdit = editingTx;
+    const optimistic = buildTransactionFromDraft(currentDraft, currentEdit?.rowId || transactions.length + 2);
+    const next = currentEdit
+      ? renumberTransactions(insertChronologically(transactions.filter((tx) => tx.rowId !== currentEdit.rowId), optimistic))
+      : renumberTransactions(insertChronologically(transactions, optimistic));
+    setTransactions(next);
+    setSummaries(calculateSummaries(next, freqIncome));
+    setAddVisible(false);
+    setEditingTx(null);
+    setDraft(getBlankDraft());
+
+    if (accessToken && spreadsheetId) {
+      syncGoogleInBackground(async () => {
+        if (currentEdit) await updateGoogleTransaction(accessToken, spreadsheetId, currentEdit.rowId, currentDraft);
+        else await saveTransaction(accessToken, spreadsheetId, currentDraft);
+        await reloadFromGoogle(accessToken, spreadsheetId, false);
+      }, currentEdit ? "Editar registro" : "Agregar registro");
+    }
   }
 
   async function deleteTx(tx: Transaction) {
     setDeletedTx(tx); setDetailTx(null);
     setSelectedRows((current) => current.filter((rowId) => rowId !== tx.rowId));
-    if (accessToken && spreadsheetId) {
-      await deleteGoogleTransaction(accessToken, spreadsheetId, tx.rowId);
-      await reloadFromGoogle(); return;
-    }
-    const next = transactions.filter((item) => item.rowId !== tx.rowId).map((item, idx) => ({ ...item, rowId: idx + 2 }));
+    const next = renumberTransactions(transactions.filter((item) => item.rowId !== tx.rowId));
     setTransactions(next); setSummaries(calculateSummaries(next, freqIncome));
+    if (accessToken && spreadsheetId) {
+      syncGoogleInBackground(async () => {
+        await deleteGoogleTransaction(accessToken, spreadsheetId, tx.rowId);
+        await reloadFromGoogle(accessToken, spreadsheetId, false);
+      }, "Eliminar registro");
+    }
   }
 
   async function deleteSelectedRows() {
     const selected = transactions.filter((tx) => selectedRows.includes(tx.rowId)).sort((a, b) => b.rowId - a.rowId);
     if (!selected.length) return;
-    setDeletedTx(selected[0]); setLoading(true);
-    try {
-      if (accessToken && spreadsheetId) {
+    setDeletedTx(selected[0]);
+    const selectedIds = new Set(selected.map((tx) => tx.rowId));
+    const next = renumberTransactions(transactions.filter((item) => !selectedIds.has(item.rowId)));
+    setTransactions(next); setSummaries(calculateSummaries(next, freqIncome));
+    setSelectedRows([]);
+    if (accessToken && spreadsheetId) {
+      syncGoogleInBackground(async () => {
         for (const tx of selected) await deleteGoogleTransaction(accessToken, spreadsheetId, tx.rowId);
-        await reloadFromGoogle();
-      } else {
-        const selectedIds = new Set(selected.map((tx) => tx.rowId));
-        const next = transactions.filter((item) => !selectedIds.has(item.rowId)).map((item, idx) => ({ ...item, rowId: idx + 2 }));
-        setTransactions(next); setSummaries(calculateSummaries(next, freqIncome));
-      }
-      setSelectedRows([]);
-    } catch (error) {
-      Alert.alert("Eliminar", error instanceof Error ? error.message : "No se pudo eliminar la selección.");
-    } finally { setLoading(false); }
+        await reloadFromGoogle(accessToken, spreadsheetId, false);
+      }, "Eliminar seleccion");
+    }
   }
 
   function toggleSelection(tx: Transaction) {

@@ -1,10 +1,10 @@
 import { useRef, useState } from "react";
-import { Modal, Platform, ScrollView, StatusBar as NativeStatusBar, Text, TouchableOpacity, useWindowDimensions, View, ViewStyle } from "react-native";
+import { Modal, ScrollView, Text, TouchableOpacity, useWindowDimensions, View, ViewStyle } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { styles } from "../../styles/globalStyles";
 import { Palette } from "../../theme/colors";
 
-type SelectOption = { label: string; value: string };
+type SelectOption = { label: string; value: string; color?: string; softBg?: string };
 
 export function Select({ value, options, onSelect, colors, placeholder, style, title }: {
   value: string; options: SelectOption[]; onSelect: (v: string) => void; colors: Palette;
@@ -20,11 +20,10 @@ export function Select({ value, options, onSelect, colors, placeholder, style, t
     triggerRef.current?.measureInWindow((x, y, width, height) => {
       const margin = 12;
       const gap = 2;
-      const modalOffsetY = Platform.OS === "android" ? NativeStatusBar.currentHeight || 0 : 0;
       const panelWidth = Math.min(width, windowSize.width - margin * 2);
       const left = Math.min(Math.max(margin, x), windowSize.width - panelWidth - margin);
       const maxAllowedHeight = Math.min(220, windowSize.height - margin * 2);
-      const anchorTop = y + modalOffsetY;
+      const anchorTop = y;
       const belowSpace = windowSize.height - anchorTop - height - gap - margin;
       const aboveSpace = anchorTop - gap - margin;
       const openAbove = belowSpace < 150 && aboveSpace > belowSpace;
@@ -45,7 +44,8 @@ export function Select({ value, options, onSelect, colors, placeholder, style, t
         activeOpacity={1}
         accessibilityLabel={title || placeholder || label}
       >
-        <Text numberOfLines={1} style={[styles.selectButtonText, { color: selected ? colors.text : colors.muted }]}>{label}</Text>
+        {selected?.color && <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: selected.color }} />}
+        <Text numberOfLines={1} style={[styles.selectButtonText, { color: selected?.color || (selected ? colors.text : colors.muted) }]}>{label}</Text>
         <MaterialCommunityIcons name="chevron-down" size={18} color={colors.muted} />
       </TouchableOpacity>
 
@@ -73,20 +73,22 @@ export function Select({ value, options, onSelect, colors, placeholder, style, t
             >
               {options.map((opt) => {
                 const isSelected = opt.value === value;
+                const optionColor = opt.color || colors.primary;
                 return (
                   <TouchableOpacity
                     key={opt.value}
                     style={[
                       styles.selectOptionRow,
-                      { backgroundColor: isSelected ? colors.primarySoft : "transparent" },
+                      { backgroundColor: isSelected ? opt.softBg || colors.primarySoft : "transparent" },
                     ]}
                     onPress={() => {
                       onSelect(opt.value);
                       setOpen(false);
                     }}
                   >
-                    <Text numberOfLines={1} style={[styles.selectOptionLabel, { color: isSelected ? colors.primary : colors.text }]}>{opt.label}</Text>
-                    {isSelected && <MaterialCommunityIcons name="check" size={16} color={colors.primary} />}
+                    {opt.color && <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: optionColor }} />}
+                    <Text numberOfLines={1} style={[styles.selectOptionLabel, { color: isSelected ? optionColor : colors.text }]}>{opt.label}</Text>
+                    {isSelected && <MaterialCommunityIcons name="check" size={16} color={optionColor} />}
                   </TouchableOpacity>
                 );
               })}
