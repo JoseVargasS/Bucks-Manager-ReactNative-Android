@@ -8,7 +8,7 @@ import { SheetCandidate } from "../../types";
 export function SheetChooserModal({ visible, colors, candidates, onClose, onSelect }: { visible: boolean; colors: Palette; candidates: SheetCandidate[]; onClose: () => void; onSelect: (candidate: SheetCandidate) => void }) {
   return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
-      <View style={styles.modalOverlay}>
+      <View style={[styles.modalOverlay, { backgroundColor: colors.overlay }]}>
         <TouchableOpacity style={styles.optionBackdrop} activeOpacity={1} onPress={onClose} />
         <View style={[styles.modal, { backgroundColor: colors.card }]}>
           <ModalHeader title="Selecciona tu hoja" icon="google-spreadsheet" colors={colors} onClose={onClose} />
@@ -16,7 +16,7 @@ export function SheetChooserModal({ visible, colors, candidates, onClose, onSele
             Encontré varias hojas compatibles. Elige la que quieres usar como base de datos.
           </Text>
           {candidates.map((candidate) => (
-            <TouchableOpacity key={candidate.id} style={[styles.sheetChoice, { backgroundColor: colors.input, borderColor: colors.border }]} onPress={() => onSelect(candidate)}>
+            <TouchableOpacity key={candidate.id} style={[styles.sheetChoice, { backgroundColor: colors.input }]} onPress={() => onSelect(candidate)}>
               <MaterialCommunityIcons name="google-spreadsheet" size={22} color={colors.green} />
               <View style={{ flex: 1 }}>
                 <Text numberOfLines={1} style={[styles.sheetChoiceTitle, { color: colors.text }]}>{candidate.name}</Text>

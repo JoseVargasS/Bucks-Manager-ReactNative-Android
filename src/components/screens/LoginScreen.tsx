@@ -6,14 +6,25 @@ import { Palette } from "../../theme/colors";
 export function LoginScreen({ colors, loading, canConnect, onSignIn }: { colors: Palette; loading: boolean; canConnect: boolean; onSignIn: () => void }) {
   return (
     <View style={styles.loginScreen}>
-      <View style={[styles.loginMark, { backgroundColor: colors.primary, borderColor: colors.primary }]}>
+      <View style={[styles.loginMark, { backgroundColor: colors.primary }]}>
         <MaterialCommunityIcons name="sack" size={38} color={colors.onPrimary} />
       </View>
       <Text style={[styles.loginTitle, { color: colors.text }]}>Bucks Manager</Text>
+      <Text style={{ fontSize: 13, fontWeight: "400", color: colors.muted, marginTop: 6 }}>Tus finanzas, organizadas.</Text>
       <TouchableOpacity
         disabled={!canConnect || loading}
         onPress={onSignIn}
-        style={[styles.googleLoginBtn, { backgroundColor: canConnect ? colors.primary : colors.disabled }]}
+        style={[
+          styles.googleLoginBtn,
+          {
+            backgroundColor: canConnect ? colors.primary : colors.disabled,
+            shadowColor: colors.shadow,
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.12,
+            shadowRadius: 8,
+            elevation: 2,
+          },
+        ]}
       >
         {loading ? (
           <ActivityIndicator color={colors.onPrimary} />

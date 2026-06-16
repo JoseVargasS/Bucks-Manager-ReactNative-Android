@@ -8,7 +8,7 @@ type Tab = "expenses" | "search" | "summary" | "settings";
 
 export function BottomNav({ colors, tab, setTab, onAdd, onSearch }: { colors: Palette; tab: Tab; setTab: (tab: Tab) => void; onAdd: () => void; onSearch: () => void }) {
   return (
-    <View style={[styles.bottomNav, { backgroundColor: colors.card, borderColor: colors.border }]}>
+    <View style={[styles.bottomNav, { backgroundColor: colors.card }]}>
       <BottomNavItem colors={colors} active={tab === "expenses"} icon="view-dashboard-outline" label="Gastos" onPress={() => setTab("expenses")} />
       <BottomNavItem colors={colors} active={false} icon="magnify" label="Buscar" onPress={onSearch} />
       <TouchableOpacity onPress={onAdd} style={[styles.bottomAddButton, { backgroundColor: colors.primary }]}>
@@ -25,6 +25,7 @@ function BottomNavItem({ colors, active, icon, label, onPress }: { colors: Palet
     <TouchableOpacity onPress={onPress} style={[styles.bottomNavItem, active && { backgroundColor: colors.primarySoft }]}>
       <MaterialCommunityIcons name={icon} size={21} color={active ? colors.primary : colors.muted} />
       <Text numberOfLines={1} style={[styles.bottomNavLabel, { color: active ? colors.primary : colors.muted }]}>{label}</Text>
+      {active && <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: colors.primary, marginTop: -2 }} />}
     </TouchableOpacity>
   );
 }

@@ -37,7 +37,7 @@ export function ExportModal({ visible, colors, config, setConfig, minDate, onClo
   };
   return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
-      <View style={styles.modalOverlay}>
+      <View style={[styles.modalOverlay, { backgroundColor: colors.overlay }]}>
         <TouchableOpacity style={styles.optionBackdrop} activeOpacity={1} onPress={onClose} />
         <View style={[styles.modal, { backgroundColor: colors.card }]}>
           <ModalHeader title="Exportar movimientos" icon="file-export" colors={colors} onClose={onClose} />
@@ -49,14 +49,14 @@ export function ExportModal({ visible, colors, config, setConfig, minDate, onClo
                 onPress={() => setConfig({ ...config, format: "xlsx" })}
               >
                 <MaterialCommunityIcons name="file-delimited" size={20} color={config.format === "xlsx" ? colors.primary : colors.muted} />
-                <Text style={[{ color: config.format === "xlsx" ? colors.primary : colors.text, fontWeight: "900" }]}>CSV</Text>
+                <Text style={[{ color: config.format === "xlsx" ? colors.primary : colors.text, fontWeight: "700" }]}>CSV</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.exportChip, { backgroundColor: config.format === "pdf" ? colors.primarySoft : colors.input, borderColor: config.format === "pdf" ? colors.primary : colors.border }]}
                 onPress={() => setConfig({ ...config, format: "pdf" })}
               >
                 <MaterialCommunityIcons name="file-pdf-box" size={20} color={config.format === "pdf" ? colors.primary : colors.muted} />
-                <Text style={[{ color: config.format === "pdf" ? colors.primary : colors.text, fontWeight: "900" }]}>PDF</Text>
+                <Text style={[{ color: config.format === "pdf" ? colors.primary : colors.text, fontWeight: "700" }]}>PDF</Text>
               </TouchableOpacity>
             </View>
             <Text style={[styles.label, { color: colors.text, marginTop: 12 }]}>Rango</Text>
@@ -66,14 +66,14 @@ export function ExportModal({ visible, colors, config, setConfig, minDate, onClo
                 onPress={() => setConfig({ ...config, rangeMode: "dates" })}
               >
                 <MaterialCommunityIcons name="calendar-range" size={20} color={config.rangeMode === "dates" ? colors.primary : colors.muted} />
-                <Text style={[{ color: config.rangeMode === "dates" ? colors.primary : colors.text, fontWeight: "900" }]}>Por fechas</Text>
+                <Text style={[{ color: config.rangeMode === "dates" ? colors.primary : colors.text, fontWeight: "700" }]}>Por fechas</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.exportChip, { backgroundColor: config.rangeMode === "months" ? colors.primarySoft : colors.input, borderColor: config.rangeMode === "months" ? colors.primary : colors.border }]}
                 onPress={() => setConfig({ ...config, rangeMode: "months" })}
               >
                 <MaterialCommunityIcons name="calendar-month" size={20} color={config.rangeMode === "months" ? colors.primary : colors.muted} />
-                <Text style={[{ color: config.rangeMode === "months" ? colors.primary : colors.text, fontWeight: "900" }]}>Por meses</Text>
+                <Text style={[{ color: config.rangeMode === "months" ? colors.primary : colors.text, fontWeight: "700" }]}>Por meses</Text>
               </TouchableOpacity>
             </View>
             {config.rangeMode === "months" ? (
@@ -84,7 +84,7 @@ export function ExportModal({ visible, colors, config, setConfig, minDate, onClo
                   onPress={() => setCalFrom(true)}
                 >
                   <MaterialCommunityIcons name="calendar" size={20} color={colors.blue} />
-                  <Text style={{ color: config.startDate ? colors.text : colors.muted, fontWeight: "900", flex: 1 }}>{rangeLabel(config.startDate, true)}</Text>
+                  <Text style={{ color: config.startDate ? colors.text : colors.muted, fontWeight: "600", flex: 1 }}>{rangeLabel(config.startDate, true)}</Text>
                 </TouchableOpacity>
                 <CalendarPicker visible={calFrom} value={config.startDate} mode="month" minDate={minDate ? minDate.slice(0, 7) : undefined} onSelect={(v: string) => setConfig({ ...config, startDate: v })} onClose={() => setCalFrom(false)} colors={colors} />
                 <Text style={[styles.label, { color: colors.text, marginTop: 12 }]}>Mes final</Text>
@@ -93,7 +93,7 @@ export function ExportModal({ visible, colors, config, setConfig, minDate, onClo
                   onPress={() => setCalTo(true)}
                 >
                   <MaterialCommunityIcons name="calendar" size={20} color={colors.blue} />
-                  <Text style={{ color: config.endDate ? colors.text : colors.muted, fontWeight: "900", flex: 1 }}>{rangeLabel(config.endDate, true)}</Text>
+                  <Text style={{ color: config.endDate ? colors.text : colors.muted, fontWeight: "600", flex: 1 }}>{rangeLabel(config.endDate, true)}</Text>
                 </TouchableOpacity>
                 <CalendarPicker visible={calTo} value={config.endDate} mode="month" minDate={minDate ? minDate.slice(0, 7) : undefined} onSelect={(v: string) => setConfig({ ...config, endDate: v })} onClose={() => setCalTo(false)} colors={colors} />
               </>
@@ -105,7 +105,7 @@ export function ExportModal({ visible, colors, config, setConfig, minDate, onClo
                   onPress={() => setCalFrom(true)}
                 >
                   <MaterialCommunityIcons name="calendar" size={20} color={colors.blue} />
-                  <Text style={{ color: config.startDate ? colors.text : colors.muted, fontWeight: "900", flex: 1 }}>{rangeLabel(config.startDate)}</Text>
+                  <Text style={{ color: config.startDate ? colors.text : colors.muted, fontWeight: "600", flex: 1 }}>{rangeLabel(config.startDate)}</Text>
                 </TouchableOpacity>
                 <CalendarPicker visible={calFrom} value={config.startDate} mode="date" minDate={minDate} onSelect={(v: string) => setConfig({ ...config, startDate: v })} onClose={() => setCalFrom(false)} colors={colors} />
                 <Text style={[styles.label, { color: colors.text, marginTop: 12 }]}>Hasta</Text>
@@ -114,7 +114,7 @@ export function ExportModal({ visible, colors, config, setConfig, minDate, onClo
                   onPress={() => setCalTo(true)}
                 >
                   <MaterialCommunityIcons name="calendar" size={20} color={colors.blue} />
-                  <Text style={{ color: config.endDate ? colors.text : colors.muted, fontWeight: "900", flex: 1 }}>{rangeLabel(config.endDate)}</Text>
+                  <Text style={{ color: config.endDate ? colors.text : colors.muted, fontWeight: "600", flex: 1 }}>{rangeLabel(config.endDate)}</Text>
                 </TouchableOpacity>
                 <CalendarPicker visible={calTo} value={config.endDate} mode="date" minDate={minDate} onSelect={(v: string) => setConfig({ ...config, endDate: v })} onClose={() => setCalTo(false)} colors={colors} />
               </>

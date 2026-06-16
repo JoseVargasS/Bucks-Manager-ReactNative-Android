@@ -12,7 +12,7 @@ export function SearchPage({ colors, filters, setFilters, onSubmit, onClear }: {
   return (
     <View style={styles.searchBody}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.searchScrollContent}>
-        <View style={[styles.searchSection, { backgroundColor: colors.input, borderColor: colors.border }]}>
+        <View style={[styles.searchSection, { backgroundColor: colors.input }]}>
           <View style={styles.searchSectionHeader}>
             <MaterialCommunityIcons name="text-search" size={18} color={colors.primary} />
             <Text style={[styles.searchSectionTitle, { color: colors.text }]}>Detalle</Text>
@@ -27,7 +27,7 @@ export function SearchPage({ colors, filters, setFilters, onSubmit, onClear }: {
           />
         </View>
 
-        <View style={[styles.searchSection, { backgroundColor: colors.input, borderColor: colors.border }]}>
+        <View style={[styles.searchSection, { backgroundColor: colors.input }]}>
           <View style={styles.searchSectionHeader}>
             <MaterialCommunityIcons name="cash-multiple" size={18} color={colors.primary} />
             <Text style={[styles.searchSectionTitle, { color: colors.text }]}>Monto</Text>
@@ -52,7 +52,7 @@ export function SearchPage({ colors, filters, setFilters, onSubmit, onClear }: {
           </View>
         </View>
 
-        <View style={[styles.searchSection, { backgroundColor: colors.input, borderColor: colors.border }]}>
+        <View style={[styles.searchSection, { backgroundColor: colors.input }]}>
           <View style={styles.searchSectionHeader}>
             <MaterialCommunityIcons name="calendar-range" size={18} color={colors.primary} />
             <Text style={[styles.searchSectionTitle, { color: colors.text }]}>Fechas</Text>

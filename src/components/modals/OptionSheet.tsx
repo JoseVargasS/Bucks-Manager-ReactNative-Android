@@ -11,12 +11,12 @@ export function OptionSheet({ config, colors, onClose }: { config: PickerConfig;
   if (!config) return null;
   return (
     <Modal visible transparent animationType="none" onRequestClose={onClose}>
-      <View style={styles.optionOverlay}>
+      <View style={[styles.optionOverlay, { backgroundColor: colors.overlay }]}>
         <TouchableOpacity style={styles.optionBackdrop} activeOpacity={1} onPress={onClose} />
-        <View style={[styles.optionSheet, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <View style={[styles.optionSheet, { backgroundColor: colors.card }]}>
           <View style={[styles.optionHeader, { borderColor: colors.border }]}>
             <Text style={[styles.optionTitle, { color: colors.text }]}>{config.title}</Text>
-            <TouchableOpacity style={[styles.optionClose, { backgroundColor: colors.input, borderColor: colors.border }]} onPress={onClose}>
+            <TouchableOpacity style={[styles.optionClose, { backgroundColor: colors.input }]} onPress={onClose}>
               <MaterialCommunityIcons name="close" size={20} color={colors.text} />
             </TouchableOpacity>
           </View>
@@ -29,14 +29,14 @@ export function OptionSheet({ config, colors, onClose }: { config: PickerConfig;
                   key={option.value}
                   style={[
                     styles.optionRow,
-                    { backgroundColor: selected ? colors.primarySoft : colors.input, borderColor: selected ? colors.primary : colors.border },
+                    { backgroundColor: selected ? colors.primarySoft : colors.input },
                   ]}
                   onPress={() => {
                     config.onSelect(option.value);
                     onClose();
                   }}
                 >
-                  <View style={[styles.optionIcon, { backgroundColor: selected ? colors.primarySoft : colors.card, borderColor: tone }]}>
+                  <View style={[styles.optionIcon, { backgroundColor: selected ? colors.primarySoft : colors.card }]}>
                     <MaterialCommunityIcons name={option.icon || "chevron-right"} size={19} color={tone} />
                   </View>
                   <Text numberOfLines={1} style={[styles.optionLabel, { color: selected ? colors.primary : colors.text }]}>{option.label}</Text>

@@ -35,15 +35,15 @@ export function ExpensesView({
 
       {searchActive && (
         <View style={[styles.searchBanner, styles.searchBannerMobile, { backgroundColor: colors.infoSoft, borderColor: colors.blue }]}>
-          <Text style={{ color: colors.blue, fontWeight: "800" }}>Mostrando resultados de busqueda avanzada</Text>
+          <Text style={{ color: colors.blue, fontWeight: "600" }}>Mostrando resultados de busqueda avanzada</Text>
           <TouchableOpacity onPress={onExitSearch}>
-            <Text style={{ color: colors.blue, fontWeight: "900" }}>Salir</Text>
+            <Text style={{ color: colors.blue, fontWeight: "700" }}>Salir</Text>
           </TouchableOpacity>
         </View>
       )}
 
       {selectedCount > 0 && (
-        <View style={[styles.selectionBar, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <View style={[styles.selectionBar, { backgroundColor: colors.card }]}>
           <Text style={[styles.selectionText, { color: colors.text }]}>{selectedCount === 1 ? "1 seleccionado" : `${selectedCount} seleccionados`}</Text>
           <View style={styles.selectionActions}>
             {selectedCount === 1 && selectedTx && (
@@ -62,7 +62,7 @@ export function ExpensesView({
         {groups.map((group) => (
           <View key={group.key} style={styles.dateGroup}>
             <Text style={[styles.dateGroupLabel, { color: colors.muted }]}>{group.label}</Text>
-            <View style={[styles.txGroupCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <View style={[styles.txGroupCard, { backgroundColor: colors.card }]}>
               {group.items.map((tx, index) => {
                 const selected = selectedRows.includes(tx.rowId);
                 const icon = tx.amount >= 0 ? "bank-transfer-in" : tx.type === "GASTO FRECUENTE" ? "credit-card-outline" : "basket-outline";
@@ -73,12 +73,12 @@ export function ExpensesView({
                     onLongPress={() => (selected ? onMove(tx) : onToggleSelection(tx))}
                     style={[
                       styles.groupedTxRow,
-                      index > 0 && { borderTopWidth: 1, borderColor: colors.border },
+                      index > 0 && { borderTopWidth: 0.5, borderColor: colors.border },
                       tx.type === "GASTO FRECUENTE" && { backgroundColor: colors.freqExpenseRow },
                       selected && { backgroundColor: colors.primarySoft },
                     ]}
                   >
-                    <View style={[styles.txIcon, { backgroundColor: selected ? colors.infoSoft : typeFill(tx.type, colors), borderColor: selected ? colors.blue : typeColor(tx.type, colors) }]}>
+                    <View style={[styles.txIcon, { backgroundColor: selected ? colors.infoSoft : typeFill(tx.type, colors) }]}>
                       <MaterialCommunityIcons name={selected ? "check" : (icon as MaterialIconName)} size={18} color={selected ? colors.blue : typeColor(tx.type, colors)} />
                     </View>
                     <View style={styles.groupedTxMain}>
@@ -101,12 +101,12 @@ export function ExpensesView({
           </View>
         ))}
         {!transactions.length && (
-          <View style={[styles.mobileEmptyCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View style={[styles.mobileEmptyCard, { backgroundColor: colors.card }]}>
             <Text style={[styles.empty, { color: colors.muted }]}>No hay movimientos para mostrar.</Text>
           </View>
         )}
         {!searchActive && (
-          <TouchableOpacity style={[styles.loadOlderBtn, { backgroundColor: colors.card, borderColor: colors.border }]} onPress={onLoadOlder}>
+          <TouchableOpacity style={[styles.loadOlderBtn, { backgroundColor: colors.card }]} onPress={onLoadOlder}>
             <Text style={[styles.loadOlderText, { color: colors.text }]}>CARGAR MOVIMIENTOS ANTERIORES</Text>
           </TouchableOpacity>
         )}

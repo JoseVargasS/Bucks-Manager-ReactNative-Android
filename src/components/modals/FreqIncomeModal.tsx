@@ -10,7 +10,7 @@ export function FreqIncomeModal({ visible, colors, value, setValue, onClose, onS
 }) {
   return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
-      <View style={styles.modalOverlay}>
+      <View style={[styles.modalOverlay, { backgroundColor: colors.overlay }]}>
         <TouchableOpacity style={styles.optionBackdrop} activeOpacity={1} onPress={onClose} />
         <View style={[styles.modal, { backgroundColor: colors.card }]}>
           <ModalHeader title="Ingreso frecuente" icon="cash" colors={colors} onClose={onClose} />

@@ -496,9 +496,9 @@ export default function App() {
         </View>
 
         {deletedTx && (
-          <TouchableOpacity style={[styles.undoFab, compact && { left: 18 }, { backgroundColor: colors.card, borderColor: colors.border }]} onPress={undoDelete}>
+          <TouchableOpacity style={[styles.undoFab, compact && { left: 18 }, { backgroundColor: colors.card }]} onPress={undoDelete}>
             <MaterialCommunityIcons name="undo" size={20} color={colors.blue} />
-            <Text style={{ color: colors.text, fontWeight: "800" }}>Deshacer</Text>
+            <Text style={{ color: colors.text, fontWeight: "600" }}>Deshacer</Text>
           </TouchableOpacity>
         )}
         <BottomNav colors={colors} tab={tab} setTab={setTab} onAdd={() => openAdd()} onSearch={() => setSearchVisible(true)} />
@@ -636,7 +636,7 @@ function SearchModal({ visible, colors, filters, setFilters, onClose, onClear, o
     <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
       <View style={[styles.searchOverlay, { backgroundColor: colors.overlay }]}>
         <TouchableOpacity style={styles.optionBackdrop} activeOpacity={1} onPress={onClose} />
-        <View style={[styles.searchSheet, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <View style={[styles.searchSheet, { backgroundColor: colors.card }]}>
           <View style={[styles.searchGrabber, { backgroundColor: colors.border }]} />
           <View style={styles.searchHeader}>
             <View style={[styles.searchHeaderIcon, { backgroundColor: colors.primarySoft }]}>
@@ -646,7 +646,7 @@ function SearchModal({ visible, colors, filters, setFilters, onClose, onClear, o
               <Text style={[styles.searchTitle, { color: colors.text }]}>Busqueda avanzada</Text>
               <Text style={[styles.searchSubtitle, { color: colors.muted }]}>Filtra movimientos por detalle, monto o fecha</Text>
             </View>
-            <TouchableOpacity style={[styles.optionClose, { backgroundColor: colors.input, borderColor: colors.border }]} onPress={onClose}>
+            <TouchableOpacity style={[styles.optionClose, { backgroundColor: colors.input }]} onPress={onClose}>
               <MaterialCommunityIcons name="close" size={20} color={colors.text} />
             </TouchableOpacity>
           </View>

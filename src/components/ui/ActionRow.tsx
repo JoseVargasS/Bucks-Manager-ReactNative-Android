@@ -6,7 +6,7 @@ export function ActionRow({ colors, onCancel, onSubmit, submitLabel, cancelLabel
   return (
     <View style={styles.modalActions}>
       <TouchableOpacity style={[styles.cancelBtn, { backgroundColor: colors.input }]} onPress={onCancel}>
-        <Text style={{ color: colors.text, fontWeight: "800" }}>{cancelLabel}</Text>
+        <Text style={{ color: colors.text, fontWeight: "600" }}>{cancelLabel}</Text>
       </TouchableOpacity>
       <TouchableOpacity style={[styles.saveBtn, { backgroundColor: colors.primary }]} onPress={onSubmit}>
         <Text style={[styles.saveText, { color: colors.onPrimary }]}>{submitLabel}</Text>

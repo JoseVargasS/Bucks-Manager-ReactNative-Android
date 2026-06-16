@@ -14,9 +14,9 @@ export function SettingsView({ colors, theme, setTheme, accountInfo, onRescan, o
     <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.pageScroll, styles.pageScrollMobile]}>
       <View style={styles.settingsSection}>
         <Text style={[styles.settingsLabel, { color: colors.muted }]}>CUENTA</Text>
-        <View style={[styles.settingsGroup, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <TouchableOpacity style={[styles.settingsRow, { borderColor: colors.border }]} onPress={onSwitch}>
-            <View style={[styles.settingsAvatar, { backgroundColor: colors.primarySoft, borderColor: colors.primary }]}>
+        <View style={[styles.settingsGroup, { backgroundColor: colors.card }]}>
+          <TouchableOpacity style={[styles.settingsRow, { borderBottomWidth: 0.5, borderColor: colors.border }]} onPress={onSwitch}>
+            <View style={[styles.settingsAvatar, { backgroundColor: colors.primarySoft }]}>
               <Text style={[styles.accountInitial, { color: colors.primary }]}>{initial}</Text>
             </View>
             <View style={styles.settingsRowText}>
@@ -32,12 +32,12 @@ export function SettingsView({ colors, theme, setTheme, accountInfo, onRescan, o
 
       <View style={styles.settingsSection}>
         <Text style={[styles.settingsLabel, { color: colors.muted }]}>TEMA</Text>
-        <View style={[styles.settingsGroup, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <TouchableOpacity style={[styles.settingsRow, { borderColor: colors.border }]} onPress={() => setTheme(theme === "dark" ? "light" : "dark")}>
+        <View style={[styles.settingsGroup, { backgroundColor: colors.card }]}>
+          <TouchableOpacity style={styles.settingsRow} onPress={() => setTheme(theme === "dark" ? "light" : "dark")}>
             <MaterialCommunityIcons name={theme === "dark" ? "weather-night" : "white-balance-sunny"} size={22} color={colors.yellow} />
             <Text style={[styles.settingsRowLabel, { color: colors.text }]}>Modo oscuro</Text>
             <View style={[styles.themeToggle, { backgroundColor: theme === "dark" ? colors.primary : colors.switchTrack }]}>
-              <View style={[styles.themeThumb, theme === "dark" ? { marginLeft: 23 } : { marginLeft: 0 }]} />
+              <View style={[styles.themeThumb, theme === "dark" ? { marginLeft: 22 } : { marginLeft: 0 }]} />
             </View>
           </TouchableOpacity>
         </View>
@@ -45,7 +45,7 @@ export function SettingsView({ colors, theme, setTheme, accountInfo, onRescan, o
 
       <View style={styles.settingsSection}>
         <Text style={[styles.settingsLabel, { color: colors.muted }]}>EXPORTAR</Text>
-        <View style={[styles.settingsGroup, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <View style={[styles.settingsGroup, { backgroundColor: colors.card }]}>
           <SettingsRow colors={colors} icon="file-export" label="Exportar movimientos" onPress={onOpenExport} last />
         </View>
       </View>

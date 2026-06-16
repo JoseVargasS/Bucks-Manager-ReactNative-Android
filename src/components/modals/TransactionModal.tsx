@@ -18,14 +18,14 @@ export function TransactionModal({ visible, colors, draft, setDraft, editing, op
   const [calVisible, setCalVisible] = useState(false);
   return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
-      <View style={styles.modalOverlay}>
+      <View style={[styles.modalOverlay, { backgroundColor: colors.overlay }]}>
         <TouchableOpacity style={styles.optionBackdrop} activeOpacity={1} onPress={onClose} />
-        <View style={[styles.recordModal, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <View style={[styles.recordModal, { backgroundColor: colors.card }]}>
           <View style={[styles.recordHeader, { borderColor: colors.border }]}>
             <Text style={[styles.recordTitle, { color: colors.text }]}>
               <MaterialCommunityIcons name="calculator-variant" size={19} color={colors.blue} /> {editing ? "Editar Registro" : "Nuevo Registro"}
             </Text>
-            <TouchableOpacity style={[styles.closeBtn, { backgroundColor: colors.input, borderColor: colors.border }]} onPress={onClose}>
+            <TouchableOpacity style={[styles.closeBtn, { backgroundColor: colors.input }]} onPress={onClose}>
               <MaterialCommunityIcons name="close" size={22} color={colors.text} />
             </TouchableOpacity>
           </View>
@@ -36,7 +36,7 @@ export function TransactionModal({ visible, colors, draft, setDraft, editing, op
               onPress={() => setCalVisible(true)}
             >
               <MaterialCommunityIcons name="calendar" size={20} color={colors.blue} />
-              <Text style={[{ color: colors.text, fontWeight: "900", flex: 1 }]}>{draft.date || "Seleccionar fecha"}</Text>
+              <Text style={[{ color: colors.text, fontWeight: "600", flex: 1 }]}>{draft.date || "Seleccionar fecha"}</Text>
             </TouchableOpacity>
             <CalendarPicker visible={calVisible} value={draft.date} onSelect={(v: string) => setDraft({ ...draft, date: v })} onClose={() => setCalVisible(false)} colors={colors} />
             <Text style={[styles.label, { color: colors.text }]}>Tipo</Text>

@@ -34,7 +34,7 @@ export function PeriodControls({ colors, year, month, availableYears, availableM
           title="Seleccionar mes"
           style={{ flex: 1 }}
         />
-        <TouchableOpacity onPress={goToday} style={[styles.periodToday, { backgroundColor: colors.card, borderColor: colors.blue }]}>
+        <TouchableOpacity onPress={goToday} style={[styles.periodToday, { backgroundColor: colors.infoSoft }]}>
           <MaterialCommunityIcons name="calendar-today" size={18} color={colors.blue} />
         </TouchableOpacity>
       </View>

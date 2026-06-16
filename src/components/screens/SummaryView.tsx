@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { ScrollView, Text, View } from "react-native";
 import { calculateSummaries } from "../../domain/bucksLogic";
-import { formatMoney } from "../../utils/formats";
 import { styles } from "../../styles/globalStyles";
 import { Kpi } from "../ui/Kpi";
 import { PieCard } from "../ui/PieCard";
@@ -26,6 +25,11 @@ export function SummaryView({ colors, summaries, transactions, freqIncome, compa
     { income: 0, expense: 0, net: 0 },
   );
   const savings = totals.income > 0 ? Math.round((totals.net / totals.income) * 100) : 0;
+  const netNoFreq = filtered.reduce((acc, row) => acc + row.netNoFreq, 0);
+  const compactMoney = (value: number, signed = false) => {
+    const sign = signed && value < 0 ? "- " : "";
+    return `${sign}S/ ${Math.abs(value).toFixed(0)}`;
+  };
   const incomeTypes = [
     { label: "Ing. Frecuente", value: computed.reduce((a, r) => a + r.freqIncome, 0), color: colors.green },
     { label: "Ing. No Frec.", value: computed.reduce((a, r) => a + r.nonFreqIncome, 0), color: colors.blue },
@@ -46,43 +50,49 @@ export function SummaryView({ colors, summaries, transactions, freqIncome, compa
           style={{ flex: 1 }}
         />
       </View>
-      <View style={[styles.kpiGrid, compact && styles.kpiGridMobile]}>
-        <Kpi title="Ingresos Totales" value={`S/ ${totals.income.toFixed(2)}`} icon="trending-up" color={colors.green} colors={colors} />
-        <Kpi title="Gastos Totales" value={`S/ ${totals.expense.toFixed(2)}`} icon="trending-down" color={colors.red} colors={colors} />
-        <Kpi title="Balance Neto" value={`S/ ${totals.net.toFixed(2)}`} icon="wallet" color={totals.net >= 0 ? colors.blue : colors.red} colors={colors} />
-        <Kpi title="Sin Ing. Frec." value={`S/ ${filtered.reduce((a, r) => a + r.netNoFreq, 0).toFixed(2)}`} icon="cash-remove" color={colors.yellow} colors={colors} />
-        <Kpi title="Tasa de Ahorro" value={`${savings}%`} icon="piggy-bank" color={colors.blue} colors={colors} />
+      <View style={[styles.kpiGridMobile, { gap: 8, marginBottom: 12 }]}>
+        <View style={{ flexDirection: "row", gap: 8 }}>
+          <Kpi title="Ingresos" value={compactMoney(totals.income)} icon="trending-up" color={colors.green} colors={colors} />
+          <Kpi title="Gastos" value={compactMoney(totals.expense)} icon="trending-down" color={colors.red} colors={colors} />
+        </View>
+        <View style={{ flexDirection: "row", gap: 8 }}>
+          <Kpi title="Balance Neto" value={compactMoney(totals.net, true)} icon="wallet" color={totals.net >= 0 ? colors.blue : colors.red} colors={colors} />
+          <Kpi title="Tasa de Ahorro" value={`${savings}%`} icon="piggy-bank" color={colors.blue} colors={colors} />
+        </View>
+        <View style={{ flexDirection: "row", gap: 8 }}>
+          <Kpi title="Sin Ing. Frec." value={compactMoney(netNoFreq, true)} icon="cash-remove" color={colors.yellow} colors={colors} />
+        </View>
       </View>
-      <BarChart rows={filtered} colors={colors} />
+      <View style={[styles.chartCard, { backgroundColor: colors.card, alignItems: "stretch" }]}>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>Evolucion mensual</Text>
+        <BarChart rows={filtered} colors={colors} />
+      </View>
       <View style={[styles.chartRow, compact && styles.chartRowMobile]}>
         <PieCard title="Ingresos" values={incomeTypes.map((t) => t.value)} colors={colors} labels={incomeTypes.map((t) => t.label)} tints={incomeTypes.map((t) => t.color)} />
         <PieCard title="Gastos" values={expenseTypes.map((t) => t.value)} colors={colors} labels={expenseTypes.map((t) => t.label)} tints={expenseTypes.map((t) => t.color)} danger />
       </View>
-      <View style={[styles.tableCard, compact && styles.summaryTableMobile, { backgroundColor: colors.card, borderColor: colors.border }]}>
-        <View style={[styles.gasTableHeader, { backgroundColor: colors.input, borderColor: colors.border }]}>
-          <Text style={[styles.gasTableHeadCell, { color: colors.muted, flex: 1.2 }]}>MES</Text>
-          <Text style={[styles.gasTableHeadCell, { color: colors.muted }]}>ING. FREC.</Text>
-          <Text style={[styles.gasTableHeadCell, { color: colors.muted }]}>ING. N/FREC</Text>
-          <Text style={[styles.gasTableHeadCell, { color: colors.green }]}>TOT. ING</Text>
-          <Text style={[styles.gasTableHeadCell, { color: colors.muted }]}>G. FREC.</Text>
-          <Text style={[styles.gasTableHeadCell, { color: colors.muted }]}>G. N/FREC</Text>
-          <Text style={[styles.gasTableHeadCell, { color: colors.red }]}>TOT. G.</Text>
+      <View style={[styles.tableCard, compact && styles.summaryTableMobile, { backgroundColor: colors.card }]}>
+        <View style={[styles.gasTableHeader, { backgroundColor: colors.input }]}>
+          <Text style={[styles.gasTableHeadCell, { color: colors.muted, flex: 1.35 }]}>MES</Text>
+          <Text style={[styles.gasTableHeadCell, { color: colors.green }]}>ING.</Text>
+          <Text style={[styles.gasTableHeadCell, { color: colors.red }]}>GASTO</Text>
           <Text style={[styles.gasTableHeadCell, { color: colors.blue }]}>NETO</Text>
-          <Text style={[styles.gasTableHeadCell, { color: colors.yellow }]}>NETO SIN IF</Text>
+          <Text style={[styles.gasTableHeadCell, { color: colors.muted }]}>AHORRO</Text>
         </View>
-        {filtered.map((row) => (
-          <View key={row.monthYear} style={[styles.gasTableRow, { borderColor: colors.border }]}>
-            <Text style={[styles.gasTableCell, { color: colors.text, flex: 1.2, fontWeight: "900" }]}>{row.monthYear}</Text>
-            <Text style={[styles.gasTableCell, { color: colors.green }]}>{formatMoney(row.freqIncome)}</Text>
-            <Text style={[styles.gasTableCell, { color: colors.green }]}>{formatMoney(row.nonFreqIncome)}</Text>
-            <Text style={[styles.gasTableCell, { color: colors.green, fontWeight: "900" }]}>{formatMoney(row.totalIncome)}</Text>
-            <Text style={[styles.gasTableCell, { color: colors.red }]}>{formatMoney(row.freqExpense)}</Text>
-            <Text style={[styles.gasTableCell, { color: colors.red }]}>{formatMoney(row.nonFreqExpense)}</Text>
-            <Text style={[styles.gasTableCell, { color: colors.red, fontWeight: "900" }]}>{formatMoney(row.totalExpense)}</Text>
-            <Text style={[styles.gasTableCell, { color: row.netMonthly >= 0 ? colors.green : colors.red, fontWeight: "900" }]}>{formatMoney(row.netMonthly)}</Text>
-            <Text style={[styles.gasTableCell, { color: colors.yellow, fontWeight: "900" }]}>{formatMoney(row.netNoFreq)}</Text>
-          </View>
-        ))}
+        {filtered.map((row) => {
+          const rowSavings = row.totalIncome > 0 ? Math.round((row.netMonthly / row.totalIncome) * 100) : 0;
+          const [monthName, year] = row.monthYear.split(" ");
+          const monthLabel = `${monthName.slice(0, 3).toUpperCase()} ${year?.slice(-2) || ""}`.trim();
+          return (
+            <View key={row.monthYear} style={[styles.gasTableRow, { borderColor: colors.border }]}>
+              <Text numberOfLines={1} style={[styles.gasTableCell, { color: colors.text, flex: 1.35, fontWeight: "600" }]}>{monthLabel}</Text>
+              <Text numberOfLines={1} style={[styles.gasTableCell, { color: colors.green }]}>{compactMoney(row.totalIncome)}</Text>
+              <Text numberOfLines={1} style={[styles.gasTableCell, { color: colors.red }]}>{compactMoney(row.totalExpense)}</Text>
+              <Text numberOfLines={1} style={[styles.gasTableCell, { color: row.netMonthly >= 0 ? colors.green : colors.red, fontWeight: "700" }]}>{compactMoney(row.netMonthly, true)}</Text>
+              <Text numberOfLines={1} style={[styles.gasTableCell, { color: rowSavings >= 0 ? colors.blue : colors.red }]}>{rowSavings}%</Text>
+            </View>
+          );
+        })}
       </View>
     </ScrollView>
   );
