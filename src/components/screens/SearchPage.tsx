@@ -12,7 +12,7 @@ export function SearchPage({ colors, copy, currencySymbol, filters, setFilters, 
 }) {
   return (
     <View style={styles.searchBody}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.searchScrollContent}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.searchScrollContent} keyboardShouldPersistTaps="handled">
         <View style={[styles.searchSection, { backgroundColor: colors.input }]}>
           <View style={styles.searchSectionHeader}>
             <MaterialCommunityIcons name="text-search" size={18} color={colors.primary} />

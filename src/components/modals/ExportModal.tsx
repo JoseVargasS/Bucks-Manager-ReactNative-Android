@@ -44,7 +44,7 @@ export function ExportModal({ visible, colors, copy, config, setConfig, minDate,
         <TouchableOpacity style={styles.optionBackdrop} activeOpacity={1} onPress={onClose} />
         <View style={[styles.modal, { backgroundColor: colors.card }]}>
           <ModalHeader title={copy.exportMovements} icon="file-export" colors={colors} onClose={onClose} />
-          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 10 }}>
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 10 }} keyboardShouldPersistTaps="handled">
             <Text style={[styles.label, { color: colors.text }]}>{copy.format}</Text>
             <View style={styles.twoCols}>
               <TouchableOpacity
