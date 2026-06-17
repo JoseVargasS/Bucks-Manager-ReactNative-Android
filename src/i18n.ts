@@ -96,6 +96,13 @@ export const UI_COPY = {
     completeRequired: "Completa fecha, monto y detalle.",
     syncError: "No se pudo sincronizar con Google Sheets.",
     deleteRecord: "Eliminar registro",
+    confirmDeleteTitle: "Eliminar gasto",
+    confirmDeleteMsg: "Este movimiento se eliminará de tu hoja de cálculo. Puedes deshacer después.",
+    confirmEditTitle: "Editar gasto",
+    confirmEditMsg: "Vas a modificar este movimiento en tu hoja de cálculo.",
+    confirmDeleteSelectedTitle: "Eliminar movimientos",
+    confirmDeleteSelectedMsg: "Los movimientos seleccionados se eliminarán de tu hoja de cálculo.",
+    confirm: "Confirmar",
   },
   en: {
     languageCode: "en",
@@ -194,6 +201,13 @@ export const UI_COPY = {
     completeRequired: "Complete date, amount, and detail.",
     syncError: "Could not sync with Google Sheets.",
     deleteRecord: "Delete record",
+    confirmDeleteTitle: "Delete expense",
+    confirmDeleteMsg: "This movement will be deleted from your spreadsheet. You can undo afterwards.",
+    confirmEditTitle: "Edit expense",
+    confirmEditMsg: "You are about to modify this movement in your spreadsheet.",
+    confirmDeleteSelectedTitle: "Delete movements",
+    confirmDeleteSelectedMsg: "The selected movements will be deleted from your spreadsheet.",
+    confirm: "Confirm",
   },
 } as const;
 
