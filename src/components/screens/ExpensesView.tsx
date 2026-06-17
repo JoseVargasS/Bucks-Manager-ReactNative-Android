@@ -1,50 +1,78 @@
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
-import React from "react";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { formatMoney, formatCreatedTime, abbrev, typeColor, typeFill } from "../../utils/formats";
+import { formatMoney, formatCreatedTime, typeColor, typeFill } from "../../utils/formats";
 import { groupTransactionsByDate } from "../../utils/transactions";
 import { styles } from "../../styles/globalStyles";
 import { StatCard } from "../ui/StatCard";
 import { HighlightedText } from "../ui/HighlightedText";
 import { Palette } from "../../theme/colors";
 import { SummaryRow, Transaction, MaterialIconName } from "../../types";
+import { UiCopy } from "../../i18n";
 
 export function ExpensesView({
-  colors, summary, transactions, searchActive, searchText, selectedRows,
-  onEditFreq, onExitSearch, onOpenDetail, onEdit, onDeleteSelected, onMove, onToggleSelection, onLoadOlder,
+  colors,
+  summary,
+  transactions,
+  searchActive,
+  searchText,
+  selectedRows,
+  currencySymbol,
+  copy,
+  onEditFreq,
+  onExitSearch,
+  onOpenDetail,
+  onEdit,
+  onDeleteSelected,
+  onMove,
+  onToggleSelection,
+  onLoadOlder,
   topInset,
 }: {
-  colors: Palette; summary: SummaryRow; transactions: Transaction[]; searchActive: boolean; searchText: string;
-  selectedRows: number[]; onEditFreq: () => void; onExitSearch: () => void; onOpenDetail: (tx: Transaction) => void;
-  onEdit: (tx: Transaction) => void; onDeleteSelected: () => void; onMove: (tx: Transaction) => void;
-  onToggleSelection: (tx: Transaction) => void; onLoadOlder: () => void; topInset?: number;
+  colors: Palette;
+  summary: SummaryRow;
+  transactions: Transaction[];
+  searchActive: boolean;
+  searchText: string;
+  selectedRows: number[];
+  currencySymbol: string;
+  copy: UiCopy;
+  onEditFreq: () => void;
+  onExitSearch: () => void;
+  onOpenDetail: (tx: Transaction) => void;
+  onEdit: (tx: Transaction) => void;
+  onDeleteSelected: () => void;
+  onMove: (tx: Transaction) => void;
+  onToggleSelection: (tx: Transaction) => void;
+  onLoadOlder: () => void;
+  topInset?: number;
 }) {
-  const groups = groupTransactionsByDate(transactions);
+  const groups = groupTransactionsByDate(transactions, copy);
   const selectedCount = selectedRows.length;
   const selectedTx = transactions.find((tx) => tx.rowId === selectedRows[0]);
+
   return (
     <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.pageScroll, topInset !== undefined && { paddingTop: topInset }]}>
       <View style={[styles.statsGrid, styles.statsGridMobile]}>
-        <StatCard title="Ing. Frec." value={formatMoney(summary.freqIncome)} tone="income" icon="cash" colors={colors} action={onEditFreq} />
-        <StatCard title="Ing. No Frec." value={formatMoney(summary.nonFreqIncome)} tone="income" icon="trending-up" colors={colors} />
-        <StatCard title="Gasto Frec." value={formatMoney(summary.freqExpense)} tone="expense" icon="credit-card" colors={colors} />
-        <StatCard title="Gasto No Frec." value={formatMoney(summary.nonFreqExpense)} tone="expense" icon="trending-down" colors={colors} />
-        <StatCard title="Gasto Total" value={formatMoney(summary.totalExpense)} tone="warn" icon="basket" colors={colors} />
-        <StatCard title="Balance" value={formatMoney(summary.netMonthly)} tone="balance" icon="wallet" colors={colors} />
+        <StatCard title={copy.freqIncome} value={formatMoney(summary.freqIncome, currencySymbol)} tone="income" icon="cash" colors={colors} action={onEditFreq} />
+        <StatCard title={copy.nonFreqIncome} value={formatMoney(summary.nonFreqIncome, currencySymbol)} tone="income" icon="trending-up" colors={colors} />
+        <StatCard title={copy.freqExpense} value={formatMoney(summary.freqExpense, currencySymbol)} tone="expense" icon="credit-card" colors={colors} />
+        <StatCard title={copy.nonFreqExpense} value={formatMoney(summary.nonFreqExpense, currencySymbol)} tone="expense" icon="trending-down" colors={colors} />
+        <StatCard title={copy.totalExpense} value={formatMoney(summary.totalExpense, currencySymbol)} tone="warn" icon="basket" colors={colors} />
+        <StatCard title={copy.balance} value={formatMoney(summary.netMonthly, currencySymbol)} tone="balance" icon="wallet" colors={colors} />
       </View>
 
       {searchActive && (
         <View style={[styles.searchBanner, styles.searchBannerMobile, { backgroundColor: colors.infoSoft, borderColor: colors.blue }]}>
-          <Text style={{ color: colors.blue, fontWeight: "600" }}>Mostrando resultados de busqueda avanzada</Text>
+          <Text style={{ color: colors.blue, fontWeight: "600" }}>{copy.searchResults}</Text>
           <TouchableOpacity onPress={onExitSearch}>
-            <Text style={{ color: colors.blue, fontWeight: "700" }}>Salir</Text>
+            <Text style={{ color: colors.blue, fontWeight: "700" }}>{copy.exit}</Text>
           </TouchableOpacity>
         </View>
       )}
 
       {selectedCount > 0 && (
         <View style={[styles.selectionBar, { backgroundColor: colors.card }]}>
-          <Text style={[styles.selectionText, { color: colors.text }]}>{selectedCount === 1 ? "1 seleccionado" : `${selectedCount} seleccionados`}</Text>
+          <Text style={[styles.selectionText, { color: colors.text }]}>{selectedCount === 1 ? copy.selectedOne : `${selectedCount} ${copy.selectedMany}`}</Text>
           <View style={styles.selectionActions}>
             {selectedCount === 1 && selectedTx && (
               <TouchableOpacity style={[styles.selectionBtn, { backgroundColor: colors.editBg, borderColor: colors.editBorder }]} onPress={() => onEdit(selectedTx)}>
@@ -89,10 +117,10 @@ export function ExpensesView({
                         highlightStyle={{ color: colors.onPrimary, backgroundColor: colors.primary, borderRadius: 4 }}
                       />
                       <Text numberOfLines={1} style={[styles.groupedTxMeta, { color: colors.muted }]}>
-                        {`${abbrev(tx.type)} · ${formatCreatedTime(tx.createdAt).slice(0, 5)}`}
+                        {`${compactTypeLabel(tx.type, copy)} - ${formatCreatedTime(tx.createdAt).slice(0, 5)}`}
                       </Text>
                     </View>
-                    <Text numberOfLines={1} style={[styles.groupedTxAmount, { color: tx.amount >= 0 ? colors.green : colors.red }]}>{formatMoney(tx.amount)}</Text>
+                    <Text numberOfLines={1} style={[styles.groupedTxAmount, { color: tx.amount >= 0 ? colors.green : colors.red }]}>{formatMoney(tx.amount, currencySymbol)}</Text>
                     {selected && <MaterialCommunityIcons name="drag-vertical" size={18} color={colors.muted} />}
                   </TouchableOpacity>
                 );
@@ -102,15 +130,22 @@ export function ExpensesView({
         ))}
         {!transactions.length && (
           <View style={[styles.mobileEmptyCard, { backgroundColor: colors.card }]}>
-            <Text style={[styles.empty, { color: colors.muted }]}>No hay movimientos para mostrar.</Text>
+            <Text style={[styles.empty, { color: colors.muted }]}>{copy.noMovements}</Text>
           </View>
         )}
         {!searchActive && (
           <TouchableOpacity style={[styles.loadOlderBtn, { backgroundColor: colors.card }]} onPress={onLoadOlder}>
-            <Text style={[styles.loadOlderText, { color: colors.text }]}>CARGAR MOVIMIENTOS ANTERIORES</Text>
+            <Text style={[styles.loadOlderText, { color: colors.text }]}>{copy.loadOlder}</Text>
           </TouchableOpacity>
         )}
       </View>
     </ScrollView>
   );
+}
+
+function compactTypeLabel(type: string, copy: UiCopy) {
+  if (type === "INGRESO FRECUENTE") return copy.freqIncome;
+  if (type === "INGRESO NO FRECUENTE") return copy.nonFreqIncome;
+  if (type === "GASTO FRECUENTE") return copy.freqExpense;
+  return copy.nonFreqExpense;
 }

@@ -2,15 +2,16 @@ import { ActivityIndicator, Text, TouchableOpacity, View } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { styles } from "../../styles/globalStyles";
 import { Palette } from "../../theme/colors";
+import { UiCopy } from "../../i18n";
 
-export function LoginScreen({ colors, loading, canConnect, onSignIn }: { colors: Palette; loading: boolean; canConnect: boolean; onSignIn: () => void }) {
+export function LoginScreen({ colors, copy, loading, canConnect, onSignIn }: { colors: Palette; copy: UiCopy; loading: boolean; canConnect: boolean; onSignIn: () => void }) {
   return (
     <View style={styles.loginScreen}>
       <View style={[styles.loginMark, { backgroundColor: colors.primary }]}>
         <MaterialCommunityIcons name="sack" size={38} color={colors.onPrimary} />
       </View>
       <Text style={[styles.loginTitle, { color: colors.text }]}>Bucks Manager</Text>
-      <Text style={{ fontSize: 13, fontWeight: "400", color: colors.muted, marginTop: 6 }}>Tus finanzas, organizadas.</Text>
+      <Text style={{ fontSize: 13, fontWeight: "400", color: colors.muted, marginTop: 6 }}>{copy.loginSubtitle}</Text>
       <TouchableOpacity
         disabled={!canConnect || loading}
         onPress={onSignIn}
@@ -31,11 +32,11 @@ export function LoginScreen({ colors, loading, canConnect, onSignIn }: { colors:
         ) : (
           <>
             <MaterialCommunityIcons name="google" size={21} color={colors.onPrimary} />
-            <Text style={[styles.googleLoginText, { color: colors.onPrimary }]}>Acceder con Google</Text>
+            <Text style={[styles.googleLoginText, { color: colors.onPrimary }]}>{copy.signInWithGoogle}</Text>
           </>
         )}
       </TouchableOpacity>
-      {!canConnect && <Text style={[styles.loginStatus, { color: colors.muted }]}>Faltan credenciales OAuth en .env</Text>}
+      {!canConnect && <Text style={[styles.loginStatus, { color: colors.muted }]}>{copy.missingCredentials}</Text>}
     </View>
   );
 }

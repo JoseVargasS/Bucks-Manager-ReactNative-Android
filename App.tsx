@@ -8,7 +8,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Alert, Modal, SafeAreaView, Text, TouchableOpacity, View, StatusBar as NativeStatusBar } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { GoogleSignin } from "@react-native-google-signin/google-signin";
-import Svg, { Defs, LinearGradient, Rect, Stop } from "react-native-svg";
+import Svg, { Defs, LinearGradient, Mask, Rect, Stop } from "react-native-svg";
 
 import {
   applySearch, buildTransactionFromDraft, calculateSummaries,
@@ -38,6 +38,7 @@ import { ExportModal, ExportConfig } from "./src/components/modals/ExportModal";
 import { SheetChooserModal } from "./src/components/modals/SheetChooserModal";
 import { OptionSheet, PickerConfig } from "./src/components/modals/OptionSheet";
 import { ExportFormat, SearchFilters, SheetCandidate, SummaryRow, Transaction, TransactionDraft, TransactionType } from "./src/types";
+import { UI_COPY, UI_MONTH_NAMES, UiCopy } from "./src/i18n";
 
 const GOOGLE_ANDROID_CLIENT_ID = Constants.expoConfig?.extra?.googleAndroidClientId || "";
 const GOOGLE_WEB_CLIENT_ID = Constants.expoConfig?.extra?.googleWebClientId || "";
@@ -50,8 +51,24 @@ const GOOGLE_WORKSPACE_SCOPES = [
 
 type Tab = "expenses" | "search" | "summary" | "settings";
 type ThemeMode = "dark" | "light";
+type LanguageMode = "es" | "en";
+type FontPreference = "system" | "serif" | "mono";
 
 const emptySearch: SearchFilters = { text: "", minAmount: "", maxAmount: "", startDate: "", endDate: "" };
+const LANGUAGE_KEY = "bucks_language";
+const CURRENCY_SYMBOL_KEY = "bucks_currency_symbol";
+const FONT_KEY = "bucks_font";
+const CURRENCY_OPTIONS = [
+  { labelEs: "Soles peruanos (S/)", labelEn: "Peruvian soles (S/)", value: "S/", icon: "cash" as const },
+  { labelEs: "Dólares ($)", labelEn: "US dollars ($)", value: "$", icon: "currency-usd" as const },
+  { labelEs: "Euros (€)", labelEn: "Euros (€)", value: "€", icon: "currency-eur" as const },
+  { labelEs: "Libras (£)", labelEn: "Pounds (£)", value: "£", icon: "currency-gbp" as const },
+  { labelEs: "Yenes (¥)", labelEn: "Yen (¥)", value: "¥", icon: "currency-jpy" as const },
+  { labelEs: "Reales (R$)", labelEn: "Brazilian reais (R$)", value: "R$", icon: "currency-brl" as const },
+  { labelEs: "Pesos mexicanos (MX$)", labelEn: "Mexican pesos (MX$)", value: "MX$", icon: "cash" as const },
+  { labelEs: "Pesos colombianos (COP$)", labelEn: "Colombian pesos (COP$)", value: "COP$", icon: "cash" as const },
+  { labelEs: "Pesos chilenos (CLP$)", labelEn: "Chilean pesos (CLP$)", value: "CLP$", icon: "cash" as const },
+];
 const defaultExportConfig: ExportConfig = {
   format: "xlsx" as ExportFormat,
   rangeMode: "dates" as const,
@@ -66,6 +83,10 @@ const defaultExportConfig: ExportConfig = {
 export default function App() {
   const [theme, setTheme] = useState<ThemeMode>("dark");
   const colors: Palette = theme === "dark" ? dark : light;
+  const [language, setLanguage] = useState<LanguageMode>("es");
+  const copy = UI_COPY[language];
+  const [currencySymbol, setCurrencySymbol] = useState(detectDeviceCurrencySymbol);
+  const [fontPreference, setFontPreference] = useState<FontPreference>("system");
   const [tab, setTab] = useState<Tab>("expenses");
   const [month, setMonth] = useState(new Date().getMonth());
   const [year, setYear] = useState(new Date().getFullYear());
@@ -98,7 +119,7 @@ export default function App() {
   const compact = true;
   const statusBarInset = NativeStatusBar.currentHeight || 0;
   const headerTopInset = statusBarInset + 6;
-  const headerHeight = tab === "expenses" ? 154 : 62;
+  const headerHeight = tab === "expenses" ? 112 : 62;
   const contentTopInset = headerTopInset + headerHeight;
   const headerFadeHeight = Math.max(headerTopInset + 28, 56);
   const bottomFadeHeight = 128;
@@ -107,8 +128,13 @@ export default function App() {
     GoogleSignin.configure({
       webClientId: GOOGLE_WEB_CLIENT_ID || undefined,
     });
+    restorePreferences();
     restoreSession();
   }, []);
+
+  useEffect(() => {
+    applyDefaultFont(fontPreference);
+  }, [fontPreference]);
 
   // --- Derived data ---
   const visibleTransactions = useMemo(() => {
@@ -134,8 +160,9 @@ export default function App() {
 
   const availableMonths = useMemo(() => getAvailableMonthsForYear(year, transactions), [year, transactions]);
 
-  const pageTitle = tab === "expenses" ? "Gastos" : tab === "summary" ? "Análisis" : "Ajustes";
-  const pageSubtitle = tab === "expenses" ? "" : tab === "summary" ? "Resumen por mes" : "Cuenta y exportación";
+  const uiMonthNames = copy.languageCode === "en" ? UI_MONTH_NAMES.en : UI_MONTH_NAMES.es;
+  const pageTitle = tab === "expenses" ? copy.expenses : tab === "summary" ? copy.summary : copy.settings;
+  const pageSubtitle = tab === "expenses" ? `${uiMonthNames[month]} ${year}` : tab === "summary" ? copy.summarySubtitle : copy.settingsSubtitle;
 
   // --- Session management ---
   async function restoreSession() {
@@ -152,6 +179,76 @@ export default function App() {
         } catch { await clearGoogleSession(); }
       }
     } finally { setBootstrapping(false); }
+  }
+
+  async function restorePreferences() {
+    const [storedLanguage, storedCurrency, storedFont] = await Promise.all([
+      SecureStore.getItemAsync(LANGUAGE_KEY),
+      SecureStore.getItemAsync(CURRENCY_SYMBOL_KEY),
+      SecureStore.getItemAsync(FONT_KEY),
+    ]);
+    if (storedLanguage === "es" || storedLanguage === "en") setLanguage(storedLanguage);
+    if (storedCurrency && CURRENCY_OPTIONS.some((option) => option.value === storedCurrency)) setCurrencySymbol(storedCurrency);
+    if (storedFont === "system" || storedFont === "serif" || storedFont === "mono") {
+      setFontPreference(storedFont);
+      applyDefaultFont(storedFont);
+    }
+  }
+
+  function saveLanguage(next: string) {
+    const value = next === "en" ? "en" : "es";
+    setLanguage(value);
+    SecureStore.setItemAsync(LANGUAGE_KEY, value).catch(() => undefined);
+  }
+
+  function saveCurrencySymbol(next: string) {
+    setCurrencySymbol(next);
+    SecureStore.setItemAsync(CURRENCY_SYMBOL_KEY, next).catch(() => undefined);
+  }
+
+  function saveFontPreference(next: string) {
+    const value = next === "serif" || next === "mono" ? next : "system";
+    applyDefaultFont(value);
+    setFontPreference(value);
+    SecureStore.setItemAsync(FONT_KEY, value).catch(() => undefined);
+  }
+
+  function openLanguagePicker() {
+    setPicker({
+      title: copy.language,
+      selectedValue: language,
+      options: [
+        { label: copy.spanish, value: "es", icon: "translate" },
+        { label: copy.english, value: "en", icon: "translate" },
+      ],
+      onSelect: saveLanguage,
+    });
+  }
+
+  function openCurrencyPicker() {
+    setPicker({
+      title: copy.currencySymbol,
+      selectedValue: currencySymbol,
+      options: CURRENCY_OPTIONS.map((option) => ({
+        label: language === "en" ? option.labelEn : option.labelEs,
+        value: option.value,
+        icon: option.icon,
+      })),
+      onSelect: saveCurrencySymbol,
+    });
+  }
+
+  function openFontPicker() {
+    setPicker({
+      title: copy.fontStyle,
+      selectedValue: fontPreference,
+      options: [
+        { label: copy.system, value: "system", icon: "format-font" },
+        { label: copy.serif, value: "serif", icon: "format-letter-case" },
+        { label: copy.mono, value: "mono", icon: "code-tags" },
+      ],
+      onSelect: saveFontPreference,
+    });
   }
 
   async function getWorkspaceAccessToken(interactive: boolean) {
@@ -286,13 +383,13 @@ export default function App() {
 
   function syncGoogleInBackground(task: () => Promise<void>, title: string) {
     task().catch((error) => {
-      Alert.alert(title, error instanceof Error ? error.message : "No se pudo sincronizar con Google Sheets.");
+      Alert.alert(title, error instanceof Error ? error.message : copy.syncError);
     });
   }
 
   async function submitDraft() {
     if (!draft.date || !draft.amount || !draft.detail.trim()) {
-      Alert.alert("Datos incompletos", "Completa fecha, monto y detalle."); return;
+      Alert.alert(copy.incompleteData, copy.completeRequired); return;
     }
     const currentDraft = draft;
     const currentEdit = editingTx;
@@ -311,7 +408,7 @@ export default function App() {
         if (currentEdit) await updateGoogleTransaction(accessToken, spreadsheetId, currentEdit.rowId, currentDraft);
         else await saveTransaction(accessToken, spreadsheetId, currentDraft);
         await reloadFromGoogle(accessToken, spreadsheetId, false);
-      }, currentEdit ? "Editar registro" : "Agregar registro");
+      }, currentEdit ? copy.editRecord : copy.newRecord);
     }
   }
 
@@ -324,7 +421,7 @@ export default function App() {
       syncGoogleInBackground(async () => {
         await deleteGoogleTransaction(accessToken, spreadsheetId, tx.rowId);
         await reloadFromGoogle(accessToken, spreadsheetId, false);
-      }, "Eliminar registro");
+      }, copy.deleteRecord);
     }
   }
 
@@ -429,7 +526,7 @@ export default function App() {
       await Sharing.shareAsync(uri, { mimeType: "text/csv", dialogTitle: "Exportar movimientos" });
     } else {
       const html = `<html><body><h1>Bucks Manager</h1><table border="1" cellspacing="0" cellpadding="6">${rows
-        .map((tx) => `<tr><td>${tx.date}</td><td>${formatMoney(tx.amount)}</td><td>${tx.detail}</td><td>${tx.type}</td><td>${formatCreatedTime(tx.createdAt)}</td></tr>`)
+        .map((tx) => `<tr><td>${tx.date}</td><td>${formatMoney(tx.amount, currencySymbol)}</td><td>${tx.detail}</td><td>${tx.type}</td><td>${formatCreatedTime(tx.createdAt)}</td></tr>`)
         .join("")}</table></body></html>`;
       const pdf = await Print.printToFileAsync({ html });
       const uri = `${FileSystem.cacheDirectory}${baseFileName}.pdf`;
@@ -453,7 +550,7 @@ export default function App() {
     return (
       <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]}>
         <NativeStatusBar barStyle={theme === "dark" ? "light-content" : "dark-content"} translucent backgroundColor="transparent" />
-        <LoginScreen colors={colors} loading={loading} canConnect={Boolean(GOOGLE_ANDROID_CLIENT_ID || GOOGLE_WEB_CLIENT_ID)} onSignIn={signInWithGoogle} />
+        <LoginScreen colors={colors} copy={copy} loading={loading} canConnect={Boolean(GOOGLE_ANDROID_CLIENT_ID || GOOGLE_WEB_CLIENT_ID)} onSignIn={signInWithGoogle} />
       </SafeAreaView>
     );
   }
@@ -468,13 +565,15 @@ export default function App() {
               {loading && (
                 <View style={styles.loadingBar}>
                   <ActivityIndicator color={colors.primary} />
-                  <Text style={{ color: colors.muted }}>Sincronizando...</Text>
+                  <Text style={{ color: colors.muted }}>{copy.syncing}</Text>
                 </View>
               )}
               {tab === "expenses" ? (
                 <ExpensesView
                   colors={colors} summary={currentSummary} transactions={visibleTransactions}
                   searchActive={searchActive} searchText={searchFilters.text} selectedRows={selectedRows}
+                  currencySymbol={currencySymbol}
+                  copy={copy}
                   onEditFreq={() => { setFreqInput(String(currentSummary.freqIncome || 0)); setFreqVisible(true); }}
                   onExitSearch={() => setSearchActive(false)}
                   onOpenDetail={handleTransactionPress} onEdit={openEdit}
@@ -484,7 +583,7 @@ export default function App() {
                   topInset={contentTopInset}
                 />
               ) : (
-                <SummaryView colors={colors} summaries={summaries} transactions={transactions} freqIncome={freqIncome} compact={compact} availableYears={availableYears} topInset={contentTopInset} />
+                <SummaryView colors={colors} copy={copy} summaries={summaries} transactions={transactions} freqIncome={freqIncome} compact={compact} availableYears={availableYears} topInset={contentTopInset} currencySymbol={currencySymbol} />
               )}
             </View>
           ) : (
@@ -492,10 +591,12 @@ export default function App() {
               {loading && (
                 <View style={styles.loadingBar}>
                   <ActivityIndicator color={colors.primary} />
-                  <Text style={{ color: colors.muted }}>Sincronizando...</Text>
+                  <Text style={{ color: colors.muted }}>{copy.syncing}</Text>
                 </View>
               )}
-              <SettingsView colors={colors} theme={theme} setTheme={setTheme} accountInfo={accountInfo}
+              <SettingsView colors={colors} copy={copy} theme={theme} setTheme={setTheme} accountInfo={accountInfo}
+                language={language} currencySymbol={currencySymbol} fontPreference={fontPreference}
+                onOpenLanguage={openLanguagePicker} onOpenCurrency={openCurrencyPicker} onOpenFont={openFontPicker}
                 onRescan={rescanDrive} onSwitch={switchGoogleAccount} onDisconnect={disconnectGoogle} onOpenExport={() => setExportVisible(true)}
               />
             </View>
@@ -506,18 +607,19 @@ export default function App() {
             {/* TopBar + PeriodControls encima de todo, clickeables */}
             <View pointerEvents="box-none" style={{ paddingTop: headerTopInset }}>
               <View style={[styles.topBar, styles.topBarMobile, { backgroundColor: "transparent" }]}>
+                <HeaderTitleFade color={colors.bg} />
                 <View style={styles.headerLeft}>
                   <View style={[styles.headerLogo, { backgroundColor: colors.primary }]}>
                     <MaterialCommunityIcons name="sack" size={19} color={colors.onPrimary} />
                   </View>
                   <View style={styles.titleBlock}>
-                    <Text numberOfLines={1} style={[styles.pageTitle, styles.pageTitleMobile, { color: colors.text }]}>{pageTitle}</Text>
-                    {!!pageSubtitle && <Text numberOfLines={1} style={[styles.pageSub, styles.pageSubMobile, { color: colors.muted }]}>{pageSubtitle}</Text>}
+                    <Text numberOfLines={1} style={[styles.pageTitle, styles.pageTitleMobile, theme === "dark" ? styles.headerReadableTextDark : styles.headerReadableTextLight, { color: colors.text, textShadowColor: colors.shadow }]}>{pageTitle}</Text>
+                    {!!pageSubtitle && <Text numberOfLines={1} style={[styles.pageSub, styles.pageSubMobile, theme === "dark" ? styles.headerReadableTextDark : styles.headerReadableTextLight, { color: colors.muted, textShadowColor: colors.shadow }]}>{pageSubtitle}</Text>}
                   </View>
                 </View>
                </View>
               {tab === "expenses" && (
-                <PeriodControls colors={colors} year={year} month={month} availableYears={availableYears} availableMonths={availableMonths}
+                <PeriodControls colors={colors} copy={copy} year={year} month={month} availableYears={availableYears} availableMonths={availableMonths}
                   onSelectPeriod={selectPeriod} goToday={goToday}
                 />
               )}
@@ -528,25 +630,27 @@ export default function App() {
         {deletedTx && (
           <TouchableOpacity style={[styles.undoFab, compact && { left: 18 }, { backgroundColor: colors.card }]} onPress={undoDelete}>
             <MaterialCommunityIcons name="undo" size={20} color={colors.blue} />
-            <Text style={{ color: colors.text, fontWeight: "600" }}>Deshacer</Text>
+            <Text style={{ color: colors.text, fontWeight: "600" }}>{copy.undo}</Text>
           </TouchableOpacity>
         )}
         <BottomFade color={colors.bg} height={bottomFadeHeight} />
-        <BottomNav colors={colors} tab={tab} setTab={setTab} onAdd={() => openAdd()} onSearch={() => setSearchVisible(true)} blurTarget={blurTargetRef} />
+        <BottomNav colors={colors} copy={copy} tab={tab} setTab={setTab} onAdd={() => openAdd()} onSearch={() => setSearchVisible(true)} blurTarget={blurTargetRef} />
       </View>
 
       <TransactionModal visible={addVisible} colors={colors} draft={draft} setDraft={setDraft}
+        copy={copy} currencySymbol={currencySymbol}
         editing={!!editingTx} openPicker={setPicker} onClose={() => setAddVisible(false)} onSubmit={submitDraft} />
       <FreqIncomeModal visible={freqVisible} colors={colors} value={freqInput} setValue={setFreqInput}
-        onClose={() => setFreqVisible(false)} onSubmit={saveFreqIncome} />
-      <DetailModal tx={detailTx} colors={colors} onClose={() => setDetailTx(null)} onEdit={openEdit} onDelete={deleteTx} />
+        copy={copy} onClose={() => setFreqVisible(false)} onSubmit={saveFreqIncome} />
+      <DetailModal tx={detailTx} colors={colors} currencySymbol={currencySymbol} copy={copy} onClose={() => setDetailTx(null)} onEdit={openEdit} onDelete={deleteTx} />
       <SheetChooserModal visible={sheetCandidates.length > 1} colors={colors} candidates={sheetCandidates}
         onClose={() => setSheetCandidates([])} onSelect={(c) => selectSpreadsheet(accessToken, c.id, c.name)} />
       <OptionSheet config={picker} colors={colors} onClose={() => setPicker(null)} />
       <ExportModal visible={exportVisible} colors={colors} config={exportConfig} setConfig={setExportConfig}
         minDate={transactions.length ? transactions.reduce((earliest, tx) => tx.rawDate < earliest ? tx.rawDate : earliest, transactions[0].rawDate).slice(0, 10) : ""}
-        onClose={() => setExportVisible(false)} onExport={(cfg: ExportConfig) => { setExportVisible(false); exportRows(cfg); }} />
+        copy={copy} onClose={() => setExportVisible(false)} onExport={(cfg: ExportConfig) => { setExportVisible(false); exportRows(cfg); }} />
       <SearchModal visible={searchVisible} colors={colors} filters={searchFilters} setFilters={setSearchFilters}
+        copy={copy} currencySymbol={currencySymbol}
         onClose={() => setSearchVisible(false)}
         onClear={() => { setSearchFilters(emptySearch); setSearchActive(false); setSearchVisible(false); }}
         onSubmit={() => { setSearchActive(true); setTab("expenses"); setSelectedRows([]); setSearchVisible(false); }}
@@ -642,6 +746,37 @@ function getAvailableMonthsForYear(year: number, transactions: Transaction[]) {
   return Array.from({ length: Math.max(0, end - start + 1) }, (_, index) => start + index);
 }
 
+function detectDeviceCurrencySymbol() {
+  const locale = Intl.DateTimeFormat().resolvedOptions().locale || "";
+  const region = locale.split("-").pop()?.toUpperCase();
+  const map: Record<string, string> = {
+    PE: "S/",
+    US: "$",
+    EC: "$",
+    PA: "$",
+    SV: "$",
+    ES: "€",
+    FR: "€",
+    DE: "€",
+    IT: "€",
+    PT: "€",
+    GB: "£",
+    JP: "¥",
+    BR: "R$",
+    MX: "MX$",
+    CO: "COP$",
+    CL: "CLP$",
+  };
+  return map[region || ""] || "S/";
+}
+
+function applyDefaultFont(fontPreference: FontPreference) {
+  const fontFamily = fontPreference === "serif" ? "serif" : fontPreference === "mono" ? "monospace" : "sans-serif";
+  const text = Text as typeof Text & { defaultProps?: { style?: unknown } };
+  text.defaultProps = text.defaultProps || {};
+  text.defaultProps.style = [{ fontFamily }];
+}
+
 function HeaderFade({ color, height }: { color: string; height: number }) {
   return (
     <Svg pointerEvents="none" width="100%" height={height} style={{ position: "absolute", top: 0, left: 0, right: 0 }}>
@@ -654,6 +789,30 @@ function HeaderFade({ color, height }: { color: string; height: number }) {
         </LinearGradient>
       </Defs>
       <Rect x="0" y="0" width="100%" height="100%" fill="url(#headerFade)" />
+    </Svg>
+  );
+}
+
+function HeaderTitleFade({ color }: { color: string }) {
+  return (
+    <Svg pointerEvents="none" width="92%" height={70} style={styles.headerTitleFade}>
+      <Defs>
+        <LinearGradient id="headerTitleFadeHorizontal" x1="0" y1="0" x2="1" y2="0">
+          <Stop offset="0" stopColor={color} stopOpacity="0.96" />
+          <Stop offset="0.58" stopColor={color} stopOpacity="0.82" />
+          <Stop offset="1" stopColor={color} stopOpacity="0" />
+        </LinearGradient>
+        <LinearGradient id="headerTitleFadeVertical" x1="0" y1="0" x2="0" y2="1">
+          <Stop offset="0" stopColor="#ffffff" stopOpacity="0" />
+          <Stop offset="0.18" stopColor="#ffffff" stopOpacity="1" />
+          <Stop offset="0.82" stopColor="#ffffff" stopOpacity="1" />
+          <Stop offset="1" stopColor="#ffffff" stopOpacity="0" />
+        </LinearGradient>
+        <Mask id="headerTitleFadeMask">
+          <Rect x="0" y="0" width="100%" height="100%" fill="url(#headerTitleFadeVertical)" />
+        </Mask>
+      </Defs>
+      <Rect x="0" y="0" width="100%" height="100%" fill="url(#headerTitleFadeHorizontal)" mask="url(#headerTitleFadeMask)" />
     </Svg>
   );
 }
@@ -674,8 +833,8 @@ function BottomFade({ color, height }: { color: string; height: number }) {
   );
 }
 
-function SearchModal({ visible, colors, filters, setFilters, onClose, onClear, onSubmit }: {
-  visible: boolean; colors: Palette; filters: SearchFilters; setFilters: (f: SearchFilters) => void;
+function SearchModal({ visible, colors, copy, currencySymbol, filters, setFilters, onClose, onClear, onSubmit }: {
+  visible: boolean; colors: Palette; copy: UiCopy; currencySymbol: string; filters: SearchFilters; setFilters: (f: SearchFilters) => void;
   onClose: () => void; onClear: () => void; onSubmit: () => void;
 }) {
   return (
@@ -689,14 +848,14 @@ function SearchModal({ visible, colors, filters, setFilters, onClose, onClear, o
               <MaterialCommunityIcons name="magnify" size={21} color={colors.primary} />
             </View>
             <View style={styles.searchTitleBlock}>
-              <Text style={[styles.searchTitle, { color: colors.text }]}>Busqueda avanzada</Text>
-              <Text style={[styles.searchSubtitle, { color: colors.muted }]}>Filtra movimientos por detalle, monto o fecha</Text>
+              <Text style={[styles.searchTitle, { color: colors.text }]}>{copy.advancedSearch}</Text>
+              <Text style={[styles.searchSubtitle, { color: colors.muted }]}>{copy.advancedSearchSubtitle}</Text>
             </View>
             <TouchableOpacity style={[styles.optionClose, { backgroundColor: colors.input }]} onPress={onClose}>
               <MaterialCommunityIcons name="close" size={20} color={colors.text} />
             </TouchableOpacity>
           </View>
-          <SearchPage colors={colors} filters={filters} setFilters={setFilters} onSubmit={onSubmit} onClear={onClear} />
+          <SearchPage colors={colors} copy={copy} currencySymbol={currencySymbol} filters={filters} setFilters={setFilters} onSubmit={onSubmit} onClear={onClear} />
         </View>
       </View>
     </Modal>

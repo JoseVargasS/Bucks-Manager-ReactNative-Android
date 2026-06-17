@@ -57,12 +57,17 @@ Supported transaction types:
 
 ## Visual System
 
-- UI copy stays in Spanish and currency stays as `S/`.
+- UI chrome supports Spanish and English from Settings. User-entered transaction descriptions stay exactly as typed, and the Google Sheets transaction type contract remains unchanged.
+- Currency display uses the selected symbol from Settings and defaults from the device locale when possible.
 - The current native visual direction uses a blue-slate dark theme and soft warm-gray light theme.
-- Indigo/blue is the primary action color. Green and red are reserved for income and expense semantics.
+- The dark theme primary action color should use the app icon lime (`#C8FF00`) as the brand accent, not muted indigo. The light theme should use a pastel shell with lime/olive accents, not stark white or blue controls. Green and red are reserved for income and expense semantics.
 - Cards should use soft surfaces, consistent 14px radii, and minimal outer borders.
 - Inputs, selects, destructive actions, and internal separators may keep borders for affordance.
 - Financial amounts should use tabular numbers where supported.
+- On the Gastos screen, the active period label lives in the header subtitle so the period dropdowns stay high and compact.
+- Bottom navigation is a compact translucent floating bar; the add button should protrude slightly above it without increasing or clipping the bar.
+- Settings includes local preferences for language, currency symbol, and font style. Currency starts from the device locale when no saved preference exists.
+- Bottom tab changes and modal open/close interactions should feel nearly instant, with minimal transition delay.
 - The Analysis screen is optimized for mobile readability with compact KPI rows, chart labels, and a simplified monthly table.
 
 ## Commands

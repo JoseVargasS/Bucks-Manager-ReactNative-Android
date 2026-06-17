@@ -3,39 +3,54 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { styles } from "../../styles/globalStyles";
 import { SettingsRow } from "../ui/SettingsRow";
 import { Palette } from "../../theme/colors";
+import { UiCopy } from "../../i18n";
 
-export function SettingsView({ colors, theme, setTheme, accountInfo, onRescan, onSwitch, onDisconnect, onOpenExport }: {
-  colors: Palette; theme: "dark" | "light"; setTheme: (t: "dark" | "light") => void;
+export function SettingsView({
+  colors, copy, theme, setTheme, accountInfo, language, currencySymbol, fontPreference,
+  onOpenLanguage, onOpenCurrency, onOpenFont, onRescan, onSwitch, onDisconnect, onOpenExport,
+}: {
+  colors: Palette; copy: UiCopy; theme: "dark" | "light"; setTheme: (t: "dark" | "light") => void;
+  language: "es" | "en"; currencySymbol: string; fontPreference: "system" | "serif" | "mono";
   accountInfo: { name?: string; email?: string } | null;
+  onOpenLanguage: () => void; onOpenCurrency: () => void; onOpenFont: () => void;
   onRescan: () => void; onSwitch: () => void; onDisconnect: () => void; onOpenExport: () => void;
 }) {
   const initial = (accountInfo?.email || accountInfo?.name || "B").slice(0, 1).toUpperCase();
+  const fontLabel = fontPreference === "serif" ? copy.serif : fontPreference === "mono" ? copy.mono : copy.system;
   return (
     <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.pageScroll, styles.pageScrollMobile]}>
       <View style={styles.settingsSection}>
-        <Text style={[styles.settingsLabel, { color: colors.muted }]}>CUENTA</Text>
+        <Text style={[styles.settingsLabel, { color: colors.muted }]}>{copy.account}</Text>
         <View style={[styles.settingsGroup, { backgroundColor: colors.card }]}>
-          <TouchableOpacity style={[styles.settingsRow, { borderBottomWidth: 0.5, borderColor: colors.border }]} onPress={onSwitch}>
+          <View style={[styles.settingsRow, { borderBottomWidth: 0.5, borderColor: colors.border }]}>
             <View style={[styles.settingsAvatar, { backgroundColor: colors.primarySoft }]}>
               <Text style={[styles.accountInitial, { color: colors.primary }]}>{initial}</Text>
             </View>
             <View style={styles.settingsRowText}>
-              <Text numberOfLines={1} style={[styles.accountHeroName, { color: colors.text }]}>{accountInfo?.name || "Cuenta conectada"}</Text>
-              <Text numberOfLines={1} style={[styles.accountHeroEmail, { color: colors.muted }]}>{accountInfo?.email || "Google"}</Text>
+              <Text numberOfLines={1} style={[styles.accountHeroName, { color: colors.text }]}>{accountInfo?.name || copy.connectedAccount}</Text>
+              <Text numberOfLines={1} style={[styles.accountHeroEmail, { color: colors.muted }]}>{accountInfo?.email || copy.google}</Text>
             </View>
-            <MaterialCommunityIcons name="chevron-right" size={22} color={colors.muted} />
-          </TouchableOpacity>
-          <SettingsRow colors={colors} icon="google-drive" label="Buscar hoja en Drive" onPress={onRescan} />
-          <SettingsRow colors={colors} icon="account-switch" label="Cambiar o agregar cuenta" onPress={onSwitch} last />
+          </View>
+          <SettingsRow colors={colors} icon="google-drive" label={copy.findDriveSheet} onPress={onRescan} />
+          <SettingsRow colors={colors} icon="account-switch" label={copy.switchAccount} onPress={onSwitch} last />
         </View>
       </View>
 
       <View style={styles.settingsSection}>
-        <Text style={[styles.settingsLabel, { color: colors.muted }]}>TEMA</Text>
+        <Text style={[styles.settingsLabel, { color: colors.muted }]}>{copy.preferences}</Text>
+        <View style={[styles.settingsGroup, { backgroundColor: colors.card }]}>
+          <ChoiceRow colors={colors} icon="translate" label={copy.language} value={language === "es" ? copy.spanish : copy.english} onPress={onOpenLanguage} />
+          <ChoiceRow colors={colors} icon="currency-usd" label={copy.currencySymbol} value={currencySymbol} onPress={onOpenCurrency} />
+          <ChoiceRow colors={colors} icon="format-font" label={copy.fontStyle} value={fontLabel} onPress={onOpenFont} last />
+        </View>
+      </View>
+
+      <View style={styles.settingsSection}>
+        <Text style={[styles.settingsLabel, { color: colors.muted }]}>{copy.theme}</Text>
         <View style={[styles.settingsGroup, { backgroundColor: colors.card }]}>
           <TouchableOpacity style={styles.settingsRow} onPress={() => setTheme(theme === "dark" ? "light" : "dark")}>
             <MaterialCommunityIcons name={theme === "dark" ? "weather-night" : "white-balance-sunny"} size={22} color={colors.yellow} />
-            <Text style={[styles.settingsRowLabel, { color: colors.text }]}>Modo oscuro</Text>
+            <Text style={[styles.settingsRowLabel, { color: colors.text }]}>{copy.darkMode}</Text>
             <View style={[styles.themeToggle, { backgroundColor: theme === "dark" ? colors.primary : colors.switchTrack }]}>
               <View style={[styles.themeThumb, theme === "dark" ? { marginLeft: 22 } : { marginLeft: 0 }]} />
             </View>
@@ -44,15 +59,29 @@ export function SettingsView({ colors, theme, setTheme, accountInfo, onRescan, o
       </View>
 
       <View style={styles.settingsSection}>
-        <Text style={[styles.settingsLabel, { color: colors.muted }]}>EXPORTAR</Text>
+        <Text style={[styles.settingsLabel, { color: colors.muted }]}>{copy.export}</Text>
         <View style={[styles.settingsGroup, { backgroundColor: colors.card }]}>
-          <SettingsRow colors={colors} icon="file-export" label="Exportar movimientos" onPress={onOpenExport} last />
+          <SettingsRow colors={colors} icon="file-export" label={copy.exportMovements} onPress={onOpenExport} last />
         </View>
       </View>
 
       <TouchableOpacity style={styles.signOutBtn} onPress={onDisconnect}>
-        <Text style={[styles.signOutText, { color: colors.red }]}>Cerrar sesión</Text>
+        <Text style={[styles.signOutText, { color: colors.red }]}>{copy.signOut}</Text>
       </TouchableOpacity>
     </ScrollView>
+  );
+}
+
+function ChoiceRow({ colors, icon, label, value, onPress, last = false }: {
+  colors: Palette; icon: React.ComponentProps<typeof MaterialCommunityIcons>["name"];
+  label: string; value: string; onPress: () => void; last?: boolean;
+}) {
+  return (
+    <TouchableOpacity style={[styles.settingsRow, !last && { borderBottomWidth: 0.5, borderColor: colors.border }]} onPress={onPress}>
+      <MaterialCommunityIcons name={icon} size={22} color={colors.blue} />
+      <Text style={[styles.settingsRowLabel, { color: colors.text }]}>{label}</Text>
+      <Text numberOfLines={1} style={[styles.settingsRowValue, { color: colors.muted }]}>{value}</Text>
+      <MaterialCommunityIcons name="chevron-right" size={22} color={colors.muted} />
+    </TouchableOpacity>
   );
 }

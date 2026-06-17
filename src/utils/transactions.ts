@@ -1,6 +1,7 @@
 import { Transaction, TransactionDraft, TransactionType } from "../types";
 import { formatDateToISO } from "../domain/bucksLogic";
 import { formatDateGroupLabel } from "./formats";
+import { UI_COPY, UiCopy } from "../i18n";
 
 /** Crea un TransactionDraft vacío con tipo por defecto "GASTO NO FRECUENTE" y fecha actual */
 export function getBlankDraft(type: TransactionType = "GASTO NO FRECUENTE"): TransactionDraft {
@@ -25,12 +26,12 @@ export function filterTransactionsByRollingPeriod(transactions: Transaction[], m
 }
 
 /** Agrupa transacciones por fecha en segmentos con etiqueta y array de items */
-export function groupTransactionsByDate(transactions: Transaction[]): Array<{ key: string; label: string; items: Transaction[] }> {
+export function groupTransactionsByDate(transactions: Transaction[], copy: UiCopy = UI_COPY.es): Array<{ key: string; label: string; items: Transaction[] }> {
   return transactions.reduce<Array<{ key: string; label: string; items: Transaction[] }>>((groups, tx) => {
     const key = formatDateToISO(new Date(tx.rawDate));
     let group = groups.find((item) => item.key === key);
     if (!group) {
-      group = { key, label: formatDateGroupLabel(tx.rawDate), items: [] };
+      group = { key, label: formatDateGroupLabel(tx.rawDate, copy), items: [] };
       groups.push(group);
     }
     group.items.push(tx);

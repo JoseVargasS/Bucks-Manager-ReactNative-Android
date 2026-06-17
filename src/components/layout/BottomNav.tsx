@@ -1,44 +1,53 @@
 import type { RefObject } from "react";
-import { Text, TouchableOpacity, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { BlurView } from "expo-blur";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { styles } from "../../styles/globalStyles";
 import { Palette } from "../../theme/colors";
 import { MaterialIconName } from "../../types";
+import { UiCopy } from "../../i18n";
 
 type Tab = "expenses" | "search" | "summary" | "settings";
 
-export function BottomNav({ colors, tab, setTab, onAdd, onSearch, blurTarget }: {
-  colors: Palette; tab: Tab; setTab: (tab: Tab) => void; onAdd: () => void; onSearch: () => void; blurTarget: RefObject<View | null>;
+export function BottomNav({ colors, copy, tab, setTab, onAdd, onSearch, blurTarget }: {
+  colors: Palette; copy: UiCopy; tab: Tab; setTab: (tab: Tab) => void; onAdd: () => void; onSearch: () => void; blurTarget: RefObject<View | null>;
 }) {
   const isDark = colors.bg === "#0f1117";
-  const glassSurface = withAlpha(colors.card, isDark ? 0.72 : 0.82);
+  const glassSurface = isDark ? withAlpha(colors.card, 0.72) : withAlpha(colors.card, 0.96);
   return (
-    <BlurView
-      blurTarget={blurTarget}
-      blurMethod="dimezisBlurViewSdk31Plus"
-      intensity={isDark ? 28 : 36}
-      tint={isDark ? "dark" : "light"}
-      style={[styles.bottomNav, { backgroundColor: glassSurface, borderColor: withAlpha(colors.borderStrong, isDark ? 0.26 : 0.36) }]}
-    >
-      <BottomNavItem colors={colors} active={tab === "expenses"} icon="view-dashboard-outline" label="Gastos" onPress={() => setTab("expenses")} />
-      <BottomNavItem colors={colors} active={false} icon="magnify" label="Buscar" onPress={onSearch} />
-      <TouchableOpacity onPress={onAdd} style={[styles.bottomAddButton, { backgroundColor: colors.primary }]}>
-        <MaterialCommunityIcons name="plus" size={31} color={colors.onPrimary} />
-      </TouchableOpacity>
-      <BottomNavItem colors={colors} active={tab === "summary"} icon="chart-line" label="Análisis" onPress={() => setTab("summary")} />
-      <BottomNavItem colors={colors} active={tab === "settings"} icon="cog-outline" label="Ajustes" onPress={() => setTab("settings")} />
-    </BlurView>
+    <View style={styles.bottomNav}>
+      {isDark ? (
+        <BlurView
+          pointerEvents="none"
+          blurTarget={blurTarget}
+          blurMethod="dimezisBlurViewSdk31Plus"
+          intensity={28}
+          tint="dark"
+          style={[styles.bottomNavGlass, { backgroundColor: glassSurface, borderColor: withAlpha(colors.borderStrong, 0.26) }]}
+        />
+      ) : (
+        <View pointerEvents="none" style={[styles.bottomNavGlass, { backgroundColor: glassSurface, borderColor: withAlpha(colors.borderStrong, 0.54) }]} />
+      )}
+      <View style={styles.bottomNavContent}>
+        <BottomNavItem colors={colors} active={tab === "expenses"} icon="view-dashboard-outline" label={copy.expenses} onPress={() => setTab("expenses")} />
+        <BottomNavItem colors={colors} active={false} icon="magnify" label={copy.search} onPress={onSearch} />
+        <Pressable onPressIn={onAdd} style={[styles.bottomAddButton, { backgroundColor: colors.primary }]}>
+          <MaterialCommunityIcons name="plus" size={31} color={colors.onPrimary} />
+        </Pressable>
+        <BottomNavItem colors={colors} active={tab === "summary"} icon="chart-line" label={copy.summary} onPress={() => setTab("summary")} />
+        <BottomNavItem colors={colors} active={tab === "settings"} icon="cog-outline" label={copy.settings} onPress={() => setTab("settings")} />
+      </View>
+    </View>
   );
 }
 
 function BottomNavItem({ colors, active, icon, label, onPress }: { colors: Palette; active: boolean; icon: MaterialIconName; label: string; onPress: () => void }) {
   return (
-    <TouchableOpacity onPress={onPress} style={[styles.bottomNavItem, active && { backgroundColor: colors.primarySoft }]}>
+    <Pressable onPressIn={onPress} style={[styles.bottomNavItem, active && { backgroundColor: colors.primarySoft }]}>
       <MaterialCommunityIcons name={icon} size={21} color={active ? colors.primary : colors.muted} />
-      <Text numberOfLines={1} style={[styles.bottomNavLabel, { color: active ? colors.primary : colors.muted }]}>{label}</Text>
+      <Text numberOfLines={1} style={[styles.bottomNavLabel, { color: active ? colors.text : colors.muted }]}>{label}</Text>
       {active && <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: colors.primary, marginTop: -2 }} />}
-    </TouchableOpacity>
+    </Pressable>
   );
 }
 

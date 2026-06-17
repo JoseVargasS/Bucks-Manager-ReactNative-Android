@@ -3,11 +3,15 @@ import { Modal, Text, TouchableOpacity, View, StyleSheet, ScrollView } from "rea
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { formatDateToISO, MONTH_NAMES } from "../../domain/bucksLogic";
 import { Palette } from "../../theme/colors";
+import { UI_COPY, UiCopy } from "../../i18n";
 
 const MONTH_ABBR = ["ene.", "feb.", "mar.", "abr.", "may.", "jun.", "jul.", "ago.", "sep.", "oct.", "nov.", "dic."];
+const MONTH_ABBR_EN = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const MONTH_NAMES_EN = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const DAY_LABELS = ["L", "M", "X", "J", "V", "S", "D"];
+const DAY_LABELS_EN = ["M", "T", "W", "T", "F", "S", "S"];
 
-export function CalendarPicker({ visible, value, onSelect, onClose, colors, mode = "date", minDate, maxDate }: { visible: boolean; value: string; onSelect: (v: string) => void; onClose: () => void; colors: Palette; mode?: "date" | "month"; minDate?: string; maxDate?: string }) {
+export function CalendarPicker({ visible, value, onSelect, onClose, colors, copy = UI_COPY.es, mode = "date", minDate, maxDate }: { visible: boolean; value: string; onSelect: (v: string) => void; onClose: () => void; colors: Palette; copy?: UiCopy; mode?: "date" | "month"; minDate?: string; maxDate?: string }) {
   const parsed = value ? new Date(value + (value.length <= 7 ? "-15T12:00:00" : "T12:00:00")) : new Date();
   const [viewYear, setViewYear] = useState(parsed.getFullYear());
   const [viewMonth, setViewMonth] = useState(parsed.getMonth());
@@ -25,7 +29,10 @@ export function CalendarPicker({ visible, value, onSelect, onClose, colors, mode
   const canGoBackMonth = viewYear === minYear ? viewMonth > minParsed.getMonth() : viewYear > minYear;
   const canGoForwardMonth = viewYear === maxYear ? viewMonth < maxParsed.getMonth() : viewYear < maxYear;
 
-  const monthName = MONTH_NAMES[viewMonth];
+  const english = copy.languageCode === "en";
+  const monthName = english ? MONTH_NAMES_EN[viewMonth] : MONTH_NAMES[viewMonth];
+  const monthAbbr = english ? MONTH_ABBR_EN : MONTH_ABBR;
+  const dayLabels = english ? DAY_LABELS_EN : DAY_LABELS;
   const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
   const firstDayOfWeek = (new Date(viewYear, viewMonth, 1).getDay() + 6) % 7;
 
@@ -84,7 +91,7 @@ export function CalendarPicker({ visible, value, onSelect, onClose, colors, mode
         <View style={{ padding: 12 }}>
           {mode === "month" ? (
             <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
-              {MONTH_ABBR.map((abbr, i) => {
+              {monthAbbr.map((abbr, i) => {
                 const isSelected = i === viewMonth;
                 const disabled = isMonthDisabled(i);
                 return (
@@ -104,7 +111,7 @@ export function CalendarPicker({ visible, value, onSelect, onClose, colors, mode
           ) : (
             <>
               <View style={{ flexDirection: "row", marginBottom: 4 }}>
-                {DAY_LABELS.map((d) => (
+                {dayLabels.map((d) => (
                   <Text key={d} style={{ flex: 1, textAlign: "center", color: colors.muted, fontSize: 11, fontWeight: "900" }}>{d}</Text>
                 ))}
               </View>
@@ -134,10 +141,10 @@ export function CalendarPicker({ visible, value, onSelect, onClose, colors, mode
             else onSelect(formatDateToISO(nowDate));
             onClose();
           }}>
-            <Text style={{ color: colors.primary, fontWeight: "900", fontSize: 14 }}>Este mes</Text>
+            <Text style={{ color: colors.primary, fontWeight: "900", fontSize: 14 }}>{copy.thisMonth}</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={() => { onSelect(""); onClose(); }}>
-            <Text style={{ color: colors.muted, fontWeight: "900", fontSize: 14 }}>Borrar</Text>
+            <Text style={{ color: colors.muted, fontWeight: "900", fontSize: 14 }}>{copy.erase}</Text>
           </TouchableOpacity>
         </View>
       </View>

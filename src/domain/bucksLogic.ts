@@ -28,10 +28,10 @@ export const SUMMARY_HEADERS = [
 export const TRANSACTION_HEADERS = ["Fecha", "Monto", "Detalle", "Tipo", "HORA DE CREACIÓN"];
 
 /** Formatea un valor numérico como moneda con signo explícito: "+ S/ 100.00" o "- S/ 50.00" */
-export function formatMoney(value: number): string {
+export function formatMoney(value: number, symbol = "S/"): string {
   const n = Number(value) || 0;
   const sign = n >= 0 ? "+ " : "- ";
-  return `${sign}S/ ${Math.abs(n).toFixed(2)}`;
+  return `${sign}${symbol} ${Math.abs(n).toFixed(2)}`;
 }
 
 /** Convierte un Date o string ISO a formato YYYY-MM-DD */
