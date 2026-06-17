@@ -103,6 +103,11 @@ export const UI_COPY = {
     confirmDeleteSelectedTitle: "Eliminar movimientos",
     confirmDeleteSelectedMsg: "Los movimientos seleccionados se eliminarán de tu hoja de cálculo.",
     confirm: "Confirmar",
+    history: "Historial",
+    historySubtitle: "Últimos 30 días de cambios",
+    historyEmpty: "No hay cambios registrados.",
+    historyUndo: "Deshacer",
+    historyUndone: "Cambio deshecho",
   },
   en: {
     languageCode: "en",
@@ -208,6 +213,11 @@ export const UI_COPY = {
     confirmDeleteSelectedTitle: "Delete movements",
     confirmDeleteSelectedMsg: "The selected movements will be deleted from your spreadsheet.",
     confirm: "Confirm",
+    history: "History",
+    historySubtitle: "Last 30 days of changes",
+    historyEmpty: "No changes recorded.",
+    historyUndo: "Undo",
+    historyUndone: "Change undone",
   },
 } as const;
 
