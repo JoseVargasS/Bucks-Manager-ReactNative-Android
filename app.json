@@ -6,11 +6,6 @@
     "orientation": "portrait",
     "icon": "./assets/icon-bucks.png",
     "userInterfaceStyle": "dark",
-    "splash": {
-      "image": "./assets/splash-bucks.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#050E0B"
-    },
     "scheme": "com.josev.bucksmanager",
     "ios": {
       "supportsTablet": true,
@@ -45,7 +40,21 @@
     "plugins": [
       "@react-native-google-signin/google-signin",
       "expo-secure-store",
-      "expo-sharing"
-    ]
+      "expo-sharing",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-bucks.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#050E0B"
+        }
+      ]
+    ],
+    "owner": "jose-vass",
+    "extra": {
+      "eas": {
+        "projectId": "3d5e761d-91e2-455f-993f-be80f182ea36"
+      }
+    }
   }
 }
