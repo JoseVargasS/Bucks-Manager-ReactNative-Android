@@ -682,7 +682,7 @@ export default function App() {
                   <Text style={{ color: colors.muted }}>{copy.syncing}</Text>
                 </View>
               )}
-              <SettingsView colors={colors} copy={copy} theme={theme} setTheme={setTheme} accountInfo={accountInfo}
+              <SettingsView colors={colors} copy={copy} accountInfo={accountInfo}
                 language={language} currencySymbol={currencySymbol} fontPreference={fontPreference}
                 onOpenLanguage={openLanguagePicker} onOpenCurrency={openCurrencyPicker} onOpenFont={openFontPicker}
                 onRescan={rescanDrive} onSwitch={switchGoogleAccount} onDisconnect={disconnectGoogle} onOpenExport={() => setExportVisible(true)}
@@ -705,12 +705,20 @@ export default function App() {
                     {!!pageSubtitle && <Text numberOfLines={1} style={[styles.pageSub, styles.pageSubMobile, theme === "dark" ? styles.headerReadableTextDark : styles.headerReadableTextLight, { color: colors.muted, textShadowColor: colors.shadow }]}>{pageSubtitle}</Text>}
                   </View>
                 </View>
-                <TouchableOpacity
-                  style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: colors.input, alignItems: "center", justifyContent: "center" }}
-                  onPress={() => setHistoryVisible(true)}
-                >
-                  <MaterialCommunityIcons name="history" size={20} color={historyEntries.length ? colors.primary : colors.muted} />
-                </TouchableOpacity>
+                <View style={{ flexDirection: "row", gap: 8 }}>
+                  <TouchableOpacity
+                    style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: colors.input, alignItems: "center", justifyContent: "center" }}
+                    onPress={() => setTheme(theme === "dark" ? "light" : "dark")}
+                  >
+                    <MaterialCommunityIcons name={theme === "dark" ? "weather-night" : "white-balance-sunny"} size={20} color={colors.yellow} />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: colors.input, alignItems: "center", justifyContent: "center" }}
+                    onPress={() => setHistoryVisible(true)}
+                  >
+                    <MaterialCommunityIcons name="history" size={20} color={historyEntries.length ? colors.primary : colors.muted} />
+                  </TouchableOpacity>
+                </View>
                </View>
               {tab === "expenses" && (
                 <PeriodControls colors={colors} copy={copy} year={year} month={month} availableYears={availableYears} availableMonths={availableMonths}

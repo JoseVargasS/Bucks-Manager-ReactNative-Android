@@ -6,10 +6,10 @@ import { Palette } from "../../theme/colors";
 import { UiCopy } from "../../i18n";
 
 export function SettingsView({
-  colors, copy, theme, setTheme, accountInfo, language, currencySymbol, fontPreference,
+  colors, copy, accountInfo, language, currencySymbol, fontPreference,
   onOpenLanguage, onOpenCurrency, onOpenFont, onRescan, onSwitch, onDisconnect, onOpenExport,
 }: {
-  colors: Palette; copy: UiCopy; theme: "dark" | "light"; setTheme: (t: "dark" | "light") => void;
+  colors: Palette; copy: UiCopy;
   language: "es" | "en"; currencySymbol: string; fontPreference: "system" | "serif" | "mono";
   accountInfo: { name?: string; email?: string } | null;
   onOpenLanguage: () => void; onOpenCurrency: () => void; onOpenFont: () => void;
@@ -42,19 +42,6 @@ export function SettingsView({
           <ChoiceRow colors={colors} icon="translate" label={copy.language} value={language === "es" ? copy.spanish : copy.english} onPress={onOpenLanguage} />
           <ChoiceRow colors={colors} icon="currency-usd" label={copy.currencySymbol} value={currencySymbol} onPress={onOpenCurrency} />
           <ChoiceRow colors={colors} icon="format-font" label={copy.fontStyle} value={fontLabel} onPress={onOpenFont} last />
-        </View>
-      </View>
-
-      <View style={styles.settingsSection}>
-        <Text style={[styles.settingsLabel, { color: colors.muted }]}>{copy.theme}</Text>
-        <View style={[styles.settingsGroup, { backgroundColor: colors.card }]}>
-          <TouchableOpacity style={styles.settingsRow} onPress={() => setTheme(theme === "dark" ? "light" : "dark")}>
-            <MaterialCommunityIcons name={theme === "dark" ? "weather-night" : "white-balance-sunny"} size={22} color={colors.yellow} />
-            <Text style={[styles.settingsRowLabel, { color: colors.text }]}>{copy.darkMode}</Text>
-            <View style={[styles.themeToggle, { backgroundColor: theme === "dark" ? colors.primary : colors.switchTrack }]}>
-              <View style={[styles.themeThumb, theme === "dark" ? { marginLeft: 22 } : { marginLeft: 0 }]} />
-            </View>
-          </TouchableOpacity>
         </View>
       </View>
 
