@@ -57,3 +57,13 @@ export type ExportRangeMode = "dates" | "months";
 export type MaterialIconName = React.ComponentProps<typeof import("@expo/vector-icons").MaterialCommunityIcons>["name"];
 
 export type AccountInfo = { name?: string; email?: string } | null;
+
+export type HistoryAction = "create" | "edit" | "delete";
+
+export interface HistoryEntry {
+  id: string;
+  timestamp: string;
+  action: HistoryAction;
+  transaction: Transaction;
+  previousTransaction?: Transaction;
+}
