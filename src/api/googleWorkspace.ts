@@ -308,6 +308,17 @@ export async function saveTransaction(token: string, spreadsheetId: string, draf
   return { ...tx, rowId: targetRow };
 }
 
+export async function insertTransactionAtRow(token: string, spreadsheetId: string, draft: TransactionDraft, targetRow: number) {
+  const tx = buildTransactionFromDraft(draft, targetRow);
+  const dateObj = new Date(tx.rawDate);
+  const sheetId = await getTransactionSheetId(token, spreadsheetId);
+  const safeRow = Math.max(2, targetRow);
+  await insertBlankRow(token, spreadsheetId, sheetId, safeRow);
+  await writeRow(token, spreadsheetId, safeRow, buildTransactionRow(tx));
+  await ensureMonthlySummaryRow(token, spreadsheetId, dateObj);
+  return { ...tx, rowId: safeRow };
+}
+
 export async function updateTransaction(token: string, spreadsheetId: string, rowId: number, draft: TransactionDraft) {
   const tx = buildTransactionFromDraft(draft, rowId);
   const newDateObj = new Date(tx.rawDate);

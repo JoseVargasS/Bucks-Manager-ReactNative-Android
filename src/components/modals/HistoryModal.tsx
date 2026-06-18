@@ -15,6 +15,8 @@ export function HistoryModal({ visible, entries, colors, currencySymbol, copy, o
   onClose: () => void;
   onUndo: (entry: HistoryEntry) => void;
 }) {
+  const deletedOnly = entries.filter((e) => e.action === "delete");
+
   return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
       <View style={[styles.modalOverlay, { backgroundColor: colors.overlay }]}>
@@ -22,7 +24,7 @@ export function HistoryModal({ visible, entries, colors, currencySymbol, copy, o
         <View style={[styles.recordModal, { backgroundColor: colors.card }]}>
           <View style={[styles.recordHeader, { borderColor: colors.border }]}>
             <Text style={[styles.recordTitle, { color: colors.text }]}>
-              <MaterialCommunityIcons name="history" size={19} color={colors.primary} /> {copy.history}
+              <MaterialCommunityIcons name="delete-restore" size={19} color={colors.red} /> {copy.history}
             </Text>
             <TouchableOpacity style={[styles.closeBtn, { backgroundColor: colors.input }]} onPress={onClose}>
               <MaterialCommunityIcons name="close" size={22} color={colors.text} />
@@ -32,26 +34,26 @@ export function HistoryModal({ visible, entries, colors, currencySymbol, copy, o
             <Text style={{ fontSize: 12, fontWeight: "500", color: colors.muted, marginBottom: 12, marginTop: 4 }}>
               {copy.historySubtitle}
             </Text>
-            {entries.length === 0 ? (
+            {deletedOnly.length === 0 ? (
               <View style={{ paddingVertical: 32, alignItems: "center", gap: 10 }}>
-                <MaterialCommunityIcons name="history" size={36} color={colors.muted} />
+                <MaterialCommunityIcons name="delete-restore" size={36} color={colors.muted} />
                 <Text style={{ color: colors.muted, fontSize: 14, fontWeight: "500" }}>{copy.historyEmpty}</Text>
               </View>
             ) : (
               <FlatList
-                data={entries}
+                data={deletedOnly}
                 keyExtractor={(item) => item.id}
                 style={{ maxHeight: 420 }}
                 showsVerticalScrollIndicator={false}
                 renderItem={({ item }) => (
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 10, borderBottomWidth: 1, borderColor: colors.border }}>
-                    <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: actionBg(item.action, colors), alignItems: "center", justifyContent: "center" }}>
-                      <MaterialCommunityIcons name={actionIcon(item.action)} size={18} color={actionColor(item.action, colors)} />
+                    <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: colors.expenseSoft, alignItems: "center", justifyContent: "center" }}>
+                      <MaterialCommunityIcons name="trash-can" size={18} color={colors.red} />
                     </View>
                     <View style={{ flex: 1, minWidth: 0 }}>
                       <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                        <Text style={{ fontSize: 12, fontWeight: "700", color: actionColor(item.action, colors), textTransform: "uppercase" }}>
-                          {actionLabel(item.action, copy)}
+                        <Text style={{ fontSize: 12, fontWeight: "700", color: colors.red, textTransform: "uppercase" }}>
+                          {copy.delete}
                         </Text>
                         <Text style={{ fontSize: 11, fontWeight: "500", color: colors.muted }}>
                           {formatCreatedTime(item.timestamp)}
@@ -79,28 +81,4 @@ export function HistoryModal({ visible, entries, colors, currencySymbol, copy, o
       </View>
     </Modal>
   );
-}
-
-function actionIcon(action: HistoryEntry["action"]) {
-  if (action === "create") return "plus-circle";
-  if (action === "edit") return "pencil";
-  return "trash-can";
-}
-
-function actionLabel(action: HistoryEntry["action"], copy: UiCopy) {
-  if (action === "create") return copy.add;
-  if (action === "edit") return copy.edit;
-  return copy.delete;
-}
-
-function actionColor(action: HistoryEntry["action"], colors: Palette) {
-  if (action === "create") return colors.green;
-  if (action === "edit") return colors.blue;
-  return colors.red;
-}
-
-function actionBg(action: HistoryEntry["action"], colors: Palette) {
-  if (action === "create") return colors.incomeSoft;
-  if (action === "edit") return colors.infoSoft;
-  return colors.expenseSoft;
 }

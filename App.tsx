@@ -16,7 +16,7 @@ import {
 } from "./src/domain/bucksLogic";
 import {
   createBucksSpreadsheet, findCompatibleSheets, moveTransaction as moveGoogleTransaction,
-  readSummaries, readTransactions, saveTransaction, updateFreqIncome as updateGoogleFreqIncome,
+  readSummaries, readTransactions, saveTransaction, insertTransactionAtRow, updateFreqIncome as updateGoogleFreqIncome,
   updateTransaction as updateGoogleTransaction, deleteTransaction as deleteGoogleTransaction,
 } from "./src/api/googleWorkspace";
 import { dark, light, Palette } from "./src/theme/colors";
@@ -431,14 +431,8 @@ export default function App() {
       syncGoogleInBackground(async () => {
         if (currentEdit) {
           await updateGoogleTransaction(accessToken, spreadsheetId, currentEdit.rowId, currentDraft);
-          addHistoryEntry({ action: "edit", transaction: optimistic, previousTransaction: currentEdit }).then((entry) => {
-            setHistoryEntries((prev) => [entry, ...prev]);
-          }).catch(() => undefined);
         } else {
           await saveTransaction(accessToken, spreadsheetId, currentDraft);
-          addHistoryEntry({ action: "create", transaction: optimistic }).then((entry) => {
-            setHistoryEntries((prev) => [entry, ...prev]);
-          }).catch(() => undefined);
         }
         await reloadFromGoogle(accessToken, spreadsheetId, false);
       }, currentEdit ? copy.editRecord : copy.newRecord);
@@ -519,59 +513,26 @@ export default function App() {
     });
   }
 
-  async function undoHistoryEntry(entry: HistoryEntry) {
+  async function undoDeleteEntry(entry: HistoryEntry) {
     const entryId = entry.id;
     setHistoryEntries((prev) => prev.filter((e) => e.id !== entryId));
     removeHistoryEntry(entryId).catch(() => undefined);
 
-    if (entry.action === "delete") {
-      const next = [...transactions, entry.transaction].sort((a, b) => new Date(a.rawDate).getTime() - new Date(b.rawDate).getTime());
-      setTransactions(next.map((item, idx) => ({ ...item, rowId: idx + 2 })));
-      setSummaries(calculateSummaries(next, freqIncome));
-      if (accessToken && spreadsheetId) {
-        const draft: TransactionDraft = {
-          date: formatDateToISO(entry.transaction.rawDate),
-          amount: entry.transaction.formula ? `=${entry.transaction.formula}` : String(Math.abs(entry.transaction.amount)),
-          detail: entry.transaction.detail,
-          type: entry.transaction.type,
-          createdAt: entry.transaction.createdAt,
-        };
-        syncGoogleInBackground(async () => {
-          await saveTransaction(accessToken, spreadsheetId, draft);
-          await reloadFromGoogle(accessToken, spreadsheetId, false);
-        }, "Deshacer");
-      }
-    } else if (entry.action === "edit" && entry.previousTransaction) {
-      const prev = entry.previousTransaction;
-      const next = renumberTransactions(insertChronologically(
-        transactions.filter((tx) => tx.rowId !== prev.rowId && tx.rowId !== entry.transaction.rowId),
-        prev
-      ));
-      setTransactions(next);
-      setSummaries(calculateSummaries(next, freqIncome));
-      if (accessToken && spreadsheetId) {
-        const draft: TransactionDraft = {
-          date: formatDateToISO(prev.rawDate),
-          amount: prev.formula ? `=${prev.formula}` : String(Math.abs(prev.amount)),
-          detail: prev.detail,
-          type: prev.type,
-          createdAt: prev.createdAt,
-        };
-        syncGoogleInBackground(async () => {
-          await updateGoogleTransaction(accessToken, spreadsheetId, entry.transaction.rowId, draft);
-          await reloadFromGoogle(accessToken, spreadsheetId, false);
-        }, "Deshacer");
-      }
-    } else if (entry.action === "create") {
-      const next = renumberTransactions(transactions.filter((item) => item.rowId !== entry.transaction.rowId));
-      setTransactions(next);
-      setSummaries(calculateSummaries(next, freqIncome));
-      if (accessToken && spreadsheetId) {
-        syncGoogleInBackground(async () => {
-          await deleteGoogleTransaction(accessToken, spreadsheetId, entry.transaction.rowId);
-          await reloadFromGoogle(accessToken, spreadsheetId, false);
-        }, "Deshacer");
-      }
+    const next = [...transactions, entry.transaction].sort((a, b) => new Date(a.rawDate).getTime() - new Date(b.rawDate).getTime());
+    setTransactions(next.map((item, idx) => ({ ...item, rowId: idx + 2 })));
+    setSummaries(calculateSummaries(next, freqIncome));
+    if (accessToken && spreadsheetId) {
+      const draft: TransactionDraft = {
+        date: formatDateToISO(entry.transaction.rawDate),
+        amount: entry.transaction.formula ? `=${entry.transaction.formula}` : String(Math.abs(entry.transaction.amount)),
+        detail: entry.transaction.detail,
+        type: entry.transaction.type,
+        createdAt: entry.transaction.createdAt,
+      };
+      syncGoogleInBackground(async () => {
+        await insertTransactionAtRow(accessToken, spreadsheetId, draft, entry.transaction.rowId);
+        await reloadFromGoogle(accessToken, spreadsheetId, false);
+      }, "Deshacer");
     }
   }
 
@@ -743,7 +704,7 @@ export default function App() {
         onClose={() => setSheetCandidates([])} onSelect={(c) => selectSpreadsheet(accessToken, c.id, c.name)} />
       <OptionSheet config={picker} colors={colors} onClose={() => setPicker(null)} />
       <ConfirmModal config={confirmConfig} colors={colors} currencySymbol={currencySymbol} copy={copy} onClose={() => setConfirmConfig(null)} onConfirm={handleConfirm} />
-      <HistoryModal visible={historyVisible} entries={historyEntries} colors={colors} currencySymbol={currencySymbol} copy={copy} onClose={() => setHistoryVisible(false)} onUndo={undoHistoryEntry} />
+      <HistoryModal visible={historyVisible} entries={historyEntries} colors={colors} currencySymbol={currencySymbol} copy={copy} onClose={() => setHistoryVisible(false)} onUndo={undoDeleteEntry} />
       <ExportModal visible={exportVisible} colors={colors} config={exportConfig} setConfig={setExportConfig}
         minDate={transactions.length ? transactions.reduce((earliest, tx) => tx.rawDate < earliest ? tx.rawDate : earliest, transactions[0].rawDate).slice(0, 10) : ""}
         copy={copy} onClose={() => setExportVisible(false)} onExport={(cfg: ExportConfig) => { setExportVisible(false); exportRows(cfg); }} />

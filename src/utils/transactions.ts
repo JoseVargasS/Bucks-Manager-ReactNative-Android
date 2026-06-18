@@ -27,7 +27,7 @@ export function filterTransactionsByRollingPeriod(transactions: Transaction[], m
 
 /** Agrupa transacciones por fecha en segmentos con etiqueta y array de items */
 export function groupTransactionsByDate(transactions: Transaction[], copy: UiCopy = UI_COPY.es): Array<{ key: string; label: string; items: Transaction[] }> {
-  return transactions.reduce<Array<{ key: string; label: string; items: Transaction[] }>>((groups, tx) => {
+  const groups = transactions.reduce<Array<{ key: string; label: string; items: Transaction[] }>>((groups, tx) => {
     const key = formatDateToISO(new Date(tx.rawDate));
     let group = groups.find((item) => item.key === key);
     if (!group) {
@@ -37,4 +37,6 @@ export function groupTransactionsByDate(transactions: Transaction[], copy: UiCop
     group.items.push(tx);
     return groups;
   }, []);
+  for (const group of groups) group.items.reverse();
+  return groups;
 }
