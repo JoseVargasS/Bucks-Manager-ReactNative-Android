@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { ScrollView, Text, View } from "react-native";
 import { calculateSummaries, formatMoney } from "../../domain/bucksLogic";
 import { styles } from "../../styles/globalStyles";
@@ -15,27 +15,33 @@ export function SummaryView({ colors, copy, summaries, transactions, freqIncome,
   availableYears: number[]; topInset?: number; currencySymbol: string;
 }) {
   const [filterYear, setFilterYear] = useState<number | null>(null);
-  const computed = summaries.length ? summaries : calculateSummaries(transactions, freqIncome);
-  const filtered = filterYear ? computed.filter((r) => r.monthYear.endsWith(String(filterYear))) : computed;
-  const totals = filtered.reduce(
+  const computed = useMemo(
+    () => (summaries.length ? summaries : calculateSummaries(transactions, freqIncome)),
+    [summaries, transactions, freqIncome],
+  );
+  const filtered = useMemo(
+    () => (filterYear ? computed.filter((r) => r.monthYear.endsWith(String(filterYear))) : computed),
+    [computed, filterYear],
+  );
+  const totals = useMemo(() => filtered.reduce(
     (acc, row) => ({
       income: acc.income + row.totalIncome,
       expense: acc.expense + Math.abs(row.totalExpense),
       net: acc.net + row.netMonthly,
     }),
     { income: 0, expense: 0, net: 0 },
-  );
-  const savings = totals.income > 0 ? Math.round((totals.net / totals.income) * 100) : 0;
-  const netNoFreq = filtered.reduce((acc, row) => acc + row.netNoFreq, 0);
+  ), [filtered]);
+  const savings = useMemo(() => (totals.income > 0 ? Math.round((totals.net / totals.income) * 100) : 0), [totals]);
+  const netNoFreq = useMemo(() => filtered.reduce((acc, row) => acc + row.netNoFreq, 0), [filtered]);
   const fm = (value: number) => formatMoney(value, currencySymbol, 0).replace("+ ", "");
-  const incomeTypes = [
+  const incomeTypes = useMemo(() => [
     { label: copy.freqIncome, value: computed.reduce((a, r) => a + r.freqIncome, 0), color: colors.green },
     { label: copy.nonFreqIncome, value: computed.reduce((a, r) => a + r.nonFreqIncome, 0), color: colors.blue },
-  ];
-  const expenseTypes = [
+  ], [computed, copy.freqIncome, copy.nonFreqIncome, colors.green, colors.blue]);
+  const expenseTypes = useMemo(() => [
     { label: copy.freqExpense, value: computed.reduce((a, r) => a + Math.abs(r.freqExpense), 0), color: colors.red },
     { label: copy.nonFreqExpense, value: computed.reduce((a, r) => a + Math.abs(r.nonFreqExpense), 0), color: colors.yellow },
-  ];
+  ], [computed, copy.freqExpense, copy.nonFreqExpense, colors.red, colors.yellow]);
   return (
     <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.pageScroll, styles.pageScrollMobile, topInset !== undefined && { paddingTop: topInset }]}>
       <View style={{ flexDirection: "row", gap: 8, marginBottom: 10 }}>

@@ -26,6 +26,7 @@ import { formatCreatedTime } from "./src/utils/formats";
 import { loadHistory, addHistoryEntry, removeHistoryEntry } from "./src/utils/history";
 import { isPinEnabled, savePin, verifyPin, clearPin } from "./src/utils/pin";
 import { loadTags } from "./src/utils/tags";
+import { deleteFinancialCache, loadFinancialCache, saveFinancialCache } from "./src/data/localCache";
 import { styles } from "./src/styles/globalStyles";
 import { SkeletonScreen } from "./src/components/ui/SkeletonScreen";
 import { BottomNav } from "./src/components/layout/BottomNav";
@@ -96,6 +97,13 @@ export default function App() {
   const [spreadsheetId, setSpreadsheetId] = useState("");
   const [bootstrapping, setBootstrapping] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [hasLocalData, setHasLocalData] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [isFirstRemoteLoad, setIsFirstRemoteLoad] = useState(false);
+  const [syncError, setSyncError] = useState("");
+  const [authError, setAuthError] = useState("");
+  const [pendingSync, setPendingSync] = useState(false);
+  const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [summaries, setSummaries] = useState<SummaryRow[]>([]);
   const [freqIncome, setFreqIncome] = useState<Record<string, number>>({});
@@ -128,6 +136,9 @@ export default function App() {
   const pinLockedRef = useRef(false);
   const blurTargetRef = useRef<View | null>(null);
   const didSetInitialPeriodRef = useRef(false);
+  const reloadPromiseRef = useRef<Promise<void> | null>(null);
+  const freqIncomeRef = useRef<Record<string, number>>({});
+  const hasLocalDataRef = useRef(false);
   const statusBarInset = NativeStatusBar.currentHeight || 0;
   const headerTopInset = statusBarInset + 6;
   const headerHeight = tab === "expenses" ? 112 : 62;
@@ -162,6 +173,14 @@ export default function App() {
     applyDefaultFont(fontPreference);
   }, [fontPreference]);
 
+  useEffect(() => {
+    freqIncomeRef.current = freqIncome;
+  }, [freqIncome]);
+
+  useEffect(() => {
+    hasLocalDataRef.current = hasLocalData;
+  }, [hasLocalData]);
+
   // --- Derived data ---
   const visibleTransactions = useMemo(() => {
     const source = searchActive
@@ -189,6 +208,17 @@ export default function App() {
   const uiMonthNames = copy.languageCode === "en" ? UI_MONTH_NAMES.en : UI_MONTH_NAMES.es;
   const pageTitle = tab === "expenses" ? copy.expenses : tab === "summary" ? copy.summary : copy.settings;
   const pageSubtitle = tab === "expenses" ? `${uiMonthNames[month]} ${year}` : tab === "summary" ? copy.summarySubtitle : copy.settingsSubtitle;
+  const savedDataText = copy.languageCode === "en" ? "Saved data" : "Datos guardados";
+  const syncStatusText = authError
+    ? authError
+    : syncError
+      ? (hasLocalData ? (copy.languageCode === "en" ? "Showing saved data" : "Mostrando datos guardados") : syncError)
+      : pendingSync
+        ? (copy.languageCode === "en" ? "Pending sync" : "Pendiente de sincronizar")
+        : isSyncing
+          ? (hasLocalData ? `${savedDataText} · ${copy.syncing.toLowerCase()}` : copy.syncing)
+          : "";
+  const showContentSkeleton = isFirstRemoteLoad && !hasLocalData && !transactions.length && tab !== "settings";
 
   // --- Session management ---
   async function restoreSession() {
@@ -196,15 +226,39 @@ export default function App() {
     try {
       const [token, sheetId] = await Promise.all([SecureStore.getItemAsync(TOKEN_KEY), SecureStore.getItemAsync(SHEET_KEY)]);
       if (token && sheetId) {
-        try {
-          const fresh = await getWorkspaceAccessToken(false);
-          const activeToken = fresh.accessToken || token;
-          setAccessToken(activeToken);
-          syncAccountInfo();
-          await connectGoogleWorkspace(activeToken, sheetId);
-        } catch { await clearGoogleSession(); }
+        setAccessToken(token);
+        setSpreadsheetId(sheetId);
+        syncAccountInfo();
+        const cached = await loadFinancialCache(sheetId);
+        if (cached) {
+          applyFinancialState(cached.transactions, cached.summaries, cached.freqIncome, cached.lastSyncedAt, true);
+        }
+        setIsFirstRemoteLoad(!cached);
+        void refreshStoredSession(token, sheetId, Boolean(cached));
       }
     } finally { setBootstrapping(false); }
+  }
+
+  async function refreshStoredSession(token: string, sheetId: string, hadCache: boolean) {
+    let activeToken = token;
+    try {
+      const fresh = await getWorkspaceAccessToken(false);
+      activeToken = fresh.accessToken || token;
+      setAuthError("");
+      setAccessToken(activeToken);
+      syncAccountInfo();
+      await SecureStore.setItemAsync(TOKEN_KEY, activeToken);
+      await reloadFromGoogle(activeToken, sheetId, false);
+    } catch (error) {
+      if (isAuthError(error)) setAuthError(getErrorMessage(error));
+      if (shouldRescanForSheetError(error)) {
+        await connectGoogleWorkspace(activeToken, "", true);
+      } else if (!hadCache) {
+        setSyncError(getErrorMessage(error));
+      }
+    } finally {
+      setIsFirstRemoteLoad(false);
+    }
   }
 
   async function restorePreferences() {
@@ -293,26 +347,36 @@ export default function App() {
     return GoogleSignin.getTokens();
   }
 
-  async function connectGoogleWorkspace(token: string, _preferredSheetId = "") {
+  async function connectGoogleWorkspace(token: string, preferredSheetId = "", forceScan = false) {
     setLoading(true);
+    setIsSyncing(true);
     try {
+      if (preferredSheetId && !forceScan) {
+        try {
+          await selectSpreadsheet(token, preferredSheetId, "", false);
+          return;
+        } catch (error) {
+          if (!shouldRescanForSheetError(error)) throw error;
+        }
+      }
       const candidates = await findCompatibleSheets(token);
       const namedSheet = candidates.find((c) => c.name.trim().toUpperCase() === SHEET_NAMES.transactions);
       if (namedSheet) { await selectSpreadsheet(token, namedSheet.id, namedSheet.name); return; }
       const sheetId = await createBucksSpreadsheet(token);
       await selectSpreadsheet(token, sheetId, SHEET_NAMES.transactions);
     } catch (error) {
-      Alert.alert("Google Sheets", error instanceof Error ? error.message : "No se pudo conectar la hoja");
-    } finally { setLoading(false); }
+      setSyncError(getErrorMessage(error));
+      if (!hasLocalDataRef.current) Alert.alert("Google Sheets", getErrorMessage(error));
+    } finally { setLoading(false); setIsSyncing(false); }
   }
 
-  async function selectSpreadsheet(token: string, sheetId: string, _name: string) {
+  async function selectSpreadsheet(token: string, sheetId: string, _name: string, showLoader = true) {
     setLoading(true);
     try {
       await SecureStore.setItemAsync(TOKEN_KEY, token);
       await SecureStore.setItemAsync(SHEET_KEY, sheetId);
       setAccessToken(token); setSpreadsheetId(sheetId); setSheetCandidates([]);
-      await reloadFromGoogle(token, sheetId);
+      await reloadFromGoogle(token, sheetId, showLoader);
     } finally { setLoading(false); }
   }
 
@@ -326,8 +390,12 @@ export default function App() {
       await GoogleSignin.signIn();
       const tokens = await getWorkspaceAccessToken(true);
       if (!tokens.accessToken) throw new Error("Google no devolvió access token.");
+      await SecureStore.setItemAsync(TOKEN_KEY, tokens.accessToken);
+      setAccessToken(tokens.accessToken);
+      setIsFirstRemoteLoad(true);
+      setSyncError("");
       syncAccountInfo();
-      await connectGoogleWorkspace(tokens.accessToken);
+      await connectGoogleWorkspace(tokens.accessToken, "", true);
     } catch (error) {
       const message = error instanceof Error ? error.message : "No se pudo iniciar sesión con Google.";
       const isDeveloperError = message.includes("DEVELOPER_ERROR") || message.includes("code: 10");
@@ -343,10 +411,79 @@ export default function App() {
     if (data) setAccountInfo({ name: data.user?.name || data.name, email: data.user?.email || data.email });
   }
 
+  function applyFinancialState(nextTransactions: Transaction[], nextSummaries: SummaryRow[], nextFreqIncome: Record<string, number>, syncedAt: string | null, fromCache = false) {
+    const summariesToUse = nextSummaries.length ? nextSummaries : calculateSummaries(nextTransactions, nextFreqIncome);
+    setTransactions(nextTransactions);
+    setSummaries(summariesToUse);
+    setFreqIncome(nextFreqIncome);
+    freqIncomeRef.current = nextFreqIncome;
+    setLastSyncedAt(syncedAt);
+    const nextHasLocalData = cacheHasData(nextTransactions, summariesToUse);
+    setHasLocalData(nextHasLocalData);
+    hasLocalDataRef.current = nextHasLocalData;
+    if (fromCache || nextTransactions.length) updateInitialPeriod(nextTransactions);
+  }
+
+  function persistFinancialState(nextTransactions: Transaction[], nextSummaries: SummaryRow[], nextFreqIncome: Record<string, number>, syncedAt = lastSyncedAt, sheetId = spreadsheetId) {
+    const summariesToUse = nextSummaries.length ? nextSummaries : calculateSummaries(nextTransactions, nextFreqIncome);
+    const nextHasLocalData = cacheHasData(nextTransactions, summariesToUse);
+    setHasLocalData(nextHasLocalData);
+    hasLocalDataRef.current = nextHasLocalData;
+    if (!sheetId) return;
+    saveFinancialCache({
+      spreadsheetId: sheetId,
+      transactions: nextTransactions,
+      summaries: summariesToUse,
+      freqIncome: nextFreqIncome,
+      lastSyncedAt: syncedAt,
+    }).catch(() => undefined);
+  }
+
+  function updateInitialPeriod(source: Transaction[]) {
+    if (didSetInitialPeriodRef.current || !source.length) return;
+    const latestDate = getLatestTransactionDate(source);
+    if (latestDate) {
+      setMonth(latestDate.getMonth());
+      setYear(latestDate.getFullYear());
+      setLoadedMonthCount(1);
+    }
+    didSetInitialPeriodRef.current = true;
+  }
+
+  function freqIncomeFromSummaries(rows: SummaryRow[]) {
+    return rows.reduce<Record<string, number>>((acc, row) => {
+      acc[row.monthYear] = row.freqIncome;
+      return acc;
+    }, {});
+  }
+
+  function cacheHasData(nextTransactions: Transaction[], nextSummaries: SummaryRow[]) {
+    return nextTransactions.length > 0 || nextSummaries.length > 0;
+  }
+
+  function getErrorMessage(error: unknown) {
+    return error instanceof Error ? error.message : copy.syncError;
+  }
+
+  function isAuthError(error: unknown) {
+    const message = getErrorMessage(error);
+    return message.includes("401") || message.includes("403") || message.toLowerCase().includes("permiso");
+  }
+
+  function shouldRescanForSheetError(error: unknown) {
+    const message = getErrorMessage(error).toLowerCase();
+    return message.includes("404")
+      || message.includes("not found")
+      || message.includes("unable to parse range")
+      || message.includes("no se encontro")
+      || message.includes("no se encontró");
+  }
+
   async function clearGoogleSession() {
-    await Promise.all([SecureStore.deleteItemAsync(TOKEN_KEY), SecureStore.deleteItemAsync(SHEET_KEY)]);
+    await Promise.all([SecureStore.deleteItemAsync(TOKEN_KEY), SecureStore.deleteItemAsync(SHEET_KEY), deleteFinancialCache()]);
     setAccessToken(""); setSpreadsheetId(""); setTransactions([]); setSummaries([]);
-    setFreqIncome({}); setAccountInfo(null);
+    setFreqIncome({}); freqIncomeRef.current = {}; setAccountInfo(null); setHasLocalData(false); hasLocalDataRef.current = false; setLastSyncedAt(null);
+    setSyncError(""); setAuthError(""); setPendingSync(false); setIsSyncing(false);
     didSetInitialPeriodRef.current = false;
   }
 
@@ -361,26 +498,41 @@ export default function App() {
     await signInWithGoogle();
   }
 
-  async function rescanDrive() { if (accessToken) await connectGoogleWorkspace(accessToken); }
+  async function rescanDrive() { if (accessToken) await connectGoogleWorkspace(accessToken, "", true); }
 
   // --- Data operations ---
-  async function reloadFromGoogle(token = accessToken, sheetId = spreadsheetId, showLoader = true) {
+  async function reloadFromGoogle(token = accessToken, sheetId = spreadsheetId, showLoader = true, forceFresh = false) {
     if (!token || !sheetId) return;
-    if (showLoader) setLoading(true);
-    try {
+    if (reloadPromiseRef.current) {
+      if (!forceFresh) return reloadPromiseRef.current;
+      await reloadPromiseRef.current.catch(() => undefined);
+    }
+    const task = (async () => {
+      if (showLoader) setLoading(true);
+      setIsSyncing(true);
+      setSyncError("");
+      if (!hasLocalDataRef.current && !transactions.length) setIsFirstRemoteLoad(true);
       const [tx, summary] = await Promise.all([readTransactions(token, sheetId), readSummaries(token, sheetId)]);
-      setTransactions(tx);
-      setSummaries(summary.length ? summary : calculateSummaries(tx, freqIncome));
-      if (!didSetInitialPeriodRef.current && tx.length) {
-        const latestDate = getLatestTransactionDate(tx);
-        if (latestDate) {
-          setMonth(latestDate.getMonth());
-          setYear(latestDate.getFullYear());
-          setLoadedMonthCount(1);
-        }
-        didSetInitialPeriodRef.current = true;
-      }
-    } finally { if (showLoader) setLoading(false); }
+      const nextFreqIncome = summary.length ? freqIncomeFromSummaries(summary) : freqIncomeRef.current;
+      const nextSummaries = summary.length ? summary : calculateSummaries(tx, nextFreqIncome);
+      const syncedAt = new Date().toISOString();
+      applyFinancialState(tx, nextSummaries, nextFreqIncome, syncedAt);
+      persistFinancialState(tx, nextSummaries, nextFreqIncome, syncedAt, sheetId);
+      setPendingSync(false);
+      if (showLoader) setLoading(false);
+      setIsSyncing(false);
+      setIsFirstRemoteLoad(false);
+      reloadPromiseRef.current = null;
+    })().catch((error) => {
+      setSyncError(getErrorMessage(error));
+      if (showLoader) setLoading(false);
+      setIsSyncing(false);
+      setIsFirstRemoteLoad(false);
+      reloadPromiseRef.current = null;
+      throw error;
+    });
+    reloadPromiseRef.current = task;
+    return task;
   }
 
   function selectPeriod(nextMonth: number, nextYear: number) {
@@ -408,9 +560,16 @@ export default function App() {
   }
 
   function syncGoogleInBackground(task: () => Promise<void>, title: string) {
-    task().catch((error) => {
-      Alert.alert(title, error instanceof Error ? error.message : copy.syncError);
-    });
+    setIsSyncing(true);
+    setPendingSync(true);
+    setSyncError("");
+    task()
+      .then(() => setPendingSync(false))
+      .catch((error) => {
+        setPendingSync(true);
+        setSyncError(getErrorMessage(error) || title);
+      })
+      .finally(() => setIsSyncing(false));
   }
 
   function requestDelete(tx: Transaction) {
@@ -441,8 +600,10 @@ export default function App() {
     const next = currentEdit
       ? renumberTransactions(insertChronologically(transactions.filter((tx) => tx.rowId !== currentEdit.rowId), optimistic))
       : renumberTransactions(insertChronologically(transactions, optimistic));
+    const nextSummaries = calculateSummaries(next, freqIncome);
     setTransactions(next);
-    setSummaries(calculateSummaries(next, freqIncome));
+    setSummaries(nextSummaries);
+    persistFinancialState(next, nextSummaries, freqIncome);
     setAddVisible(false);
     setEditingTx(null);
     setDraft(getBlankDraft());
@@ -454,7 +615,7 @@ export default function App() {
         } else {
           await saveTransaction(accessToken, spreadsheetId, currentDraft);
         }
-        await reloadFromGoogle(accessToken, spreadsheetId, false);
+        await reloadFromGoogle(accessToken, spreadsheetId, false, true);
       }, currentEdit ? copy.editRecord : copy.newRecord);
     }
   }
@@ -463,14 +624,16 @@ export default function App() {
     setDetailTx(null);
     setSelectedRows((current) => current.filter((rowId) => rowId !== tx.rowId));
     const next = renumberTransactions(transactions.filter((item) => item.rowId !== tx.rowId));
-    setTransactions(next); setSummaries(calculateSummaries(next, freqIncome));
+    const nextSummaries = calculateSummaries(next, freqIncome);
+    setTransactions(next); setSummaries(nextSummaries);
+    persistFinancialState(next, nextSummaries, freqIncome);
     addHistoryEntry({ action: "delete", transaction: tx }).then((entry) => {
       setHistoryEntries((prev) => [entry, ...prev]);
     }).catch(() => undefined);
     if (accessToken && spreadsheetId) {
       syncGoogleInBackground(async () => {
         await deleteGoogleTransaction(accessToken, spreadsheetId, tx.rowId);
-        await reloadFromGoogle(accessToken, spreadsheetId, false);
+        await reloadFromGoogle(accessToken, spreadsheetId, false, true);
       }, copy.deleteRecord);
     }
   }
@@ -480,7 +643,9 @@ export default function App() {
     if (!selected.length) return;
     const selectedIds = new Set(selected.map((tx) => tx.rowId));
     const next = renumberTransactions(transactions.filter((item) => !selectedIds.has(item.rowId)));
-    setTransactions(next); setSummaries(calculateSummaries(next, freqIncome));
+    const nextSummaries = calculateSummaries(next, freqIncome);
+    setTransactions(next); setSummaries(nextSummaries);
+    persistFinancialState(next, nextSummaries, freqIncome);
     setSelectedRows([]);
     for (const tx of selected) {
       addHistoryEntry({ action: "delete", transaction: tx }).then((entry) => {
@@ -490,7 +655,7 @@ export default function App() {
     if (accessToken && spreadsheetId) {
       syncGoogleInBackground(async () => {
         for (const tx of selected) await deleteGoogleTransaction(accessToken, spreadsheetId, tx.rowId);
-        await reloadFromGoogle(accessToken, spreadsheetId, false);
+        await reloadFromGoogle(accessToken, spreadsheetId, false, true);
       }, "Eliminar seleccion");
     }
   }
@@ -505,21 +670,27 @@ export default function App() {
   }
 
   async function moveTx(tx: Transaction, direction: "up" | "down") {
-    setLoading(true);
     try {
       if (accessToken && spreadsheetId) {
-        await moveGoogleTransaction(accessToken, spreadsheetId, tx.rowId, direction);
-        await reloadFromGoogle(); return;
+        syncGoogleInBackground(async () => {
+          await moveGoogleTransaction(accessToken, spreadsheetId, tx.rowId, direction);
+          await reloadFromGoogle(accessToken, spreadsheetId, false, true);
+        }, "Mover registro");
+        return;
       }
       const index = transactions.findIndex((item) => item.rowId === tx.rowId);
       const targetIndex = direction === "up" ? index - 1 : index + 1;
       if (index < 0 || targetIndex < 0 || targetIndex >= transactions.length) return;
       const next = [...transactions];
       [next[index], next[targetIndex]] = [next[targetIndex], next[index]];
-      setTransactions(next.map((item, idx) => ({ ...item, rowId: idx + 2 })));
+      const moved = next.map((item, idx) => ({ ...item, rowId: idx + 2 }));
+      const nextSummaries = calculateSummaries(moved, freqIncome);
+      setTransactions(moved);
+      setSummaries(nextSummaries);
+      persistFinancialState(moved, nextSummaries, freqIncome);
     } catch (error) {
       Alert.alert("Mover registro", error instanceof Error ? error.message : "No se pudo mover el registro.");
-    } finally { setLoading(false); }
+    }
   }
 
   function openMoveMenu(tx: Transaction) {
@@ -539,8 +710,11 @@ export default function App() {
     removeHistoryEntry(entryId).catch(() => undefined);
 
     const next = [...transactions, entry.transaction].sort((a, b) => new Date(a.rawDate).getTime() - new Date(b.rawDate).getTime());
-    setTransactions(next.map((item, idx) => ({ ...item, rowId: idx + 2 })));
-    setSummaries(calculateSummaries(next, freqIncome));
+    const restored = next.map((item, idx) => ({ ...item, rowId: idx + 2 }));
+    const nextSummaries = calculateSummaries(restored, freqIncome);
+    setTransactions(restored);
+    setSummaries(nextSummaries);
+    persistFinancialState(restored, nextSummaries, freqIncome);
     if (accessToken && spreadsheetId) {
       const draft: TransactionDraft = {
         date: formatDateToISO(entry.transaction.rawDate),
@@ -548,10 +722,11 @@ export default function App() {
         detail: entry.transaction.detail,
         type: entry.transaction.type,
         createdAt: entry.transaction.createdAt,
+        tags: entry.transaction.tags || [],
       };
       syncGoogleInBackground(async () => {
         await insertTransactionAtRow(accessToken, spreadsheetId, draft, entry.transaction.rowId);
-        await reloadFromGoogle(accessToken, spreadsheetId, false);
+        await reloadFromGoogle(accessToken, spreadsheetId, false, true);
       }, "Deshacer");
     }
   }
@@ -592,11 +767,19 @@ export default function App() {
     const amount = Number(freqInput);
     if (!Number.isFinite(amount) || amount < 0) { Alert.alert("Monto inválido", "Ingresa un monto válido."); return; }
     const key = `${MONTH_NAMES[month]} ${year}`;
-    if (accessToken && spreadsheetId) await updateGoogleFreqIncome(accessToken, spreadsheetId, key, amount);
     const nextFreq = { ...freqIncome, [key]: amount };
+    const nextSummaries = calculateSummaries(transactions, nextFreq);
     setFreqIncome(nextFreq);
-    setSummaries(calculateSummaries(transactions, nextFreq));
+    freqIncomeRef.current = nextFreq;
+    setSummaries(nextSummaries);
+    persistFinancialState(transactions, nextSummaries, nextFreq);
     setFreqVisible(false);
+    if (accessToken && spreadsheetId) {
+      syncGoogleInBackground(async () => {
+        await updateGoogleFreqIncome(accessToken, spreadsheetId, key, amount);
+        await reloadFromGoogle(accessToken, spreadsheetId, false, true);
+      }, copy.frequentIncomeTitle);
+    }
   }
 
   async function exportRows(cfg: ExportConfig) {
@@ -692,13 +875,17 @@ export default function App() {
         <BlurTargetView ref={blurTargetRef} style={[styles.content, { width: "100%", position: "relative" }]}>
           {tab === "expenses" || tab === "summary" ? (
             <View style={{ flex: 1 }}>
-              {loading && (
+              {(loading || syncStatusText) && (
                 <View style={styles.loadingBar}>
-                  <ActivityIndicator color={colors.primary} />
-                  <Text style={{ color: colors.muted }}>{copy.syncing}</Text>
+                  {(loading || isSyncing) && <ActivityIndicator color={colors.primary} />}
+                  <Text style={{ color: colors.muted }}>{syncStatusText || copy.syncing}</Text>
                 </View>
               )}
-              {tab === "expenses" ? (
+              {showContentSkeleton ? (
+                <View style={{ flex: 1, paddingTop: contentTopInset }}>
+                  <SkeletonScreen colors={colors} />
+                </View>
+              ) : tab === "expenses" ? (
                 <ExpensesView
                   colors={colors} summary={currentSummary} transactions={visibleTransactions}
                   searchActive={searchActive} searchText={searchFilters.text} selectedRows={selectedRows}
@@ -719,10 +906,10 @@ export default function App() {
             </View>
           ) : (
             <View style={{ paddingTop: contentTopInset, flex: 1 }}>
-              {loading && (
+              {(loading || syncStatusText) && (
                 <View style={styles.loadingBar}>
-                  <ActivityIndicator color={colors.primary} />
-                  <Text style={{ color: colors.muted }}>{copy.syncing}</Text>
+                  {(loading || isSyncing) && <ActivityIndicator color={colors.primary} />}
+                  <Text style={{ color: colors.muted }}>{syncStatusText || copy.syncing}</Text>
                 </View>
               )}
               <SettingsView colors={colors} copy={copy} accountInfo={accountInfo}

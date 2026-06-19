@@ -51,7 +51,8 @@ export function ExpensesView({
   topInset?: number;
   tagsList: Tag[];
 }) {
-  const groups = groupTransactionsByDate(transactions, copy);
+  const groups = useMemo(() => groupTransactionsByDate(transactions, copy), [transactions, copy]);
+  const selectedRowSet = useMemo(() => new Set(selectedRows), [selectedRows]);
   const selectedCount = selectedRows.length;
   const selectedTx = transactions.find((tx) => tx.rowId === selectedRows[0]);
   const [tagBubble, setTagBubble] = useState<{ x: number; y: number; tags: string[] } | null>(null);
@@ -105,7 +106,7 @@ export function ExpensesView({
             <Text style={[styles.dateGroupLabel, { color: colors.muted }]}>{group.label}</Text>
             <View style={[styles.txGroupCard, { backgroundColor: colors.card }]}>
               {group.items.map((tx, index) => {
-                const selected = selectedRows.includes(tx.rowId);
+                const selected = selectedRowSet.has(tx.rowId);
                 const icon = tx.amount >= 0 ? "bank-transfer-in" : tx.type === "GASTO FRECUENTE" ? "credit-card-outline" : "basket-outline";
                 const isFreqExpense = tx.type === "GASTO FRECUENTE";
                 const showPill = tx.type !== "GASTO NO FRECUENTE";

@@ -12,6 +12,9 @@ export function BottomNav({ colors, copy, tab, setTab, onAdd, onSearch, blurTarg
 }) {
   const isDark = colors.bg === "#0f1117";
   const glassSurface = isDark ? withAlpha(colors.card, 0.72) : withAlpha(colors.card, 0.96);
+  const selectTab = (next: Tab) => {
+    if (next !== tab) setTab(next);
+  };
   return (
     <View style={styles.bottomNav}>
       {isDark ? (
@@ -27,13 +30,13 @@ export function BottomNav({ colors, copy, tab, setTab, onAdd, onSearch, blurTarg
         <View pointerEvents="none" style={[styles.bottomNavGlass, { backgroundColor: glassSurface, borderColor: withAlpha(colors.borderStrong, 0.54) }]} />
       )}
       <View style={styles.bottomNavContent}>
-        <BottomNavItem colors={colors} active={tab === "expenses"} icon="view-dashboard-outline" label={copy.expenses} onPress={() => setTab("expenses")} />
+        <BottomNavItem colors={colors} active={tab === "expenses"} icon="view-dashboard-outline" label={copy.expenses} onPress={() => selectTab("expenses")} />
         <BottomNavItem colors={colors} active={false} icon="magnify" label={copy.search} onPress={onSearch} />
         <Pressable onPressIn={onAdd} style={[styles.bottomAddButton, { backgroundColor: colors.primary }]}>
           <MaterialCommunityIcons name="plus" size={31} color={colors.onPrimary} />
         </Pressable>
-        <BottomNavItem colors={colors} active={tab === "summary"} icon="chart-line" label={copy.summary} onPress={() => setTab("summary")} />
-        <BottomNavItem colors={colors} active={tab === "settings"} icon="cog-outline" label={copy.settings} onPress={() => setTab("settings")} />
+        <BottomNavItem colors={colors} active={tab === "summary"} icon="chart-line" label={copy.summary} onPress={() => selectTab("summary")} />
+        <BottomNavItem colors={colors} active={tab === "settings"} icon="cog-outline" label={copy.settings} onPress={() => selectTab("settings")} />
       </View>
     </View>
   );
