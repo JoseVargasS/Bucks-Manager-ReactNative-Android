@@ -3,7 +3,8 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { HistoryEntry } from "../../types";
 import { styles } from "../../styles/globalStyles";
 import { Palette } from "../../theme/colors";
-import { formatMoney, formatCreatedTime } from "../../utils/formats";
+import { formatMoney } from "../../domain/bucksLogic";
+import { formatCreatedTime } from "../../utils/formats";
 import { UiCopy } from "../../i18n";
 
 export function HistoryModal({ visible, entries, colors, currencySymbol, copy, onClose, onUndo }: {

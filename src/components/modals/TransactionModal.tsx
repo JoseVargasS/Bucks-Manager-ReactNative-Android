@@ -8,7 +8,7 @@ import { Select } from "../ui/Select";
 import { CalendarPicker } from "../ui/CalendarPicker";
 import { Palette } from "../../theme/colors";
 import { TransactionDraft, TransactionType } from "../../types";
-import { typeColor, typeFill } from "../../utils/formats";
+import { typeColor, typeFill, typeLabel } from "../../utils/formats";
 import { PickerConfig } from "./OptionSheet";
 import { UiCopy } from "../../i18n";
 
@@ -25,12 +25,6 @@ export function TransactionModal({ visible, colors, copy, currencySymbol, draft,
   const amountPreview = cleanAmount ? calculateExpression(cleanAmount) : 0;
   const hasAmountPreview = amountLooksComplete && Number.isFinite(amountPreview);
   const amountPreviewText = `${amountPreview < 0 ? "- " : ""}${currencySymbol} ${Math.abs(amountPreview).toFixed(2)}`;
-  const typeLabel = (type: TransactionType) => {
-    if (type === "INGRESO FRECUENTE") return copy.freqIncome;
-    if (type === "INGRESO NO FRECUENTE") return copy.nonFreqIncome;
-    if (type === "GASTO FRECUENTE") return copy.freqExpense;
-    return copy.nonFreqExpense;
-  };
   const appendAmountToken = (token: string) => setDraft({ ...draft, amount: `${draft.amount}${token}` });
   return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
@@ -58,7 +52,7 @@ export function TransactionModal({ visible, colors, copy, currencySymbol, draft,
             <Text style={[styles.label, { color: colors.text }]}>{copy.type}</Text>
             <Select
               value={draft.type}
-              options={TRANSACTION_TYPES.map((type) => ({ label: typeLabel(type), value: type, color: typeColor(type, colors), softBg: typeFill(type, colors) }))}
+              options={TRANSACTION_TYPES.map((type) => ({ label: typeLabel(type, copy), value: type, color: typeColor(type, colors), softBg: typeFill(type, colors) }))}
               onSelect={(type: string) => setDraft({ ...draft, type: type as TransactionType })}
               colors={colors}
               placeholder={copy.selectType}

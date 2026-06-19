@@ -3,7 +3,8 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { styles } from "../../styles/globalStyles";
 import { Palette } from "../../theme/colors";
 import { Transaction } from "../../types";
-import { formatMoney } from "../../utils/formats";
+import { formatMoney } from "../../domain/bucksLogic";
+import { typeLabel } from "../../utils/formats";
 import { UiCopy } from "../../i18n";
 
 export type ConfirmKind = "delete" | "edit" | "deleteSelected";
@@ -60,7 +61,7 @@ export function ConfirmModal({ config, colors, currencySymbol, copy, onClose, on
                 </View>
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <Text numberOfLines={1} style={{ fontSize: 12, fontWeight: "600", color: colors.muted, textTransform: "uppercase" }}>
-                    {txTypeLabel(config.tx.type, copy)}
+                    {typeLabel(config.tx.type, copy)}
                   </Text>
                   <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 20, fontWeight: "700", color: config.tx.amount >= 0 ? colors.green : colors.red, fontVariant: ["tabular-nums"] }}>
                     {formatMoney(config.tx.amount, currencySymbol)}
@@ -99,11 +100,4 @@ export function ConfirmModal({ config, colors, currencySymbol, copy, onClose, on
       </View>
     </Modal>
   );
-}
-
-function txTypeLabel(type: string, copy: UiCopy) {
-  if (type === "INGRESO FRECUENTE") return copy.freqIncome;
-  if (type === "INGRESO NO FRECUENTE") return copy.nonFreqIncome;
-  if (type === "GASTO FRECUENTE") return copy.freqExpense;
-  return copy.nonFreqExpense;
 }

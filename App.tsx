@@ -5,7 +5,7 @@ import * as Print from "expo-print";
 import * as SecureStore from "expo-secure-store";
 import * as Sharing from "expo-sharing";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Alert, AppState, Modal, SafeAreaView, Text, TouchableOpacity, View, StatusBar as NativeStatusBar } from "react-native";
+import { ActivityIndicator, Alert, AppState, SafeAreaView, Text, TouchableOpacity, View, StatusBar as NativeStatusBar } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { GoogleSignin } from "@react-native-google-signin/google-signin";
 import Svg, { Defs, LinearGradient, Mask, Rect, Stop } from "react-native-svg";
@@ -21,9 +21,10 @@ import {
 } from "./src/api/googleWorkspace";
 import { dark, light, Palette } from "./src/theme/colors";
 import { getBlankDraft, compareTransactionsDesc, filterTransactionsByRollingPeriod } from "./src/utils/transactions";
-import { formatMoney, formatCreatedTime } from "./src/utils/formats";
+import { formatMoney } from "./src/domain/bucksLogic";
+import { formatCreatedTime } from "./src/utils/formats";
 import { loadHistory, addHistoryEntry, removeHistoryEntry } from "./src/utils/history";
-import { isPinEnabled, setPinEnabled, savePin, verifyPin, clearPin } from "./src/utils/pin";
+import { isPinEnabled, savePin, verifyPin, clearPin } from "./src/utils/pin";
 import { styles } from "./src/styles/globalStyles";
 import { SkeletonScreen } from "./src/components/ui/SkeletonScreen";
 import { BottomNav } from "./src/components/layout/BottomNav";
@@ -42,8 +43,10 @@ import { ConfirmModal, ConfirmConfig } from "./src/components/modals/ConfirmModa
 import { HistoryModal } from "./src/components/modals/HistoryModal";
 import { PinSetupModal } from "./src/components/modals/PinSetupModal";
 import { SheetChooserModal } from "./src/components/modals/SheetChooserModal";
+import { SearchModal } from "./src/components/modals/SearchModal";
 import { OptionSheet, PickerConfig } from "./src/components/modals/OptionSheet";
-import { ExportFormat, HistoryEntry, SearchFilters, SheetCandidate, SummaryRow, Transaction, TransactionDraft, TransactionType } from "./src/types";
+import { ExportFormat, HistoryEntry, SearchFilters, SheetCandidate, SummaryRow, Tab, ThemeMode, LanguageMode, FontPreference, Transaction, TransactionDraft, TransactionType } from "./src/types";
+import { getLatestTransactionDate, parseLocalDateTime, parseMonthKey, buildExportFileName, getPeriodRange, getAvailableMonthsForYear, detectDeviceCurrencySymbol, applyDefaultFont } from "./src/utils/helpers";
 import { UI_COPY, UI_MONTH_NAMES, UiCopy } from "./src/i18n";
 
 const GOOGLE_ANDROID_CLIENT_ID = Constants.expoConfig?.extra?.googleAndroidClientId || "";
@@ -54,11 +57,6 @@ const GOOGLE_WORKSPACE_SCOPES = [
   "https://www.googleapis.com/auth/drive.metadata.readonly",
   "https://www.googleapis.com/auth/spreadsheets",
 ];
-
-type Tab = "expenses" | "search" | "summary" | "settings";
-type ThemeMode = "dark" | "light";
-type LanguageMode = "es" | "en";
-type FontPreference = "system" | "serif" | "mono";
 
 const emptySearch: SearchFilters = { text: "", minAmount: "", maxAmount: "", startDate: "", endDate: "" };
 const LANGUAGE_KEY = "bucks_language";
@@ -803,124 +801,6 @@ export default function App() {
   );
 }
 
-function getLatestTransactionDate(transactions: Transaction[]) {
-  const today = new Date();
-  return transactions.reduce<Date | null>((latest, tx) => {
-    const date = new Date(tx.rawDate);
-    if (Number.isNaN(date.getTime()) || date > today) return latest;
-    if (!latest || date.getTime() > latest.getTime()) return date;
-    return latest;
-  }, null);
-}
-
-function parseLocalDateTime(value: string, endOfDay: boolean) {
-  const [year, month, day] = value.split("-").map(Number);
-  if (!year || !month || !day) return Number.NaN;
-  return new Date(year, month - 1, day, endOfDay ? 23 : 0, endOfDay ? 59 : 0, endOfDay ? 59 : 0, endOfDay ? 999 : 0).getTime();
-}
-
-function parseMonthKey(value: string) {
-  const [year, month] = value.split("-").map(Number);
-  if (!year || !month) return Number.NaN;
-  return year * 12 + (month - 1);
-}
-
-function buildExportFileName(cfg: ExportConfig) {
-  const range = cfg.rangeMode === "months"
-    ? buildRangeFilePart(cfg.startDate, cfg.endDate, formatMonthFilePart)
-    : buildRangeFilePart(cfg.startDate, cfg.endDate, formatDateFilePart);
-  return `bucks-manager_${range}`;
-}
-
-function buildRangeFilePart(start: string, end: string, formatter: (value: string) => string) {
-  if (start && end) return `${formatter(start)}_a_${formatter(end)}`;
-  if (start) return `desde_${formatter(start)}`;
-  if (end) return `hasta_${formatter(end)}`;
-  return "todo";
-}
-
-function formatMonthFilePart(value: string) {
-  const [year, month] = value.split("-").map(Number);
-  if (!year || !month) return "mes";
-  return `${slugify(MONTH_NAMES[month - 1] || "mes")}-${year}`;
-}
-
-function formatDateFilePart(value: string) {
-  return value;
-}
-
-function slugify(value: string) {
-  return value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-}
-
-function getPeriodRange(transactions: Transaction[]) {
-  const today = new Date();
-  const currentMonthStart = new Date(today.getFullYear(), today.getMonth(), 1);
-  const dates = transactions
-    .map((tx) => new Date(tx.rawDate))
-    .filter((date) => !Number.isNaN(date.getTime()) && date <= today);
-  if (!dates.length) {
-    return {
-      minYear: currentMonthStart.getFullYear(),
-      minMonth: currentMonthStart.getMonth(),
-      maxYear: currentMonthStart.getFullYear(),
-      maxMonth: currentMonthStart.getMonth(),
-    };
-  }
-  const first = dates.reduce<Date>((earliest, date) => date < earliest ? date : earliest, dates[0]);
-  const last = dates.reduce<Date>((latest, date) => date > latest ? date : latest, dates[0]);
-  return {
-    minYear: first.getFullYear(),
-    minMonth: first.getMonth(),
-    maxYear: last.getFullYear(),
-    maxMonth: last.getMonth(),
-  };
-}
-
-function getAvailableMonthsForYear(year: number, transactions: Transaction[]) {
-  const range = getPeriodRange(transactions);
-  if (year < range.minYear || year > range.maxYear) return [];
-  const start = year === range.minYear ? range.minMonth : 0;
-  const end = year === range.maxYear ? range.maxMonth : 11;
-  return Array.from({ length: Math.max(0, end - start + 1) }, (_, index) => start + index);
-}
-
-function detectDeviceCurrencySymbol() {
-  const locale = Intl.DateTimeFormat().resolvedOptions().locale || "";
-  const region = locale.split("-").pop()?.toUpperCase();
-  const map: Record<string, string> = {
-    PE: "S/",
-    US: "$",
-    EC: "$",
-    PA: "$",
-    SV: "$",
-    ES: "€",
-    FR: "€",
-    DE: "€",
-    IT: "€",
-    PT: "€",
-    GB: "£",
-    JP: "¥",
-    BR: "R$",
-    MX: "MX$",
-    CO: "COP$",
-    CL: "CLP$",
-  };
-  return map[region || ""] || "S/";
-}
-
-function applyDefaultFont(fontPreference: FontPreference) {
-  const fontFamily = fontPreference === "serif" ? "serif" : fontPreference === "mono" ? "monospace" : "sans-serif";
-  const text = Text as typeof Text & { defaultProps?: { style?: unknown } };
-  text.defaultProps = text.defaultProps || {};
-  text.defaultProps.style = [{ fontFamily }];
-}
-
 function HeaderFade({ color, height }: { color: string; height: number }) {
   return (
     <Svg pointerEvents="none" width="100%" height={height} style={{ position: "absolute", top: 0, left: 0, right: 0 }}>
@@ -974,34 +854,5 @@ function BottomFade({ color, height }: { color: string; height: number }) {
       </Defs>
       <Rect x="0" y="0" width="100%" height="100%" fill="url(#bottomFade)" />
     </Svg>
-  );
-}
-
-function SearchModal({ visible, colors, copy, currencySymbol, filters, setFilters, onClose, onClear, onSubmit }: {
-  visible: boolean; colors: Palette; copy: UiCopy; currencySymbol: string; filters: SearchFilters; setFilters: (f: SearchFilters) => void;
-  onClose: () => void; onClear: () => void; onSubmit: () => void;
-}) {
-  return (
-    <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
-      <View style={[styles.searchOverlay, { backgroundColor: colors.overlay }]}>
-        <TouchableOpacity style={styles.optionBackdrop} activeOpacity={1} onPress={onClose} />
-        <View style={[styles.searchSheet, { backgroundColor: colors.card }]}>
-          <View style={[styles.searchGrabber, { backgroundColor: colors.border }]} />
-          <View style={styles.searchHeader}>
-            <View style={[styles.searchHeaderIcon, { backgroundColor: colors.primarySoft }]}>
-              <MaterialCommunityIcons name="magnify" size={21} color={colors.primary} />
-            </View>
-            <View style={styles.searchTitleBlock}>
-              <Text style={[styles.searchTitle, { color: colors.text }]}>{copy.advancedSearch}</Text>
-              <Text style={[styles.searchSubtitle, { color: colors.muted }]}>{copy.advancedSearchSubtitle}</Text>
-            </View>
-            <TouchableOpacity style={[styles.optionClose, { backgroundColor: colors.input }]} onPress={onClose}>
-              <MaterialCommunityIcons name="close" size={20} color={colors.text} />
-            </TouchableOpacity>
-          </View>
-          <SearchPage colors={colors} copy={copy} currencySymbol={currencySymbol} filters={filters} setFilters={setFilters} onSubmit={onSubmit} onClear={onClear} />
-        </View>
-      </View>
-    </Modal>
   );
 }

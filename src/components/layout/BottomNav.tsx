@@ -4,10 +4,8 @@ import { BlurView } from "expo-blur";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { styles } from "../../styles/globalStyles";
 import { Palette } from "../../theme/colors";
-import { MaterialIconName } from "../../types";
+import { Tab, MaterialIconName } from "../../types";
 import { UiCopy } from "../../i18n";
-
-type Tab = "expenses" | "search" | "summary" | "settings";
 
 export function BottomNav({ colors, copy, tab, setTab, onAdd, onSearch, blurTarget }: {
   colors: Palette; copy: UiCopy; tab: Tab; setTab: (tab: Tab) => void; onAdd: () => void; onSearch: () => void; blurTarget: RefObject<View | null>;

@@ -4,7 +4,8 @@ import { styles } from "../../styles/globalStyles";
 import { DetailMeta } from "../ui/DetailMeta";
 import { Palette } from "../../theme/colors";
 import { Transaction } from "../../types";
-import { formatMoney, formatCreatedTime } from "../../utils/formats";
+import { formatMoney } from "../../domain/bucksLogic";
+import { formatCreatedTime, typeLabelFull } from "../../utils/formats";
 import { UiCopy } from "../../i18n";
 
 export function DetailModal({ tx, colors, currencySymbol, copy, onClose, onEdit, onDelete }: { tx: Transaction | null; colors: Palette; currencySymbol: string; copy: UiCopy; onClose: () => void; onEdit: (tx: Transaction) => void; onDelete: (tx: Transaction) => void }) {
@@ -28,7 +29,7 @@ export function DetailModal({ tx, colors, currencySymbol, copy, onClose, onEdit,
                   <MaterialCommunityIcons name={tx.amount >= 0 ? "bank-transfer-in" : "receipt-text-outline"} size={24} color={tx.amount >= 0 ? colors.green : colors.red} />
                 </View>
                 <View style={styles.detailHeroText}>
-                  <Text style={[styles.detailHeroLabel, { color: colors.muted }]}>{detailTypeLabel(tx.type, copy)}</Text>
+                    <Text style={[styles.detailHeroLabel, { color: colors.muted }]}>{typeLabelFull(tx.type, copy)}</Text>
                   <Text numberOfLines={1} style={[styles.detailHeroAmount, { color: tx.amount >= 0 ? colors.green : colors.red, fontVariant: ["tabular-nums"] }]}>{formatMoney(tx.amount, currencySymbol)}</Text>
                 </View>
               </View>
@@ -56,11 +57,4 @@ export function DetailModal({ tx, colors, currencySymbol, copy, onClose, onEdit,
       </View>
     </Modal>
   );
-}
-
-function detailTypeLabel(type: string, copy: UiCopy) {
-  if (type === "INGRESO FRECUENTE") return copy.freqIncome;
-  if (type === "INGRESO NO FRECUENTE") return copy.nonFreqIncome;
-  if (type === "GASTO FRECUENTE") return copy.freqExpense;
-  return copy.nonFreqExpense;
 }

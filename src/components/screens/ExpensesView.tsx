@@ -1,6 +1,7 @@
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { formatMoney, formatCreatedTime, typeColor, typeFill } from "../../utils/formats";
+import { formatMoney } from "../../domain/bucksLogic";
+import { formatCreatedTime, typeColor, typeFill, typeLabelFull } from "../../utils/formats";
 import { groupTransactionsByDate } from "../../utils/transactions";
 import { styles } from "../../styles/globalStyles";
 import { StatCard } from "../ui/StatCard";
@@ -8,13 +9,6 @@ import { HighlightedText } from "../ui/HighlightedText";
 import { Palette } from "../../theme/colors";
 import { SummaryRow, Transaction, MaterialIconName } from "../../types";
 import { UiCopy } from "../../i18n";
-
-function fullTypeLabel(type: string, copy: UiCopy) {
-  if (type === "INGRESO FRECUENTE") return copy.freqIncomeFull;
-  if (type === "INGRESO NO FRECUENTE") return copy.nonFreqIncomeFull;
-  if (type === "GASTO FRECUENTE") return copy.freqExpenseFull;
-  return copy.nonFreqExpenseFull;
-}
 
 function typeChipBg(type: string, colors: Palette) {
   if (type === "INGRESO FRECUENTE" || type === "INGRESO NO FRECUENTE") return colors.incomeSoft;
@@ -138,7 +132,7 @@ export function ExpensesView({
                             backgroundColor: typeChipBg(tx.type, colors),
                           }}>
                             <Text style={{ fontSize: 11, fontWeight: "600", color: typeColor(tx.type, colors) }}>
-                              {fullTypeLabel(tx.type, copy)}
+                              {typeLabelFull(tx.type, copy)}
                             </Text>
                           </View>
                         )}

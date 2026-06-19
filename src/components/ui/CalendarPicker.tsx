@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Modal, Text, TouchableOpacity, View, StyleSheet, ScrollView } from "react-native";
+import { Modal, Text, TouchableOpacity, View, StyleSheet } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { formatDateToISO, MONTH_NAMES } from "../../domain/bucksLogic";
 import { Palette } from "../../theme/colors";
