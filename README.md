@@ -11,11 +11,10 @@ The app has no custom backend. Each user signs in with Google and uses a private
 3. Sign in with Google.
 4. Scan Google Drive for compatible spreadsheets.
 5. Prefer an existing spreadsheet named `INGRESOS Y GASTOS`.
-6. If multiple compatible sheets exist, show a selector.
-7. If none exists, create a new spreadsheet named `INGRESOS Y GASTOS`.
-8. Load transactions and summaries from Google Sheets.
+6. If none exists, create a new spreadsheet named `INGRESOS Y GASTOS`.
+7. Load transactions and summaries from Google Sheets.
 
-No demo finance data is shown during startup. While the app checks the session or loads Google Sheets, it shows a skeleton screen.
+No demo finance data is shown during startup. The native splash remains visible until a cached session or the first Google Sheets load is ready, so the app opens directly with real data instead of showing a skeleton.
 
 ## Google Sheet Contract
 
@@ -67,6 +66,7 @@ Supported transaction types:
 - On the Gastos screen, the active period label lives in the header subtitle so the period dropdowns stay high and compact.
 - Bottom navigation is a compact translucent floating bar; the add button should protrude slightly above it without increasing or clipping the bar.
 - Settings includes local preferences for language, currency symbol, and font style. Currency starts from the device locale when no saved preference exists.
+- On the first launch, language and currency start from the device locale. Google account actions allow switching/adding an account or revoking the current account without deleting its spreadsheet.
 - Bottom tab changes and modal open/close interactions should feel nearly instant, with minimal transition delay.
 - The Analysis screen is optimized for mobile readability with compact KPI rows, chart labels, and a simplified monthly table.
 

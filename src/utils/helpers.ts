@@ -87,6 +87,10 @@ export function getAvailableMonthsForYear(year: number, transactions: Transactio
   return Array.from({ length: Math.max(0, end - start + 1) }, (_, index) => start + index);
 }
 
+export function detectDeviceLanguage(): "es" | "en" {
+  return (Intl.DateTimeFormat().resolvedOptions().locale || "es").toLowerCase().startsWith("es") ? "es" : "en";
+}
+
 export function detectDeviceCurrencySymbol() {
   const locale = Intl.DateTimeFormat().resolvedOptions().locale || "";
   const region = locale.split("-").pop()?.toUpperCase();

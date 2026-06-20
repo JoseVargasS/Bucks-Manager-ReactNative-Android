@@ -9,7 +9,7 @@ export function SettingsView({
   colors, copy, accountInfo, language, currencySymbol, fontPreference, pinEnabled,
   tagsCount,
   onOpenLanguage, onOpenCurrency, onOpenFont, onOpenPin, onOpenTags,
-  onRescan, onSwitch, onDisconnect, onOpenExport,
+  onSwitch, onDisconnect, onOpenExport,
 }: {
   colors: Palette; copy: UiCopy;
   language: "es" | "en"; currencySymbol: string; fontPreference: "system" | "serif" | "mono";
@@ -17,7 +17,7 @@ export function SettingsView({
   pinEnabled: boolean; tagsCount: number;
   onOpenLanguage: () => void; onOpenCurrency: () => void; onOpenFont: () => void;
   onOpenPin: () => void; onOpenTags: () => void;
-  onRescan: () => void; onSwitch: () => void; onDisconnect: () => void; onOpenExport: () => void;
+  onSwitch: () => void; onDisconnect: () => void; onOpenExport: () => void;
 }) {
   const initial = (accountInfo?.email || accountInfo?.name || "B").slice(0, 1).toUpperCase();
   const fontLabel = fontPreference === "serif" ? copy.serif : fontPreference === "mono" ? copy.mono : copy.system;
@@ -35,8 +35,7 @@ export function SettingsView({
               <Text numberOfLines={1} style={[styles.accountHeroEmail, { color: colors.muted }]}>{accountInfo?.email || copy.google}</Text>
             </View>
           </View>
-          <SettingsRow colors={colors} icon="google-drive" label={copy.findDriveSheet} onPress={onRescan} />
-          <SettingsRow colors={colors} icon="account-switch" label={copy.switchAccount} onPress={onSwitch} last />
+          <SettingsRow colors={colors} icon="account-switch" label={copy.manageAccounts} onPress={onSwitch} last />
         </View>
       </View>
 

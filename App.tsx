@@ -4,8 +4,9 @@ import * as FileSystem from "expo-file-system/legacy";
 import * as Print from "expo-print";
 import * as SecureStore from "expo-secure-store";
 import * as Sharing from "expo-sharing";
+import * as SplashScreen from "expo-splash-screen";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Alert, AppState, Text, TouchableOpacity, View, StatusBar as NativeStatusBar } from "react-native";
+import { ActivityIndicator, Alert, AppState, Image, Text, TouchableOpacity, View, StatusBar as NativeStatusBar } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { GoogleSignin } from "@react-native-google-signin/google-signin";
 import Svg, { Defs, LinearGradient, Mask, Rect, Stop } from "react-native-svg";
@@ -28,7 +29,6 @@ import { isPinEnabled, savePin, verifyPin, clearPin } from "./src/utils/pin";
 import { loadTags } from "./src/utils/tags";
 import { deleteFinancialCache, loadFinancialCache, saveFinancialCache } from "./src/data/localCache";
 import { styles } from "./src/styles/globalStyles";
-import { SkeletonScreen } from "./src/components/ui/SkeletonScreen";
 import { BottomNav } from "./src/components/layout/BottomNav";
 import { PeriodControls } from "./src/components/layout/PeriodControls";
 import { LoginScreen } from "./src/components/screens/LoginScreen";
@@ -47,8 +47,11 @@ import { SearchModal } from "./src/components/modals/SearchModal";
 import { TagEditorModal } from "./src/components/modals/TagEditorModal";
 import { OptionSheet, PickerConfig } from "./src/components/modals/OptionSheet";
 import { ExportFormat, HistoryEntry, SearchFilters, SummaryRow, Tab, ThemeMode, LanguageMode, FontPreference, Tag, Transaction, TransactionDraft, TransactionType } from "./src/types";
-import { getLatestTransactionDate, parseLocalDateTime, parseMonthKey, buildExportFileName, getPeriodRange, getAvailableMonthsForYear, detectDeviceCurrencySymbol, applyDefaultFont } from "./src/utils/helpers";
+import { getLatestTransactionDate, parseLocalDateTime, parseMonthKey, buildExportFileName, getPeriodRange, getAvailableMonthsForYear, detectDeviceCurrencySymbol, detectDeviceLanguage, applyDefaultFont } from "./src/utils/helpers";
 import { UI_COPY, UI_MONTH_NAMES, UiCopy } from "./src/i18n";
+
+SplashScreen.preventAutoHideAsync().catch(() => undefined);
+SplashScreen.setOptions({ duration: 220, fade: true });
 
 const GOOGLE_ANDROID_CLIENT_ID = Constants.expoConfig?.extra?.googleAndroidClientId || "";
 const GOOGLE_WEB_CLIENT_ID = Constants.expoConfig?.extra?.googleWebClientId || "";
@@ -84,7 +87,7 @@ const defaultExportConfig: ExportConfig = {
 export default function App() {
   const [theme, setTheme] = useState<ThemeMode>("dark");
   const colors: Palette = theme === "dark" ? dark : light;
-  const [language, setLanguage] = useState<LanguageMode>("es");
+  const [language, setLanguage] = useState<LanguageMode>(detectDeviceLanguage);
   const copy = UI_COPY[language];
   const [currencySymbol, setCurrencySymbol] = useState(detectDeviceCurrencySymbol);
   const [fontPreference, setFontPreference] = useState<FontPreference>("system");
@@ -95,6 +98,7 @@ export default function App() {
   const [spreadsheetId, setSpreadsheetId] = useState("");
   const [bootstrapping, setBootstrapping] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [accountTransition, setAccountTransition] = useState(false);
   const [hasLocalData, setHasLocalData] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isFirstRemoteLoad, setIsFirstRemoteLoad] = useState(false);
@@ -147,15 +151,11 @@ export default function App() {
     GoogleSignin.configure({
       webClientId: GOOGLE_WEB_CLIENT_ID || undefined,
     });
-    restorePreferences();
-    restoreSession();
+    void Promise.all([restorePreferences(), restoreSession(), restorePinState()])
+      .catch(() => undefined)
+      .finally(() => setBootstrapping(false));
     loadHistory().then(setHistoryEntries).catch(() => undefined);
     loadTags().then(setTagsList).catch(() => undefined);
-    isPinEnabled().then((enabled) => {
-      setPinEnabledState(enabled);
-      setPinVerified(!enabled);
-      pinLockedRef.current = false;
-    }).finally(() => setPinLoading(false));
 
     const sub = AppState.addEventListener("change", (nextState) => {
       if (nextState === "background") {
@@ -165,6 +165,10 @@ export default function App() {
     });
     return () => sub.remove();
   }, []);
+
+  useEffect(() => {
+    if (!bootstrapping) SplashScreen.hideAsync().catch(() => undefined);
+  }, [bootstrapping]);
 
   useEffect(() => {
     applyDefaultFont(fontPreference);
@@ -215,25 +219,33 @@ export default function App() {
         : isSyncing
           ? (hasLocalData ? `${savedDataText} · ${copy.syncing.toLowerCase()}` : copy.syncing)
           : "";
-  const showContentSkeleton = isFirstRemoteLoad && !hasLocalData && !transactions.length && tab !== "settings";
-
   // --- Session management ---
   async function restoreSession() {
-    setBootstrapping(true);
-    try {
-      const [token, sheetId] = await Promise.all([SecureStore.getItemAsync(TOKEN_KEY), SecureStore.getItemAsync(SHEET_KEY)]);
-      if (token && sheetId) {
-        setAccessToken(token);
-        setSpreadsheetId(sheetId);
-        syncAccountInfo();
-        const cached = await loadFinancialCache(sheetId);
-        if (cached) {
-          applyFinancialState(cached.transactions, cached.summaries, cached.freqIncome, cached.lastSyncedAt, true);
-        }
-        setIsFirstRemoteLoad(!cached);
-        void refreshStoredSession(token, sheetId, Boolean(cached));
+    const [token, sheetId] = await Promise.all([SecureStore.getItemAsync(TOKEN_KEY), SecureStore.getItemAsync(SHEET_KEY)]);
+    if (token && sheetId) {
+      setAccessToken(token);
+      setSpreadsheetId(sheetId);
+      syncAccountInfo();
+      const cached = await loadFinancialCache(sheetId);
+      if (cached) {
+        applyFinancialState(cached.transactions, cached.summaries, cached.freqIncome, cached.lastSyncedAt, true);
+        void refreshStoredSession(token, sheetId, true);
+      } else {
+        setIsFirstRemoteLoad(true);
+        await refreshStoredSession(token, sheetId, false);
       }
-    } finally { setBootstrapping(false); }
+    }
+  }
+
+  async function restorePinState() {
+    try {
+      const enabled = await isPinEnabled();
+      setPinEnabledState(enabled);
+      setPinVerified(!enabled);
+      pinLockedRef.current = false;
+    } finally {
+      setPinLoading(false);
+    }
   }
 
   async function refreshStoredSession(token: string, sheetId: string, hadCache: boolean) {
@@ -264,8 +276,20 @@ export default function App() {
       SecureStore.getItemAsync(CURRENCY_SYMBOL_KEY),
       SecureStore.getItemAsync(FONT_KEY),
     ]);
-    if (storedLanguage === "es" || storedLanguage === "en") setLanguage(storedLanguage);
-    if (storedCurrency && CURRENCY_OPTIONS.some((option) => option.value === storedCurrency)) setCurrencySymbol(storedCurrency);
+    if (storedLanguage === "es" || storedLanguage === "en") {
+      setLanguage(storedLanguage);
+    } else {
+      const detectedLanguage = detectDeviceLanguage();
+      setLanguage(detectedLanguage);
+      await SecureStore.setItemAsync(LANGUAGE_KEY, detectedLanguage);
+    }
+    if (storedCurrency && CURRENCY_OPTIONS.some((option) => option.value === storedCurrency)) {
+      setCurrencySymbol(storedCurrency);
+    } else {
+      const detectedCurrency = detectDeviceCurrencySymbol();
+      setCurrencySymbol(detectedCurrency);
+      await SecureStore.setItemAsync(CURRENCY_SYMBOL_KEY, detectedCurrency);
+    }
     if (storedFont === "system" || storedFont === "serif" || storedFont === "mono") {
       setFontPreference(storedFont);
       applyDefaultFont(storedFont);
@@ -328,6 +352,21 @@ export default function App() {
     });
   }
 
+  function openAccountManager() {
+    setPicker({
+      title: copy.googleAccounts,
+      selectedValue: "",
+      options: [
+        { label: copy.switchAccount, value: "switch", icon: "account-switch" },
+        { label: copy.removeCurrentAccount, value: "remove", icon: "account-remove", tone: colors.red },
+      ],
+      onSelect: (value) => {
+        if (value === "switch") void switchGoogleAccount();
+        if (value === "remove") requestRemoveGoogleAccount();
+      },
+    });
+  }
+
   async function getWorkspaceAccessToken(interactive: boolean) {
     let current = GoogleSignin.getCurrentUser();
     if (!current) {
@@ -377,16 +416,26 @@ export default function App() {
     } finally { setLoading(false); }
   }
 
-  async function signInWithGoogle() {
+  async function runGoogleSignIn(switchingAccount: boolean) {
     if (!GOOGLE_ANDROID_CLIENT_ID && !GOOGLE_WEB_CLIENT_ID) {
       Alert.alert("Google OAuth", "Faltan las credenciales en .env."); return;
     }
     setLoading(true);
     try {
       await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
-      await GoogleSignin.signIn();
+      if (switchingAccount) await GoogleSignin.signOut();
+      const response = await GoogleSignin.signIn();
+      if (response.type !== "success") return;
       const tokens = await getWorkspaceAccessToken(true);
       if (!tokens.accessToken) throw new Error("Google no devolvió access token.");
+      if (switchingAccount) {
+        setAccountTransition(true);
+        await Promise.all([
+          SecureStore.deleteItemAsync(SHEET_KEY),
+          deleteFinancialCache(),
+        ]);
+        resetFinancialState();
+      }
       await SecureStore.setItemAsync(TOKEN_KEY, tokens.accessToken);
       setAccessToken(tokens.accessToken);
       setIsFirstRemoteLoad(true);
@@ -399,7 +448,15 @@ export default function App() {
       Alert.alert("Google", isDeveloperError
         ? "Google rechazó la configuración OAuth. En Google Cloud revisa que el cliente Android use package com.josev.bucksmanager y el SHA-1 debug actual. También confirma que GOOGLE_WEB_CLIENT_ID sea tipo Web application."
         : message);
-    } finally { setLoading(false); }
+    } finally {
+      setLoading(false);
+      setIsFirstRemoteLoad(false);
+      setAccountTransition(false);
+    }
+  }
+
+  async function signInWithGoogle() {
+    await runGoogleSignIn(false);
   }
 
   function syncAccountInfo() {
@@ -476,12 +533,20 @@ export default function App() {
       || message.includes("no se encontró");
   }
 
-  async function clearGoogleSession() {
-    await Promise.all([SecureStore.deleteItemAsync(TOKEN_KEY), SecureStore.deleteItemAsync(SHEET_KEY), deleteFinancialCache()]);
-    setAccessToken(""); setSpreadsheetId(""); setTransactions([]); setSummaries([]);
+  function resetFinancialState() {
+    setSpreadsheetId(""); setTransactions([]); setSummaries([]);
     setFreqIncome({}); freqIncomeRef.current = {}; setAccountInfo(null); setHasLocalData(false); hasLocalDataRef.current = false; setLastSyncedAt(null);
     setSyncError(""); setAuthError(""); setPendingSync(false); setIsSyncing(false);
     didSetInitialPeriodRef.current = false;
+  }
+
+  async function clearGoogleSession() {
+    try {
+      await Promise.all([SecureStore.deleteItemAsync(TOKEN_KEY), SecureStore.deleteItemAsync(SHEET_KEY), deleteFinancialCache()]);
+    } finally {
+      setAccessToken("");
+      resetFinancialState();
+    }
   }
 
   async function disconnectGoogle() {
@@ -490,12 +555,29 @@ export default function App() {
   }
 
   async function switchGoogleAccount() {
-    try { await GoogleSignin.signOut(); } catch { /* ok */ }
-    await clearGoogleSession();
-    await signInWithGoogle();
+    await runGoogleSignIn(true);
   }
 
-  async function rescanDrive() { if (accessToken) await connectGoogleWorkspace(accessToken, "", true); }
+  function requestRemoveGoogleAccount() {
+    Alert.alert(copy.removeAccountTitle, copy.removeAccountMessage, [
+      { text: copy.cancel, style: "cancel" },
+      { text: copy.removeAccount, style: "destructive", onPress: () => void removeGoogleAccount() },
+    ]);
+  }
+
+  async function removeGoogleAccount() {
+    setLoading(true);
+    setAccountTransition(true);
+    try {
+      await GoogleSignin.revokeAccess();
+      await clearGoogleSession();
+    } catch (error) {
+      Alert.alert("Google", getErrorMessage(error));
+    } finally {
+      setLoading(false);
+      setAccountTransition(false);
+    }
+  }
 
   // --- Data operations ---
   async function reloadFromGoogle(token = accessToken, sheetId = spreadsheetId, showLoader = true, forceFresh = false) {
@@ -818,12 +900,9 @@ export default function App() {
   }
 
   // --- Render ---
-  if (bootstrapping) {
+  if (bootstrapping || accountTransition || (accessToken && isFirstRemoteLoad && !hasLocalData)) {
     return (
-      <View style={[styles.safe, { backgroundColor: colors.bg }]}>
-        <NativeStatusBar barStyle={theme === "dark" ? "light-content" : "dark-content"} translucent backgroundColor="transparent" />
-        <SkeletonScreen colors={colors} />
-      </View>
+      <StartupSplash />
     );
   }
 
@@ -878,11 +957,7 @@ export default function App() {
                   <Text style={{ color: colors.muted }}>{syncStatusText || copy.syncing}</Text>
                 </View>
               )}
-              {showContentSkeleton ? (
-                <View style={{ flex: 1, paddingTop: contentTopInset }}>
-                  <SkeletonScreen colors={colors} />
-                </View>
-              ) : tab === "expenses" ? (
+              {tab === "expenses" ? (
                 <ExpensesView
                   colors={colors} summary={currentSummary} transactions={visibleTransactions}
                   searchActive={searchActive} searchText={searchFilters.text} selectedRows={selectedRows}
@@ -914,7 +989,7 @@ export default function App() {
                 tagsCount={tagsList.length}
                 onOpenLanguage={openLanguagePicker} onOpenCurrency={openCurrencyPicker} onOpenFont={openFontPicker}
                 onOpenPin={handlePinOpen} onOpenTags={() => setTagEditorVisible(true)}
-                onRescan={rescanDrive} onSwitch={switchGoogleAccount} onDisconnect={disconnectGoogle} onOpenExport={() => setExportVisible(true)}
+                onSwitch={openAccountManager} onDisconnect={disconnectGoogle} onOpenExport={() => setExportVisible(true)}
               />
             </View>
           )}
@@ -982,6 +1057,16 @@ export default function App() {
         onSubmit={() => { setSearchActive(true); setTab("expenses"); setSelectedRows([]); setSearchVisible(false); }}
       />
       <TagEditorModal visible={tagEditorVisible} colors={colors} copy={copy} tags={tagsList} setTags={setTagsList} onClose={() => setTagEditorVisible(false)} />
+    </View>
+  );
+}
+
+function StartupSplash() {
+  return (
+    <View style={{ flex: 1, backgroundColor: "#050E0B" }}>
+      <NativeStatusBar barStyle="light-content" backgroundColor="#050E0B" />
+      <Image source={require("./assets/splash-bucks.png")} resizeMode="cover" style={{ width: "100%", height: "100%" }} />
+      <ActivityIndicator color="#C8FF00" style={{ position: "absolute", bottom: 72, alignSelf: "center" }} />
     </View>
   );
 }
