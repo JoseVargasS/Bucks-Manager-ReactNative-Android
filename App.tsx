@@ -6,7 +6,7 @@ import * as SecureStore from "expo-secure-store";
 import * as Sharing from "expo-sharing";
 import * as SplashScreen from "expo-splash-screen";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Alert, AppState, Image, ScrollView, Text, TouchableOpacity, useWindowDimensions, View, StatusBar as NativeStatusBar } from "react-native";
+import { ActivityIndicator, Alert, Animated, AppState, Easing, Image, Text, TouchableOpacity, useWindowDimensions, View, StatusBar as NativeStatusBar } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { GoogleSignin } from "@react-native-google-signin/google-signin";
 import Svg, { Defs, LinearGradient, Mask, Rect, Stop } from "react-native-svg";
@@ -141,8 +141,8 @@ export default function App() {
   const reloadPromiseRef = useRef<Promise<void> | null>(null);
   const freqIncomeRef = useRef<Record<string, number>>({});
   const hasLocalDataRef = useRef(false);
-  const pagerRef = useRef<ScrollView>(null);
   const tabRef = useRef<Tab>(tab);
+  const pagerTranslateX = useRef(new Animated.Value(0)).current;
   const { width: tabWidth } = useWindowDimensions();
   const statusBarInset = NativeStatusBar.currentHeight || 0;
   const headerTopInset = statusBarInset + 6;
@@ -152,8 +152,16 @@ export default function App() {
   function changeTab(next: Tab) {
     if (next === tabRef.current) return;
     tabRef.current = next;
-    setTab(next);
-    pagerRef.current?.scrollTo({ x: TAB_ORDER.indexOf(next) * tabWidth, animated: true });
+    pagerTranslateX.stopAnimation();
+    Animated.timing(pagerTranslateX, {
+      toValue: -TAB_ORDER.indexOf(next) * tabWidth,
+      duration: 210,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+    requestAnimationFrame(() => {
+      if (tabRef.current === next) setTab(next);
+    });
   }
 
   useEffect(() => {
@@ -180,8 +188,9 @@ export default function App() {
   }, [bootstrapping]);
 
   useEffect(() => {
-    pagerRef.current?.scrollTo({ x: TAB_ORDER.indexOf(tabRef.current) * tabWidth, animated: false });
-  }, [tabWidth]);
+    pagerTranslateX.stopAnimation();
+    pagerTranslateX.setValue(-TAB_ORDER.indexOf(tabRef.current) * tabWidth);
+  }, [pagerTranslateX, tabWidth]);
 
   useEffect(() => {
     applyDefaultFont(fontPreference);
@@ -921,7 +930,7 @@ export default function App() {
         key={targetTab}
         pointerEvents={isCurrent ? "auto" : "none"}
         importantForAccessibility={isCurrent ? "auto" : "no-hide-descendants"}
-        style={{ width: tabWidth, flex: 1, position: "relative" }}
+        style={{ width: tabWidth, height: "100%", position: "relative" }}
       >
         {targetTab === "expenses" || targetTab === "summary" ? (
           <View style={{ flex: 1 }}>
@@ -1058,20 +1067,16 @@ export default function App() {
       <NativeStatusBar barStyle={theme === "dark" ? "light-content" : "dark-content"} translucent backgroundColor="transparent" />
       <View style={[styles.shell, styles.shellCompact, { backgroundColor: colors.bg, paddingTop: 0 }]}>
         <BlurTargetView ref={blurTargetRef} style={[styles.content, { width: "100%", position: "relative", overflow: "hidden" }]}>
-          <ScrollView
-            ref={pagerRef}
-            horizontal
-            pagingEnabled
-            scrollEnabled={false}
-            bounces={false}
-            overScrollMode="never"
-            showsHorizontalScrollIndicator={false}
-            removeClippedSubviews={false}
-            style={{ flex: 1 }}
-            contentContainerStyle={{ width: tabWidth * TAB_ORDER.length }}
+          <Animated.View
+            style={{
+              width: tabWidth * TAB_ORDER.length,
+              height: "100%",
+              flexDirection: "row",
+              transform: [{ translateX: pagerTranslateX }],
+            }}
           >
             {TAB_ORDER.map(renderTabPage)}
-          </ScrollView>
+          </Animated.View>
         </BlurTargetView>
 
         <BottomFade color={colors.bg} height={bottomFadeHeight} />
