@@ -13,6 +13,7 @@
     },
     "android": {
       "package": "com.josev.bucksmanager",
+      "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
         "backgroundColor": "#050E0B",
         "foregroundImage": "./assets/android-icon-foreground-bucks.png",

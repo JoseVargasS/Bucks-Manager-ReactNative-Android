@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { Modal, ScrollView, Text, TouchableOpacity, useWindowDimensions, View, ViewStyle } from "react-native";
+import { Keyboard, Modal, ScrollView, Text, TouchableOpacity, useWindowDimensions, View, ViewStyle } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { styles } from "../../styles/globalStyles";
 import { Palette } from "../../theme/colors";
@@ -17,7 +17,8 @@ export function Select({ value, options, onSelect, colors, placeholder, style, t
   const selected = options.find((o) => o.value === value);
   const label = selected ? selected.label : placeholder;
   const openMenu = () => {
-    triggerRef.current?.measureInWindow((x, y, width, height) => {
+    Keyboard.dismiss();
+    requestAnimationFrame(() => triggerRef.current?.measureInWindow((x, y, width, height) => {
       const margin = 12;
       const gap = 2;
       const panelWidth = Math.min(width, windowSize.width - margin * 2);
@@ -33,7 +34,7 @@ export function Select({ value, options, onSelect, colors, placeholder, style, t
         : Math.min(windowSize.height - margin - maxHeight, anchorTop + height + gap);
       setMenuFrame({ left, menuTop, width: panelWidth, maxHeight });
       setOpen(true);
-    });
+    }));
   };
 
   return (
@@ -70,6 +71,7 @@ export function Select({ value, options, onSelect, colors, placeholder, style, t
               contentContainerStyle={styles.selectMenuContent}
               showsVerticalScrollIndicator={false}
               nestedScrollEnabled
+              keyboardShouldPersistTaps="always"
             >
               {options.map((opt) => {
                 const isSelected = opt.value === value;
