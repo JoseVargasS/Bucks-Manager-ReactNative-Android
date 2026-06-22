@@ -9,7 +9,7 @@ import { UiCopy } from "../../i18n";
 import { useModalTransition } from "../ui/useModalTransition";
 import { Text } from "../ui/AppText";
 
-export type SearchModalHandle = { open: (filters: SearchFilters) => void; close: () => void };
+export type SearchModalHandle = { open: (filters: SearchFilters) => void };
 
 export const SearchModal = forwardRef<SearchModalHandle, {
   colors: Palette; copy: UiCopy; currencySymbol: string; tags: Tag[];
@@ -33,8 +33,7 @@ export const SearchModal = forwardRef<SearchModalHandle, {
       setLocalFilters(filters);
       setVisible(true);
     },
-    close,
-  }), [close]);
+  }), []);
 
   useEffect(() => {
     if (!visible) return;

@@ -1,7 +1,6 @@
-import { Transaction, FontPreference } from "../types";
+import { Transaction } from "../types";
 import { ExportConfig } from "../components/modals/ExportModal";
 import { MONTH_NAMES } from "../domain/bucksLogic";
-import { setAppFontPreference } from "../components/ui/AppText";
 
 export function getLatestTransactionDate(transactions: Transaction[]) {
   const today = new Date();
@@ -113,8 +112,4 @@ export function detectDeviceCurrencySymbol() {
     CL: "CLP$",
   };
   return map[region || ""] || "S/";
-}
-
-export function applyDefaultFont(fontPreference: FontPreference) {
-  setAppFontPreference(fontPreference);
 }

@@ -9,7 +9,7 @@ import { Text } from "../ui/AppText";
 
 type PickerOption = { label: string; value: string; icon?: MaterialIconName; tone?: string; fontFamily?: string };
 type PickerConfig = { title: string; options: PickerOption[]; selectedValue: string; onSelect: (value: string) => void };
-export type OptionSheetHandle = { open: (config: PickerConfig) => void; close: () => void };
+export type OptionSheetHandle = { open: (config: PickerConfig) => void };
 
 export const OptionSheet = forwardRef<OptionSheetHandle, { colors: Palette }>(function OptionSheet({ colors }, ref) {
   const [config, setConfig] = useState<PickerConfig | null>(null);
@@ -27,8 +27,7 @@ export const OptionSheet = forwardRef<OptionSheetHandle, { colors: Palette }>(fu
       setConfig(next);
       setVisible(true);
     },
-    close,
-  }), [close]);
+  }), []);
 
   if (!config || !transition.modalVisible) return null;
   return (
@@ -72,5 +71,3 @@ export const OptionSheet = forwardRef<OptionSheetHandle, { colors: Palette }>(fu
     </Modal>
   );
 });
-
-export type { PickerConfig };

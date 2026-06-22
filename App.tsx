@@ -6,14 +6,14 @@ import * as SecureStore from "expo-secure-store";
 import * as Sharing from "expo-sharing";
 import * as SplashScreen from "expo-splash-screen";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Alert, Animated, AppState, Easing, Image, Pressable, TouchableOpacity, useWindowDimensions, View, StatusBar as NativeStatusBar } from "react-native";
+import { ActivityIndicator, Alert, Animated, AppState, Easing, Image, Pressable, useWindowDimensions, View, StatusBar as NativeStatusBar } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { GoogleSignin } from "@react-native-google-signin/google-signin";
 import Svg, { Defs, LinearGradient, Mask, Rect, Stop } from "react-native-svg";
 
 import {
   applySearch, buildTransactionFromDraft, calculateSummaries,
-  formatDateToISO, getMonthYear, insertChronologically, MONTH_NAMES, SHEET_NAMES,
+  formatDateToISO, insertChronologically, MONTH_NAMES, SHEET_NAMES,
 } from "./src/domain/bucksLogic";
 import {
   createBucksSpreadsheet, findCompatibleSheets, moveTransaction as moveGoogleTransaction,
@@ -46,10 +46,10 @@ import { PinSetupModal } from "./src/components/modals/PinSetupModal";
 import { SearchModal, SearchModalHandle } from "./src/components/modals/SearchModal";
 import { TagEditorModal } from "./src/components/modals/TagEditorModal";
 import { OptionSheet, OptionSheetHandle } from "./src/components/modals/OptionSheet";
-import { getAppFontFamily, Text } from "./src/components/ui/AppText";
+import { getAppFontFamily, setAppFontPreference, Text } from "./src/components/ui/AppText";
 import { ExportFormat, HistoryEntry, SearchFilters, SummaryRow, Tab, ThemeMode, LanguageMode, FontPreference, MaterialIconName, Tag, Transaction, TransactionDraft } from "./src/types";
-import { getLatestTransactionDate, parseLocalDateTime, parseMonthKey, buildExportFileName, getPeriodRange, getAvailableMonthsForYear, detectDeviceCurrencySymbol, detectDeviceLanguage, applyDefaultFont } from "./src/utils/helpers";
-import { UI_COPY, UI_MONTH_NAMES, UiCopy } from "./src/i18n";
+import { getLatestTransactionDate, parseLocalDateTime, parseMonthKey, buildExportFileName, getPeriodRange, getAvailableMonthsForYear, detectDeviceCurrencySymbol, detectDeviceLanguage } from "./src/utils/helpers";
+import { UI_COPY, UI_MONTH_NAMES } from "./src/i18n";
 
 SplashScreen.preventAutoHideAsync().catch(() => undefined);
 SplashScreen.setOptions({ duration: 220, fade: true });
@@ -202,7 +202,7 @@ export default function App() {
   }, [pagerTranslateX, tabWidth]);
 
   useEffect(() => {
-    applyDefaultFont(fontPreference);
+    setAppFontPreference(fontPreference);
   }, [fontPreference]);
 
   useEffect(() => {
@@ -325,7 +325,7 @@ export default function App() {
     if (storedFont === "system" || FONT_PREFERENCES.includes(storedFont as FontPreference)) {
       const preference: FontPreference = storedFont === "system" ? "dmsans" : storedFont as FontPreference;
       setFontPreference(preference);
-      applyDefaultFont(preference);
+      setAppFontPreference(preference);
       if (storedFont === "system") await SecureStore.setItemAsync(FONT_KEY, preference);
     }
   }
@@ -343,7 +343,7 @@ export default function App() {
 
   const saveFontPreference = useCallback((next: string) => {
     const value = FONT_PREFERENCES.includes(next as FontPreference) ? next as FontPreference : "dmsans";
-    applyDefaultFont(value);
+    setAppFontPreference(value);
     setFontPreference(value);
     SecureStore.setItemAsync(FONT_KEY, value).catch(() => undefined);
   }, []);
@@ -428,7 +428,7 @@ export default function App() {
     try {
       if (preferredSheetId && !forceScan) {
         try {
-          await selectSpreadsheet(token, preferredSheetId, "", false);
+          await selectSpreadsheet(token, preferredSheetId, false);
           return;
         } catch (error) {
           if (!shouldRescanForSheetError(error)) throw error;
@@ -436,16 +436,16 @@ export default function App() {
       }
       const candidates = await findCompatibleSheets(token);
       const namedSheet = candidates.find((c) => c.name.trim().toUpperCase() === SHEET_NAMES.transactions);
-      if (namedSheet) { await selectSpreadsheet(token, namedSheet.id, namedSheet.name); return; }
+      if (namedSheet) { await selectSpreadsheet(token, namedSheet.id); return; }
       const sheetId = await createBucksSpreadsheet(token);
-      await selectSpreadsheet(token, sheetId, SHEET_NAMES.transactions);
+      await selectSpreadsheet(token, sheetId);
     } catch (error) {
       setSyncError(getErrorMessage(error));
       if (!hasLocalDataRef.current) Alert.alert("Google Sheets", getErrorMessage(error));
     } finally { setLoading(false); setIsSyncing(false); }
   }
 
-  async function selectSpreadsheet(token: string, sheetId: string, _name: string, showLoader = true) {
+  async function selectSpreadsheet(token: string, sheetId: string, showLoader = true) {
     setLoading(true);
     try {
       await SecureStore.setItemAsync(TOKEN_KEY, token);

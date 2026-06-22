@@ -16,7 +16,6 @@ import { Text, TextInput } from "../ui/AppText";
 
 export type TransactionModalHandle = {
   open: (draft: TransactionDraft, editingTx?: Transaction | null) => void;
-  close: () => void;
 };
 
 export const TransactionModal = forwardRef<TransactionModalHandle, {
@@ -73,8 +72,7 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
       submittingRef.current = false;
       setVisible(true);
     },
-    close,
-  }), [close]);
+  }), []);
 
   useEffect(() => {
     if (!visible) return;
