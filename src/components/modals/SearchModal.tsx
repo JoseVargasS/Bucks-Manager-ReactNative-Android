@@ -1,4 +1,4 @@
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useState } from "react";
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { Animated, BackHandler, Keyboard, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { styles } from "../../styles/globalStyles";
@@ -16,7 +16,12 @@ export const SearchModal = forwardRef<SearchModalHandle, {
 }>(function SearchModal({ colors, copy, currencySymbol, tags, onClear, onSubmit }, ref) {
   const [visible, setVisible] = useState(false);
   const [localFilters, setLocalFilters] = useState<SearchFilters>({ text: "", tag: "", minAmount: "", maxAmount: "", startDate: "", endDate: "" });
-  const transition = useModalTransition(visible, 24);
+  const pendingAction = useRef<(() => void) | null>(null);
+  const transition = useModalTransition(visible, 24, 1, () => {
+    const action = pendingAction.current;
+    pendingAction.current = null;
+    action?.();
+  });
   const close = useCallback(() => {
     Keyboard.dismiss();
     setVisible(false);
@@ -61,7 +66,7 @@ export const SearchModal = forwardRef<SearchModalHandle, {
               <MaterialCommunityIcons name="close" size={20} color={colors.text} />
             </TouchableOpacity>
           </View>
-          <SearchPage colors={colors} copy={copy} currencySymbol={currencySymbol} tags={tags} filters={localFilters} setFilters={setLocalFilters} onSubmit={() => { close(); onSubmit(localFilters); }} onClear={() => { close(); onClear(); }} />
+          <SearchPage colors={colors} copy={copy} currencySymbol={currencySymbol} tags={tags} filters={localFilters} setFilters={setLocalFilters} onSubmit={() => { const filters = localFilters; pendingAction.current = () => onSubmit(filters); close(); }} onClear={() => { pendingAction.current = onClear; close(); }} />
         </Animated.View>
       </Animated.View>
   );

@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Modal, ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { useRef, useState } from "react";
+import { Animated, Modal, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { styles } from "../../styles/globalStyles";
 import { ModalHeader } from "../ui/ModalHeader";
@@ -8,6 +8,7 @@ import { CalendarPicker } from "../ui/CalendarPicker";
 import { Palette } from "../../theme/colors";
 import { ExportFormat } from "../../types";
 import { UiCopy } from "../../i18n";
+import { useModalTransition } from "../ui/useModalTransition";
 
 export type ExportConfig = {
   format: ExportFormat;
@@ -23,6 +24,12 @@ export function ExportModal({ visible, colors, copy, config, setConfig, minDate,
 }) {
   const [calFrom, setCalFrom] = useState(false);
   const [calTo, setCalTo] = useState(false);
+  const pendingExport = useRef<ExportConfig | null>(null);
+  const transition = useModalTransition(visible, 12, 0.985, () => {
+    const pending = pendingExport.current;
+    pendingExport.current = null;
+    if (pending) onExport(pending);
+  });
   const locale = copy.languageCode === "en" ? "en-US" : "es-PE";
   const rangeLabel = (val: string, isMonth?: boolean) => {
     if (!val) return copy.select;
@@ -34,11 +41,12 @@ export function ExportModal({ visible, colors, copy, config, setConfig, minDate,
     const d = new Date(val + "T12:00:00");
     return d.toLocaleDateString(locale, { day: "2-digit", month: "short", year: "numeric" }).toUpperCase();
   };
+  if (!transition.modalVisible) return null;
   return (
-    <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
-      <View style={[styles.modalOverlay, { backgroundColor: colors.overlay }]}>
+    <Modal visible transparent animationType="none" onRequestClose={onClose}>
+      <Animated.View style={[styles.modalOverlay, { backgroundColor: colors.overlay }, transition.containerStyle]}>
         <TouchableOpacity style={styles.optionBackdrop} activeOpacity={1} onPress={onClose} />
-        <View style={[styles.modal, { backgroundColor: colors.card }]}>
+        <Animated.View style={[styles.modal, { backgroundColor: colors.card }, transition.panelStyle]}>
           <ModalHeader title={copy.exportMovements} icon="file-export" colors={colors} onClose={onClose} />
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 10 }} keyboardShouldPersistTaps="handled">
             <Text style={[styles.label, { color: colors.text }]}>{copy.format}</Text>
@@ -118,10 +126,10 @@ export function ExportModal({ visible, colors, copy, config, setConfig, minDate,
                 <CalendarPicker visible={calTo} value={config.endDate} mode="date" minDate={minDate} onSelect={(v: string) => setConfig({ ...config, endDate: v })} onClose={() => setCalTo(false)} colors={colors} copy={copy} />
               </>
             )}
-            <ActionRow colors={colors} onCancel={onClose} onSubmit={() => onExport(config)} submitLabel={copy.exportAction} cancelLabel={copy.cancel} />
+            <ActionRow colors={colors} onCancel={onClose} onSubmit={() => { pendingExport.current = config; onClose(); }} submitLabel={copy.exportAction} cancelLabel={copy.cancel} />
           </ScrollView>
-        </View>
-      </View>
+        </Animated.View>
+      </Animated.View>
     </Modal>
   );
 }

@@ -1,5 +1,5 @@
-import { memo, useCallback, useMemo, useRef, useState } from "react";
-import { Dimensions, Modal, Pressable, SectionList, Text, TouchableOpacity, View } from "react-native";
+import { memo, useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { Animated, Dimensions, Modal, Pressable, SectionList, Text, TouchableOpacity, View } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { formatMoney } from "../../domain/bucksLogic";
 import { formatCreatedTime, typeColor, typeFill, typeLabelFull } from "../../utils/formats";
@@ -11,6 +11,7 @@ import { HighlightedText } from "../ui/HighlightedText";
 import { Palette } from "../../theme/colors";
 import { SummaryRow, Tag, Transaction, MaterialIconName } from "../../types";
 import { UiCopy } from "../../i18n";
+import { useModalTransition } from "../ui/useModalTransition";
 
 type TransactionSection = {
   key: string;
@@ -144,7 +145,7 @@ const TransactionRow = memo(function TransactionRow({
   );
 });
 
-export function ExpensesView({
+export const ExpensesView = memo(function ExpensesView({
   colors,
   summary,
   transactions,
@@ -190,6 +191,8 @@ export function ExpensesView({
   const firstSelectedRow = selectedRows[0];
   const selectedTx = useMemo(() => transactions.find((tx) => tx.rowId === firstSelectedRow), [transactions, firstSelectedRow]);
   const [tagBubble, setTagBubble] = useState<TagBubble | null>(null);
+  const [displayTagBubble, setDisplayTagBubble] = useState<TagBubble | null>(null);
+  const tagBubbleTransition = useModalTransition(Boolean(tagBubble), 6, 0.99);
   const tagButtonRefs = useRef<Record<number, TagButtonRef | null>>({});
   const tagColorMap = useMemo(() => {
     const map: Record<string, string> = {};
@@ -199,6 +202,12 @@ export function ExpensesView({
 
   const keyExtractor = useCallback((tx: Transaction) => `${tx.rowId}-${tx.rawDate}-${tx.createdAt || ""}-${tx.amount}-${tx.detail}`, []);
   const closeTagBubble = useCallback(() => setTagBubble(null), []);
+
+  useLayoutEffect(() => {
+    if (tagBubble) setDisplayTagBubble(tagBubble);
+  }, [tagBubble]);
+
+  const currentTagBubble = tagBubble || displayTagBubble;
 
   const renderListHeader = useCallback(() => (
     <>
@@ -304,11 +313,12 @@ export function ExpensesView({
         onMomentumScrollBegin={closeTagBubble}
       />
 
-      <Modal visible={!!tagBubble} transparent animationType="none" onRequestClose={() => setTagBubble(null)}>
-        <TouchableOpacity activeOpacity={1} onPress={() => setTagBubble(null)} style={{ flex: 1 }}>
-          <View onStartShouldSetResponder={() => true} style={{ position: "absolute", left: tagBubble?.x || 0, top: tagBubble?.y || 0, maxWidth: 170, borderRadius: 12, padding: 8, backgroundColor: colors.card, shadowColor: "#000", shadowOpacity: 0.22, shadowRadius: 12, elevation: 8 }}>
+      {currentTagBubble && tagBubbleTransition.modalVisible && <Modal visible transparent animationType="none" onRequestClose={closeTagBubble}>
+        <Animated.View style={[{ flex: 1 }, tagBubbleTransition.containerStyle]}>
+        <TouchableOpacity activeOpacity={1} onPress={closeTagBubble} style={{ flex: 1 }}>
+          <Animated.View onStartShouldSetResponder={() => true} style={[{ position: "absolute", left: currentTagBubble.x, top: currentTagBubble.y, maxWidth: 170, borderRadius: 12, padding: 8, backgroundColor: colors.card, shadowColor: "#000", shadowOpacity: 0.22, shadowRadius: 12, elevation: 8 }, tagBubbleTransition.panelStyle]}>
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
-              {(tagBubble?.tags || []).map((tag) => {
+              {currentTagBubble.tags.map((tag) => {
                 const tc = tagColorMap[tag] || colors.muted;
                 const textColor = tagTextColor(tc);
                 return (
@@ -318,9 +328,10 @@ export function ExpensesView({
                 );
               })}
             </View>
-          </View>
+          </Animated.View>
         </TouchableOpacity>
-      </Modal>
+        </Animated.View>
+      </Modal>}
     </>
   );
-}
+});

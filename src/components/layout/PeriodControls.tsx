@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { TouchableOpacity, View } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { styles } from "../../styles/globalStyles";
@@ -5,7 +6,7 @@ import { Select } from "../ui/Select";
 import { Palette } from "../../theme/colors";
 import { UiCopy, UI_MONTH_NAMES } from "../../i18n";
 
-export function PeriodControls({
+export const PeriodControls = memo(function PeriodControls({
   colors,
   copy,
   year,
@@ -51,4 +52,4 @@ export function PeriodControls({
       </View>
     </View>
   );
-}
+});

@@ -1,4 +1,4 @@
-import { useLayoutEffect, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { Animated, Modal, Text, TouchableOpacity, View, ScrollView } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { styles } from "../../styles/globalStyles";
@@ -11,7 +11,12 @@ type PickerConfig = { title: string; options: PickerOption[]; selectedValue: str
 
 export function OptionSheet({ config, colors, onClose }: { config: PickerConfig; colors: Palette; onClose: () => void }) {
   const [displayConfig, setDisplayConfig] = useState(config);
-  const transition = useModalTransition(Boolean(config), 24);
+  const pendingSelection = useRef<{ value: string; onSelect: (value: string) => void } | null>(null);
+  const transition = useModalTransition(Boolean(config), 24, 1, () => {
+    const pending = pendingSelection.current;
+    pendingSelection.current = null;
+    if (pending) pending.onSelect(pending.value);
+  });
   const current = config || displayConfig;
 
   useLayoutEffect(() => {
@@ -42,8 +47,7 @@ export function OptionSheet({ config, colors, onClose }: { config: PickerConfig;
                     { backgroundColor: selected ? colors.primarySoft : colors.input },
                   ]}
                   onPress={() => {
-                    transition.dismissImmediately();
-                    current.onSelect(option.value);
+                    pendingSelection.current = { value: option.value, onSelect: current.onSelect };
                     onClose();
                   }}
                 >

@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { ScrollView, Switch, Text, TouchableOpacity, View } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { styles } from "../../styles/globalStyles";
@@ -5,7 +6,7 @@ import { Palette } from "../../theme/colors";
 import { MaterialIconName } from "../../types";
 import { UiCopy } from "../../i18n";
 
-export function SettingsView({
+export const SettingsView = memo(function SettingsView({
   colors, copy, accountInfo, language, currencySymbol, fontPreference, pinEnabled,
   tagsCount,
   onOpenLanguage, onOpenCurrency, onOpenFont, onOpenPin, onOpenTags,
@@ -86,7 +87,7 @@ export function SettingsView({
       </TouchableOpacity>
     </ScrollView>
   );
-}
+});
 
 function SettingsRow({ colors, icon, label, value, onPress, last = false }: {
   colors: Palette; icon: MaterialIconName;

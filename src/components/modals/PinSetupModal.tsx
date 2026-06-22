@@ -1,9 +1,10 @@
-import { useState } from "react";
-import { Modal, Text, TouchableOpacity, View } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import { Animated, Modal, Text, TouchableOpacity, View } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { styles } from "../../styles/globalStyles";
 import { Palette } from "../../theme/colors";
 import { PinScreen } from "../screens/PinScreen";
+import { useModalTransition } from "../ui/useModalTransition";
 
 export function PinSetupModal({ visible, colors, copy, onClose, onSave }: {
   visible: boolean;
@@ -16,12 +17,29 @@ export function PinSetupModal({ visible, colors, copy, onClose, onSave }: {
   const [firstPin, setFirstPin] = useState("");
   const [enteredPin, setEnteredPin] = useState("");
   const [wrong, setWrong] = useState(false);
+  const pendingPin = useRef<string | null>(null);
+  const resetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const transition = useModalTransition(visible, 12, 0.985, () => {
+    const pin = pendingPin.current;
+    pendingPin.current = null;
+    resetForm();
+    if (pin) onSave(pin);
+  });
 
-  function handleClose() {
+  useEffect(() => () => {
+    if (resetTimer.current) clearTimeout(resetTimer.current);
+  }, []);
+
+  function resetForm() {
+    if (resetTimer.current) clearTimeout(resetTimer.current);
+    resetTimer.current = null;
     setPhase("enter");
     setFirstPin("");
     setEnteredPin("");
     setWrong(false);
+  }
+
+  function handleClose() {
     onClose();
   }
 
@@ -38,29 +56,22 @@ export function PinSetupModal({ visible, colors, copy, onClose, onSave }: {
 
   function handleConfirm() {
     if (enteredPin === firstPin) {
-      onSave(enteredPin);
-      setPhase("enter");
-      setFirstPin("");
-      setEnteredPin("");
-      setWrong(false);
+      pendingPin.current = enteredPin;
+      onClose();
     } else {
       setWrong(true);
-      setTimeout(() => {
-        setPhase("enter");
-        setFirstPin("");
-        setEnteredPin("");
-        setWrong(false);
-      }, 1200);
+      resetTimer.current = setTimeout(resetForm, 1200);
     }
   }
 
   const inFirstPhase = phase === "enter";
 
+  if (!transition.modalVisible) return null;
   return (
-    <Modal visible={visible} transparent animationType="none" onRequestClose={handleClose}>
-      <View style={[styles.modalOverlay, { backgroundColor: colors.overlay }]}>
+    <Modal visible transparent animationType="none" onRequestClose={handleClose}>
+      <Animated.View style={[styles.modalOverlay, { backgroundColor: colors.overlay }, transition.containerStyle]}>
         <TouchableOpacity style={styles.optionBackdrop} activeOpacity={1} onPress={handleClose} />
-        <View style={[styles.recordModal, { backgroundColor: colors.card }]}>
+        <Animated.View style={[styles.recordModal, { backgroundColor: colors.card }, transition.panelStyle]}>
           <View style={[styles.recordHeader, { borderColor: colors.border }]}>
             <Text style={[styles.recordTitle, { color: colors.text }]}>
               <MaterialCommunityIcons name="shield-lock" size={19} color={colors.primary} />{" "}
@@ -83,8 +94,8 @@ export function PinSetupModal({ visible, colors, copy, onClose, onSave }: {
               onConfirm={!inFirstPhase ? handleConfirm : undefined}
             />
           </View>
-        </View>
-      </View>
+        </Animated.View>
+      </Animated.View>
     </Modal>
   );
 }

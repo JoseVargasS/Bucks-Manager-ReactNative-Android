@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 import { ScrollView, Text, View } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
@@ -11,7 +11,7 @@ import { BarChart } from "../ui/BarChart";
 import { Kpi } from "../ui/Kpi";
 import { Select } from "../ui/Select";
 
-export function SummaryView({ colors, copy, summaries, transactions, freqIncome, availableYears, topInset, currencySymbol }: {
+export const SummaryView = memo(function SummaryView({ colors, copy, summaries, transactions, freqIncome, availableYears, topInset, currencySymbol }: {
   colors: Palette; copy: UiCopy; summaries: SummaryRow[]; transactions: Transaction[]; freqIncome: Record<string, number>;
   availableYears: number[]; topInset?: number; currencySymbol: string;
 }) {
@@ -148,7 +148,7 @@ export function SummaryView({ colors, copy, summaries, transactions, freqIncome,
       </View>
     </ScrollView>
   );
-}
+});
 
 function Insight({ label, value, icon, color, colors }: { label: string; value: string; icon: MaterialIconName; color: string; colors: Palette }) {
   return (

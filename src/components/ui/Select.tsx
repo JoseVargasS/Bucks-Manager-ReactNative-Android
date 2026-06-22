@@ -14,8 +14,13 @@ export function Select({ value, options, onSelect, colors, placeholder, style, t
   const [open, setOpen] = useState(false);
   const [menuFrame, setMenuFrame] = useState({ left: 12, menuTop: 124, width: 180, maxHeight: 240 });
   const triggerRef = useRef<View>(null);
+  const pendingSelection = useRef<string | null>(null);
   const windowSize = useWindowDimensions();
-  const transition = useModalTransition(open, 6, 0.99);
+  const transition = useModalTransition(open, 6, 0.99, () => {
+    const next = pendingSelection.current;
+    pendingSelection.current = null;
+    if (next !== null) onSelect(next);
+  });
   const selected = options.find((o) => o.value === value);
   const label = selected ? selected.label : placeholder;
   const openMenu = () => {
@@ -87,8 +92,7 @@ export function Select({ value, options, onSelect, colors, placeholder, style, t
                       { backgroundColor: isSelected ? opt.softBg || colors.primarySoft : "transparent" },
                     ]}
                     onPress={() => {
-                      transition.dismissImmediately();
-                      onSelect(opt.value);
+                      pendingSelection.current = opt.value;
                       setOpen(false);
                     }}
                   >

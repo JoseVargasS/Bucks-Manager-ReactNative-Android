@@ -1,4 +1,5 @@
-import { FlatList, Modal, Text, TouchableOpacity, View } from "react-native";
+import { useMemo } from "react";
+import { Animated, FlatList, Modal, Text, TouchableOpacity, View } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { HistoryEntry } from "../../types";
 import { styles } from "../../styles/globalStyles";
@@ -6,6 +7,7 @@ import { Palette } from "../../theme/colors";
 import { formatMoney } from "../../domain/bucksLogic";
 import { formatCreatedTime } from "../../utils/formats";
 import { UiCopy } from "../../i18n";
+import { useModalTransition } from "../ui/useModalTransition";
 
 export function HistoryModal({ visible, entries, colors, currencySymbol, copy, onClose, onUndo }: {
   visible: boolean;
@@ -16,13 +18,15 @@ export function HistoryModal({ visible, entries, colors, currencySymbol, copy, o
   onClose: () => void;
   onUndo: (entry: HistoryEntry) => void;
 }) {
-  const deletedOnly = entries.filter((e) => e.action === "delete");
+  const deletedOnly = useMemo(() => entries.filter((entry) => entry.action === "delete"), [entries]);
+  const transition = useModalTransition(visible, 12, 0.985);
 
+  if (!transition.modalVisible) return null;
   return (
-    <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
-      <View style={[styles.modalOverlay, { backgroundColor: colors.overlay }]}>
+    <Modal visible transparent animationType="none" onRequestClose={onClose}>
+      <Animated.View style={[styles.modalOverlay, { backgroundColor: colors.overlay }, transition.containerStyle]}>
         <TouchableOpacity style={styles.optionBackdrop} activeOpacity={1} onPress={onClose} />
-        <View style={[styles.recordModal, { backgroundColor: colors.card }]}>
+        <Animated.View style={[styles.recordModal, { backgroundColor: colors.card }, transition.panelStyle]}>
           <View style={[styles.recordHeader, { borderColor: colors.border }]}>
             <Text style={[styles.recordTitle, { color: colors.text }]}>
               <MaterialCommunityIcons name="delete-restore" size={19} color={colors.red} /> {copy.history}
@@ -78,8 +82,8 @@ export function HistoryModal({ visible, entries, colors, currencySymbol, copy, o
               />
             )}
           </View>
-        </View>
-      </View>
+        </Animated.View>
+      </Animated.View>
     </Modal>
   );
 }

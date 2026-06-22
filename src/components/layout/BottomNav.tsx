@@ -1,4 +1,4 @@
-import type { RefObject } from "react";
+import { memo, type RefObject } from "react";
 import { Pressable, Text, View } from "react-native";
 import { BlurView } from "expo-blur";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
@@ -7,7 +7,7 @@ import { Palette } from "../../theme/colors";
 import { Tab, MaterialIconName } from "../../types";
 import { UiCopy } from "../../i18n";
 
-export function BottomNav({ colors, copy, tab, setTab, onAdd, onSearch, blurTarget }: {
+export const BottomNav = memo(function BottomNav({ colors, copy, tab, setTab, onAdd, onSearch, blurTarget }: {
   colors: Palette; copy: UiCopy; tab: Tab; setTab: (tab: Tab) => void; onAdd: () => void; onSearch: () => void; blurTarget: RefObject<View | null>;
 }) {
   const isDark = colors.bg === "#0f1117";
@@ -40,7 +40,7 @@ export function BottomNav({ colors, copy, tab, setTab, onAdd, onSearch, blurTarg
       </View>
     </View>
   );
-}
+});
 
 function BottomNavItem({ colors, active, icon, label, onPress }: { colors: Palette; active: boolean; icon: MaterialIconName; label: string; onPress: () => void }) {
   return (

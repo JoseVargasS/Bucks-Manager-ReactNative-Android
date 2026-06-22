@@ -1,4 +1,4 @@
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useState } from "react";
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { Animated, BackHandler, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { styles } from "../../styles/globalStyles";
@@ -14,7 +14,12 @@ export type DetailModalHandle = { open: (tx: Transaction) => void; close: () => 
 export const DetailModal = forwardRef<DetailModalHandle, { colors: Palette; currencySymbol: string; copy: UiCopy; onEdit: (tx: Transaction) => void; onDelete: (tx: Transaction) => void }>(function DetailModal({ colors, currencySymbol, copy, onEdit, onDelete }, ref) {
   const [visible, setVisible] = useState(false);
   const [current, setCurrent] = useState<Transaction | null>(null);
-  const transition = useModalTransition(visible, 12, 0.985);
+  const pendingAction = useRef<(() => void) | null>(null);
+  const transition = useModalTransition(visible, 12, 0.985, () => {
+    const action = pendingAction.current;
+    pendingAction.current = null;
+    action?.();
+  });
   const close = useCallback(() => setVisible(false), []);
   const amount = current?.amount ?? 0;
   const isIncome = amount >= 0;
@@ -72,11 +77,11 @@ export const DetailModal = forwardRef<DetailModalHandle, { colors: Palette; curr
                 <DetailMetaRow icon="clock-outline" label={copy.time} value={current ? formatCreatedTime(current.createdAt) : ""} tone={colors.muted} colors={colors} />
               </View>
               <View style={styles.detailActions}>
-                <TouchableOpacity disabled={!current} style={[styles.detailActionBtn, { backgroundColor: colors.input }]} onPress={() => { if (!current) return; transition.dismissImmediately(); setVisible(false); onEdit(current); }}>
+                <TouchableOpacity disabled={!current} style={[styles.detailActionBtn, { backgroundColor: colors.input }]} onPress={() => { if (!current) return; pendingAction.current = () => onEdit(current); close(); }}>
                   <MaterialCommunityIcons name="pencil" size={18} color={colors.blue} />
                   <Text style={[styles.detailActionText, { color: colors.blue }]}>{copy.edit}</Text>
                 </TouchableOpacity>
-                <TouchableOpacity disabled={!current} style={[styles.detailActionBtn, { backgroundColor: colors.input }]} onPress={() => { if (!current) return; transition.dismissImmediately(); setVisible(false); onDelete(current); }}>
+                <TouchableOpacity disabled={!current} style={[styles.detailActionBtn, { backgroundColor: colors.input }]} onPress={() => { if (!current) return; pendingAction.current = () => onDelete(current); close(); }}>
                   <MaterialCommunityIcons name="trash-can" size={18} color={colors.red} />
                   <Text style={[styles.detailActionText, { color: colors.red }]}>{copy.delete}</Text>
                 </TouchableOpacity>

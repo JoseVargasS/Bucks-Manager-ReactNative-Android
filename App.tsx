@@ -46,7 +46,7 @@ import { PinSetupModal } from "./src/components/modals/PinSetupModal";
 import { SearchModal, SearchModalHandle } from "./src/components/modals/SearchModal";
 import { TagEditorModal } from "./src/components/modals/TagEditorModal";
 import { OptionSheet, PickerConfig } from "./src/components/modals/OptionSheet";
-import { ExportFormat, HistoryEntry, SearchFilters, SummaryRow, Tab, ThemeMode, LanguageMode, FontPreference, Tag, Transaction, TransactionDraft, TransactionType } from "./src/types";
+import { ExportFormat, HistoryEntry, SearchFilters, SummaryRow, Tab, ThemeMode, LanguageMode, FontPreference, Tag, Transaction, TransactionDraft } from "./src/types";
 import { getLatestTransactionDate, parseLocalDateTime, parseMonthKey, buildExportFileName, getPeriodRange, getAvailableMonthsForYear, detectDeviceCurrencySymbol, detectDeviceLanguage, applyDefaultFont } from "./src/utils/helpers";
 import { UI_COPY, UI_MONTH_NAMES, UiCopy } from "./src/i18n";
 
@@ -148,7 +148,7 @@ export default function App() {
   const headerFadeHeight = Math.max(headerTopInset + 28, 56);
   const bottomFadeHeight = 128;
 
-  function changeTab(next: Tab) {
+  const changeTab = useCallback((next: Tab) => {
     if (next === tabRef.current) return;
     tabRef.current = next;
     pagerTranslateX.stopAnimation();
@@ -161,7 +161,7 @@ export default function App() {
     requestAnimationFrame(() => {
       if (tabRef.current === next) setTab(next);
     });
-  }
+  }, [pagerTranslateX, tabWidth]);
 
   useEffect(() => {
     GoogleSignin.configure({
@@ -226,6 +226,9 @@ export default function App() {
   }, [transactions]);
 
   const availableMonths = useMemo(() => getAvailableMonthsForYear(year, transactions), [year, transactions]);
+  const exportMinDate = useMemo(() => transactions.length
+    ? transactions.reduce((earliest, tx) => tx.rawDate < earliest ? tx.rawDate : earliest, transactions[0].rawDate).slice(0, 10)
+    : "", [transactions]);
 
   const uiMonthNames = copy.languageCode === "en" ? UI_MONTH_NAMES.en : UI_MONTH_NAMES.es;
   const savedDataText = copy.languageCode === "en" ? "Saved data" : "Datos guardados";
@@ -315,25 +318,25 @@ export default function App() {
     }
   }
 
-  function saveLanguage(next: string) {
+  const saveLanguage = useCallback((next: string) => {
     const value = next === "en" ? "en" : "es";
     setLanguage(value);
     SecureStore.setItemAsync(LANGUAGE_KEY, value).catch(() => undefined);
-  }
+  }, []);
 
-  function saveCurrencySymbol(next: string) {
+  const saveCurrencySymbol = useCallback((next: string) => {
     setCurrencySymbol(next);
     SecureStore.setItemAsync(CURRENCY_SYMBOL_KEY, next).catch(() => undefined);
-  }
+  }, []);
 
-  function saveFontPreference(next: string) {
+  const saveFontPreference = useCallback((next: string) => {
     const value = next === "serif" || next === "mono" ? next : "system";
     applyDefaultFont(value);
     setFontPreference(value);
     SecureStore.setItemAsync(FONT_KEY, value).catch(() => undefined);
-  }
+  }, []);
 
-  function openLanguagePicker() {
+  const openLanguagePicker = useCallback(() => {
     setPicker({
       title: copy.language,
       selectedValue: language,
@@ -343,9 +346,9 @@ export default function App() {
       ],
       onSelect: saveLanguage,
     });
-  }
+  }, [copy, language, saveLanguage]);
 
-  function openCurrencyPicker() {
+  const openCurrencyPicker = useCallback(() => {
     setPicker({
       title: copy.currencySymbol,
       selectedValue: currencySymbol,
@@ -356,9 +359,9 @@ export default function App() {
       })),
       onSelect: saveCurrencySymbol,
     });
-  }
+  }, [copy.currencySymbol, currencySymbol, language, saveCurrencySymbol]);
 
-  function openFontPicker() {
+  const openFontPicker = useCallback(() => {
     setPicker({
       title: copy.fontStyle,
       selectedValue: fontPreference,
@@ -369,9 +372,9 @@ export default function App() {
       ],
       onSelect: saveFontPreference,
     });
-  }
+  }, [copy, fontPreference, saveFontPreference]);
 
-  function openAccountManager() {
+  const openAccountManager = useCallback(() => {
     setPicker({
       title: copy.googleAccounts,
       selectedValue: "",
@@ -380,11 +383,11 @@ export default function App() {
         { label: copy.removeCurrentAccount, value: "remove", icon: "account-remove", tone: colors.red },
       ],
       onSelect: (value) => {
-        if (value === "switch") void switchGoogleAccount();
-        if (value === "remove") requestRemoveGoogleAccount();
+        if (value === "switch") void runGoogleSignIn(true);
+        if (value === "remove") setConfirmConfig({ kind: "removeAccount" });
       },
     });
-  }
+  }, [colors.red, copy]);
 
   async function getWorkspaceAccessToken(interactive: boolean) {
     let current = GoogleSignin.getCurrentUser();
@@ -574,16 +577,9 @@ export default function App() {
     await clearGoogleSession();
   }
 
-  async function switchGoogleAccount() {
-    await runGoogleSignIn(true);
-  }
-
-  function requestRemoveGoogleAccount() {
-    Alert.alert(copy.removeAccountTitle, copy.removeAccountMessage, [
-      { text: copy.cancel, style: "cancel" },
-      { text: copy.removeAccount, style: "destructive", onPress: () => void removeGoogleAccount() },
-    ]);
-  }
+  const requestDisconnectGoogle = useCallback(() => {
+    setConfirmConfig({ kind: "disconnect" });
+  }, []);
 
   async function removeGoogleAccount() {
     setLoading(true);
@@ -642,30 +638,30 @@ export default function App() {
     return task;
   }
 
-  function selectPeriod(nextMonth: number, nextYear: number) {
+  const selectPeriod = useCallback((nextMonth: number, nextYear: number) => {
     const validMonths = getAvailableMonthsForYear(nextYear, transactions);
     const clampedMonth = validMonths.includes(nextMonth)
       ? nextMonth
       : validMonths.reduce((closest, item) => Math.abs(item - nextMonth) < Math.abs(closest - nextMonth) ? item : closest, validMonths[0] ?? nextMonth);
     setMonth(clampedMonth); setYear(nextYear); setSearchActive(false); setLoadedMonthCount(1); setSelectedRows([]);
-  }
+  }, [transactions]);
   const goToday = useCallback(() => {
     const today = new Date();
     selectPeriod(today.getMonth(), today.getFullYear());
+  }, [selectPeriod]);
+
+  const openAdd = useCallback(() => {
+    transactionModalRef.current?.open(getBlankDraft());
   }, []);
 
-  function openAdd(type?: TransactionType) {
-    transactionModalRef.current?.open(getBlankDraft(type));
-  }
-
-  function openEdit(tx: Transaction) {
+  const openEdit = useCallback((tx: Transaction) => {
     detailModalRef.current?.close();
     transactionModalRef.current?.open({
       date: formatDateToISO(tx.rawDate), amount: tx.formula ? `=${tx.formula}` : String(Math.abs(tx.amount)),
       detail: tx.detail, type: tx.type, createdAt: tx.createdAt, tags: tx.tags || [],
     }, tx);
     requestAnimationFrame(() => setSelectedRows([]));
-  }
+  }, []);
 
   function renumberTransactions(items: Transaction[]) {
     return items.map((item, idx) => ({ ...item, rowId: idx + 2 }));
@@ -689,21 +685,20 @@ export default function App() {
       .finally(() => setIsSyncing(false));
   }
 
-  function requestDelete(tx: Transaction) {
+  const requestDelete = useCallback((tx: Transaction) => {
     setConfirmConfig({ kind: "delete", tx });
-  }
+  }, []);
 
-  function requestDeleteSelected() {
+  const requestDeleteSelected = useCallback(() => {
     if (!selectedRows.length) return;
     setConfirmConfig({ kind: "deleteSelected", count: selectedRows.length });
-  }
+  }, [selectedRows.length]);
 
-  function handleConfirm() {
-    const cfg = confirmConfig;
-    setConfirmConfig(null);
-    if (!cfg) return;
+  function handleConfirm(cfg: ConfirmConfig) {
     if (cfg.kind === "delete" && cfg.tx) deleteTx(cfg.tx);
     else if (cfg.kind === "deleteSelected") deleteSelectedRows();
+    else if (cfg.kind === "removeAccount") void removeGoogleAccount();
+    else if (cfg.kind === "disconnect") void disconnectGoogle();
   }
 
   function submitDraft(currentDraft: TransactionDraft, currentEdit: Transaction | null): boolean {
@@ -742,21 +737,21 @@ export default function App() {
     return true;
   }
 
-  function applySearchFilters(nextFilters: SearchFilters) {
+  const applySearchFilters = useCallback((nextFilters: SearchFilters) => {
     requestAnimationFrame(() => {
       setSearchFilters(nextFilters);
       setSearchActive(true);
       changeTab("expenses");
       setSelectedRows([]);
     });
-  }
+  }, [changeTab]);
 
-  function clearSearchFilters() {
+  const clearSearchFilters = useCallback(() => {
     requestAnimationFrame(() => {
       setSearchFilters(emptySearch);
       setSearchActive(false);
     });
-  }
+  }, []);
 
   async function deleteTx(tx: Transaction) {
     setSelectedRows((current) => current.filter((rowId) => rowId !== tx.rowId));
@@ -797,16 +792,16 @@ export default function App() {
     }
   }
 
-  function toggleSelection(tx: Transaction) {
+  const toggleSelection = useCallback((tx: Transaction) => {
     setSelectedRows((current) => current.includes(tx.rowId) ? current.filter((r) => r !== tx.rowId) : [...current, tx.rowId]);
-  }
+  }, []);
 
-  function handleTransactionPress(tx: Transaction) {
+  const handleTransactionPress = useCallback((tx: Transaction) => {
     if (selectedRows.length) { toggleSelection(tx); return; }
     detailModalRef.current?.open(tx);
-  }
+  }, [selectedRows.length, toggleSelection]);
 
-  async function moveTx(tx: Transaction, direction: "up" | "down") {
+  const moveTx = useCallback(async (tx: Transaction, direction: "up" | "down") => {
     try {
       if (accessToken && spreadsheetId) {
         syncGoogleInBackground(async () => {
@@ -828,9 +823,9 @@ export default function App() {
     } catch (error) {
       Alert.alert("Mover registro", error instanceof Error ? error.message : "No se pudo mover el registro.");
     }
-  }
+  }, [accessToken, copy, freqIncome, spreadsheetId, transactions]);
 
-  function openMoveMenu(tx: Transaction) {
+  const openMoveMenu = useCallback((tx: Transaction) => {
     setPicker({
       title: "Mover registro", selectedValue: "",
       options: [
@@ -839,7 +834,7 @@ export default function App() {
       ],
       onSelect: (direction: string) => moveTx(tx, direction as "up" | "down"),
     });
-  }
+  }, [colors.blue, colors.yellow, moveTx]);
 
   async function undoDeleteEntry(entry: HistoryEntry) {
     const entryId = entry.id;
@@ -868,23 +863,28 @@ export default function App() {
     }
   }
 
-  async function handlePinOpen() {
+  const handlePinOpen = useCallback(() => {
     if (pinEnabled) {
-      await clearPin();
       pinLockedRef.current = false;
       setPinEnabledState(false);
       setPinVerified(true);
+      void clearPin().catch((error) => {
+        setPinEnabledState(true);
+        Alert.alert(copy.pinApp, getErrorMessage(error));
+      });
     } else {
       setPinSetupVisible(true);
     }
-  }
+  }, [copy.pinApp, pinEnabled]);
 
   function handlePinSave(value: string) {
-    savePin(value).then(() => {
-      setPinEnabledState(true);
-      setPinVerified(true);
-      setPinSetupVisible(false);
-    }).catch(() => undefined);
+    pinLockedRef.current = false;
+    setPinEnabledState(true);
+    setPinVerified(true);
+    void savePin(value).catch((error) => {
+      setPinEnabledState(false);
+      Alert.alert(copy.pinApp, getErrorMessage(error));
+    });
   }
 
   function handlePinVerify(pin: string) {
@@ -910,7 +910,6 @@ export default function App() {
     freqIncomeRef.current = nextFreq;
     setSummaries(nextSummaries);
     persistFinancialState(transactions, nextSummaries, nextFreq);
-    setFreqVisible(false);
     if (accessToken && spreadsheetId) {
       syncGoogleInBackground(async () => {
         await updateGoogleFreqIncome(accessToken, spreadsheetId, key, amount);
@@ -957,6 +956,27 @@ export default function App() {
     }
   }
 
+  function startExport(cfg: ExportConfig) {
+    void exportRows(cfg).catch((error) => Alert.alert(copy.exportMovements, getErrorMessage(error)));
+  }
+
+  const openFreqIncome = useCallback(() => {
+    setFreqInput(String(currentSummary.freqIncome || 0));
+    setFreqVisible(true);
+  }, [currentSummary.freqIncome]);
+  const exitSearch = useCallback(() => setSearchActive(false), []);
+  const loadOlder = useCallback(() => setLoadedMonthCount((count) => count + 1), []);
+  const openTagEditor = useCallback(() => setTagEditorVisible(true), []);
+  const openExport = useCallback(() => setExportVisible(true), []);
+  const openSearch = useCallback(() => searchModalRef.current?.open(searchFilters), [searchFilters]);
+  const closeFreqIncome = useCallback(() => setFreqVisible(false), []);
+  const closePicker = useCallback(() => setPicker(null), []);
+  const closeConfirm = useCallback(() => setConfirmConfig(null), []);
+  const closeHistory = useCallback(() => setHistoryVisible(false), []);
+  const closePinSetup = useCallback(() => setPinSetupVisible(false), []);
+  const closeExport = useCallback(() => setExportVisible(false), []);
+  const closeTagEditor = useCallback(() => setTagEditorVisible(false), []);
+
   function renderTabPage(targetTab: Tab) {
     const contentTopInset = headerTopInset + (targetTab === "expenses" ? 112 : 62);
     const pageTitle = targetTab === "expenses" ? copy.expenses : targetTab === "summary" ? copy.summary : copy.settings;
@@ -984,12 +1004,12 @@ export default function App() {
                 searchActive={searchActive} searchText={searchFilters.text} selectedRows={selectedRows}
                 currencySymbol={currencySymbol}
                 copy={copy}
-                onEditFreq={() => { setFreqInput(String(currentSummary.freqIncome || 0)); setFreqVisible(true); }}
-                onExitSearch={() => setSearchActive(false)}
+                onEditFreq={openFreqIncome}
+                onExitSearch={exitSearch}
                 onOpenDetail={handleTransactionPress} onEdit={openEdit}
                 onDeleteSelected={requestDeleteSelected} onMove={openMoveMenu}
                 onToggleSelection={toggleSelection}
-                onLoadOlder={() => setLoadedMonthCount((count) => count + 1)}
+                onLoadOlder={loadOlder}
                 topInset={contentTopInset}
                 tagsList={tagsList}
               />
@@ -1009,8 +1029,8 @@ export default function App() {
               language={language} currencySymbol={currencySymbol} fontPreference={fontPreference} pinEnabled={pinEnabled}
               tagsCount={tagsList.length}
               onOpenLanguage={openLanguagePicker} onOpenCurrency={openCurrencyPicker} onOpenFont={openFontPicker}
-              onOpenPin={handlePinOpen} onOpenTags={() => setTagEditorVisible(true)}
-              onSwitch={openAccountManager} onDisconnect={disconnectGoogle} onOpenExport={() => setExportVisible(true)}
+              onOpenPin={handlePinOpen} onOpenTags={openTagEditor}
+              onSwitch={openAccountManager} onDisconnect={requestDisconnectGoogle} onOpenExport={openExport}
             />
           </View>
         )}
@@ -1118,28 +1138,28 @@ export default function App() {
         </BlurTargetView>
 
         <BottomFade color={colors.bg} height={bottomFadeHeight} />
-        <BottomNav colors={colors} copy={copy} tab={tab} setTab={changeTab} onAdd={() => openAdd()} onSearch={() => searchModalRef.current?.open(searchFilters)} blurTarget={blurTargetRef} />
+        <BottomNav colors={colors} copy={copy} tab={tab} setTab={changeTab} onAdd={openAdd} onSearch={openSearch} blurTarget={blurTargetRef} />
       </View>
 
       <TransactionModal ref={transactionModalRef} colors={colors} tags={tagsList}
         copy={copy} currencySymbol={currencySymbol}
         onSubmit={submitDraft} />
       <FreqIncomeModal visible={freqVisible} colors={colors} value={freqInput} setValue={setFreqInput}
-        copy={copy} onClose={() => setFreqVisible(false)} onSubmit={saveFreqIncome} />
+        copy={copy} onClose={closeFreqIncome} onSubmit={saveFreqIncome} />
       <DetailModal ref={detailModalRef} colors={colors} currencySymbol={currencySymbol} copy={copy} onEdit={openEdit} onDelete={requestDelete} />
-      <OptionSheet config={picker} colors={colors} onClose={() => setPicker(null)} />
-      <ConfirmModal config={confirmConfig} colors={colors} currencySymbol={currencySymbol} copy={copy} onClose={() => setConfirmConfig(null)} onConfirm={handleConfirm} />
-      <HistoryModal visible={historyVisible} entries={historyEntries} colors={colors} currencySymbol={currencySymbol} copy={copy} onClose={() => setHistoryVisible(false)} onUndo={undoDeleteEntry} />
-      <PinSetupModal visible={pinSetupVisible} colors={colors} copy={copy} onClose={() => setPinSetupVisible(false)} onSave={handlePinSave} />
+      <OptionSheet config={picker} colors={colors} onClose={closePicker} />
+      <ConfirmModal config={confirmConfig} colors={colors} currencySymbol={currencySymbol} copy={copy} onClose={closeConfirm} onConfirm={handleConfirm} />
+      <HistoryModal visible={historyVisible} entries={historyEntries} colors={colors} currencySymbol={currencySymbol} copy={copy} onClose={closeHistory} onUndo={undoDeleteEntry} />
+      <PinSetupModal visible={pinSetupVisible} colors={colors} copy={copy} onClose={closePinSetup} onSave={handlePinSave} />
       <ExportModal visible={exportVisible} colors={colors} config={exportConfig} setConfig={setExportConfig}
-        minDate={transactions.length ? transactions.reduce((earliest, tx) => tx.rawDate < earliest ? tx.rawDate : earliest, transactions[0].rawDate).slice(0, 10) : ""}
-        copy={copy} onClose={() => setExportVisible(false)} onExport={(cfg: ExportConfig) => { setExportVisible(false); exportRows(cfg); }} />
+        minDate={exportMinDate}
+        copy={copy} onClose={closeExport} onExport={startExport} />
       <SearchModal ref={searchModalRef} colors={colors}
         copy={copy} currencySymbol={currencySymbol} tags={tagsList}
         onClear={clearSearchFilters}
         onSubmit={applySearchFilters}
       />
-      <TagEditorModal visible={tagEditorVisible} colors={colors} copy={copy} tags={tagsList} setTags={setTagsList} onClose={() => setTagEditorVisible(false)} />
+      <TagEditorModal visible={tagEditorVisible} colors={colors} copy={copy} tags={tagsList} setTags={setTagsList} onClose={closeTagEditor} />
     </View>
   );
 }

@@ -1,5 +1,5 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
-import { Animated, BackHandler, Keyboard, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Alert, Animated, BackHandler, Keyboard, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { calculateExpression, normalizeAmountExpression, TRANSACTION_TYPES } from "../../domain/bucksLogic";
 import { styles } from "../../styles/globalStyles";
@@ -34,7 +34,12 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
   const tagsRef = useRef<View>(null);
   const detailFocusedRef = useRef(false);
   const submittingRef = useRef(false);
-  const transition = useModalTransition(visible, 14, 0.99);
+  const pendingSubmit = useRef<{ draft: TransactionDraft; editingTx: Transaction | null } | null>(null);
+  const transition = useModalTransition(visible, 14, 0.99, () => {
+    const pending = pendingSubmit.current;
+    pendingSubmit.current = null;
+    if (pending) onSubmit(pending.draft, pending.editingTx);
+  });
   const amountState = useMemo(() => {
     const cleanAmount = normalizeAmountExpression(formDraft.amount);
     const openParens = (cleanAmount.match(/\(/g) || []).length;
@@ -105,9 +110,13 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
 
   function submit() {
     if (submittingRef.current) return;
+    if (!formDraft.date || !formDraft.amount || !formDraft.detail.trim()) {
+      Alert.alert(copy.incompleteData, copy.completeRequired);
+      return;
+    }
     submittingRef.current = true;
-    if (onSubmit(formDraft, editingTx)) close();
-    else submittingRef.current = false;
+    pendingSubmit.current = { draft: { ...formDraft, tags: [...(formDraft.tags || [])] }, editingTx };
+    close();
   }
 
   return (

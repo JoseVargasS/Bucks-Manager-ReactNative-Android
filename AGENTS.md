@@ -63,6 +63,11 @@ npx tsc --noEmit
 
 When possible, also install/run on a real Android device.
 
+## Git Commits
+
+- Always use Conventional Commits.
+- Use hyphen bullets in the commit body when listing changes.
+
 ## UI Direction
 
 Use the mobile GAS workflow as the functional reference, but follow the current native visual system:

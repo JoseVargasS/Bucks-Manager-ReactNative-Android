@@ -30,30 +30,8 @@ export async function loadTags(): Promise<Tag[]> {
   } catch { return normalizeTags([]); }
 }
 
-async function saveTags(tags: Tag[]): Promise<void> {
+export async function saveTags(tags: Tag[]): Promise<void> {
   await SecureStore.setItemAsync(TAGS_KEY, JSON.stringify(tags));
-}
-
-export async function addTag(tag: Tag): Promise<Tag[]> {
-  const tags = normalizeTags([...(await loadTags()), tag]);
-  await saveTags(tags);
-  return tags;
-}
-
-export async function updateTag(updated: Tag): Promise<Tag[]> {
-  const tags = await loadTags();
-  const idx = tags.findIndex((t) => t.id === updated.id);
-  if (idx >= 0) tags[idx] = updated;
-  const normalized = normalizeTags(tags);
-  await saveTags(normalized);
-  return normalized;
-}
-
-export async function deleteTag(id: string): Promise<Tag[]> {
-  const tags = await loadTags();
-  const filtered = tags.filter((t) => t.id !== id);
-  await saveTags(filtered);
-  return filtered;
 }
 
 export function abbreviateTag(label: string): string {

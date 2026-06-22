@@ -1,4 +1,4 @@
-import { useLayoutEffect, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { Animated, Modal, Text, TouchableOpacity, View, StyleSheet } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { formatDateToISO, MONTH_NAMES } from "../../domain/bucksLogic";
@@ -17,7 +17,12 @@ export function CalendarPicker({ visible, value, onSelect, onClose, colors, copy
   const [viewYear, setViewYear] = useState(parsed.getFullYear());
   const [viewMonth, setViewMonth] = useState(parsed.getMonth());
   const [selectedDay, setSelectedDay] = useState(parsed.getDate());
-  const transition = useModalTransition(visible, 10, 0.985);
+  const pendingSelection = useRef<string | null>(null);
+  const transition = useModalTransition(visible, 10, 0.985, () => {
+    const next = pendingSelection.current;
+    pendingSelection.current = null;
+    if (next !== null) onSelect(next);
+  });
 
   useLayoutEffect(() => {
     if (!visible) return;
@@ -64,10 +69,10 @@ export function CalendarPicker({ visible, value, onSelect, onClose, colors, copy
 
   const handleSelect = (y: number, m: number, d?: number) => {
     if (mode === "month") {
-      onSelect(`${y}-${String(m + 1).padStart(2, "0")}`);
+      pendingSelection.current = `${y}-${String(m + 1).padStart(2, "0")}`;
     } else {
       const day = d || 1;
-      onSelect(`${y}-${String(m + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`);
+      pendingSelection.current = `${y}-${String(m + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
     }
     onClose();
   };
@@ -148,13 +153,14 @@ export function CalendarPicker({ visible, value, onSelect, onClose, colors, copy
         <View style={{ flexDirection: "row", justifyContent: "space-between", paddingHorizontal: 16, paddingBottom: 14, paddingTop: 6, borderTopWidth: 1, borderColor: colors.border }}>
           <TouchableOpacity onPress={() => {
             const nowDate = new Date();
-            if (mode === "month") onSelect(`${nowDate.getFullYear()}-${String(nowDate.getMonth() + 1).padStart(2, "0")}`);
-            else onSelect(formatDateToISO(nowDate));
+            pendingSelection.current = mode === "month"
+              ? `${nowDate.getFullYear()}-${String(nowDate.getMonth() + 1).padStart(2, "0")}`
+              : formatDateToISO(nowDate);
             onClose();
           }}>
             <Text style={{ color: colors.primary, fontWeight: "900", fontSize: 14 }}>{copy.thisMonth}</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => { onSelect(""); onClose(); }}>
+          <TouchableOpacity onPress={() => { pendingSelection.current = ""; onClose(); }}>
             <Text style={{ color: colors.muted, fontWeight: "900", fontSize: 14 }}>{copy.erase}</Text>
           </TouchableOpacity>
         </View>
