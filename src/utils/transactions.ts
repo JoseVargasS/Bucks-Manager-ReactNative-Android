@@ -1,7 +1,7 @@
 import { Transaction, TransactionDraft, TransactionType } from "../types";
 import { formatDateToISO } from "../domain/bucksLogic";
 import { formatDateGroupLabel } from "./formats";
-import { UI_COPY, UiCopy } from "../i18n";
+
 
 /** Crea un TransactionDraft vacío con tipo por defecto "GASTO NO FRECUENTE" y fecha actual */
 export function getBlankDraft(type: TransactionType = "GASTO NO FRECUENTE"): TransactionDraft {
