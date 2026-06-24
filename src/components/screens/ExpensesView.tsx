@@ -270,7 +270,6 @@ export const ExpensesView = memo(function ExpensesView({
   selectedRows,
   currencySymbol,
   copy,
-  onEditFreq,
   onExitSearch,
   onOpenDetail,
   onEdit,
@@ -289,7 +288,6 @@ export const ExpensesView = memo(function ExpensesView({
   selectedRows: number[];
   currencySymbol: string;
   copy: UiCopy;
-  onEditFreq: () => void;
   onExitSearch: () => void;
   onOpenDetail: (tx: Transaction) => void;
   onEdit: (tx: Transaction) => void;
@@ -357,7 +355,6 @@ export const ExpensesView = memo(function ExpensesView({
             tone="income"
             icon="cash"
             colors={colors}
-            action={onEditFreq}
           />
           <StatCard
             title={copy.nonFreqIncome}
@@ -480,7 +477,6 @@ export const ExpensesView = memo(function ExpensesView({
       currencySymbol,
       onDeleteSelected,
       onEdit,
-      onEditFreq,
       onExitSearch,
       searchActive,
       selectedCount,

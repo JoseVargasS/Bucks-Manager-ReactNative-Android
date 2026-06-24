@@ -128,8 +128,8 @@ export function CalendarPicker({ visible, value, onSelect, onClose, colors, copy
           ) : (
             <>
               <View style={{ flexDirection: "row", marginBottom: 4 }}>
-                {dayLabels.map((d) => (
-                  <Text key={d} style={{ flex: 1, textAlign: "center", color: colors.muted, fontSize: 11, fontWeight: "900" }}>{d}</Text>
+                {dayLabels.map((d, index) => (
+                  <Text key={`${d}-${index}`} style={{ flex: 1, textAlign: "center", color: colors.muted, fontSize: 11, fontWeight: "900" }}>{d}</Text>
                 ))}
               </View>
               <View style={{ flexDirection: "row", flexWrap: "wrap" }}>

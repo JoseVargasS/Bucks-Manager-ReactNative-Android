@@ -18,6 +18,8 @@ No demo finance data is shown during startup. The native splash remains visible 
 
 Add, edit, delete, reorder, and frequent-income changes update the local UI first. Google Sheets reconciliation runs in the background and a failed sync keeps the local data visible with a pending/error status.
 
+Frequent income is added through the normal transaction form using `INGRESO FRECUENTE`. Existing monthly values remain readable for legacy sheets, but the app no longer edits them through a separate modal.
+
 ## Google Sheet Contract
 
 The spreadsheet must contain these tabs:

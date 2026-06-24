@@ -10,6 +10,7 @@ const {
   typeLabel,
   typeLabelFull,
 } = await import("../src/utils/formats.ts");
+const { UI_COPY } = await import("../src/i18n.ts");
 
 const mockColors = {
   green: "#22c55e",
@@ -143,4 +144,15 @@ test("typeLabelFull returns full labels in Spanish", () => {
 test("typeLabelFull returns full labels in English", () => {
   assert.equal(typeLabelFull("INGRESO FRECUENTE", mockCopyEn), mockCopyEn.freqIncomeFull);
   assert.equal(typeLabelFull("GASTO NO FRECUENTE", mockCopyEn), mockCopyEn.nonFreqExpenseFull);
+});
+
+test("transaction type translations use complete words", () => {
+  assert.deepEqual(
+    [UI_COPY.es.freqIncomeFull, UI_COPY.es.nonFreqIncomeFull, UI_COPY.es.freqExpenseFull, UI_COPY.es.nonFreqExpenseFull],
+    ["Ingreso frecuente", "Ingreso no frecuente", "Gasto frecuente", "Gasto no frecuente"],
+  );
+  assert.deepEqual(
+    [UI_COPY.en.freqIncome, UI_COPY.en.nonFreqIncome, UI_COPY.en.freqExpense, UI_COPY.en.nonFreqExpense],
+    ["Recurring income", "Non-recurring income", "Recurring expense", "Non-recurring expense"],
+  );
 });

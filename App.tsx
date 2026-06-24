@@ -39,7 +39,6 @@ import {
   readTransactions,
   saveTransaction,
   insertTransactionAtRow,
-  updateFreqIncome as updateGoogleFreqIncome,
   updateTransaction as updateGoogleTransaction,
   deleteTransaction as deleteGoogleTransaction,
 } from "./src/api/googleWorkspace";
@@ -80,7 +79,6 @@ import {
   DetailModal,
   DetailModalHandle,
 } from "./src/components/modals/DetailModal";
-import { FreqIncomeModal } from "./src/components/modals/FreqIncomeModal";
 import { ExportModal, ExportConfig } from "./src/components/modals/ExportModal";
 import {
   ConfirmModal,
@@ -294,7 +292,6 @@ function AppContent() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [summaries, setSummaries] = useState<SummaryRow[]>([]);
   const [freqIncome, setFreqIncome] = useState<Record<string, number>>({});
-  const [freqVisible, setFreqVisible] = useState(false);
   const [accountInfo, setAccountInfo] = useState<{
     name?: string;
     email?: string;
@@ -306,7 +303,6 @@ function AppContent() {
   const [selectedRows, setSelectedRows] = useState<number[]>([]);
   const [historyEntries, setHistoryEntries] = useState<HistoryEntry[]>([]);
   const [historyVisible, setHistoryVisible] = useState(false);
-  const [freqInput, setFreqInput] = useState("");
   const [exportVisible, setExportVisible] = useState(false);
   const [exportConfig, setExportConfig] =
     useState<ExportConfig>(defaultExportConfig);
@@ -1486,27 +1482,6 @@ function AppContent() {
     });
   }
 
-  async function saveFreqIncome() {
-    const amount = Number(freqInput);
-    if (!Number.isFinite(amount) || amount < 0) {
-      Alert.alert("Monto inválido", "Ingresa un monto válido.");
-      return;
-    }
-    const key = `${MONTH_NAMES[month]} ${year}`;
-    const nextFreq = { ...freqIncome, [key]: amount };
-    const nextSummaries = calculateSummaries(transactions, nextFreq);
-    setFreqIncome(nextFreq);
-    freqIncomeRef.current = nextFreq;
-    setSummaries(nextSummaries);
-    persistFinancialState(transactions, nextSummaries, nextFreq);
-    if (accessToken && spreadsheetId) {
-      syncGoogleInBackground(async () => {
-        await updateGoogleFreqIncome(accessToken, spreadsheetId, key, amount);
-        await reloadFromGoogle(accessToken, spreadsheetId, false, true);
-      }, copy.frequentIncomeTitle);
-    }
-  }
-
   async function exportRows(cfg: ExportConfig) {
     let rows: Transaction[];
     if (cfg.rangeMode === "dates") {
@@ -1568,10 +1543,6 @@ function AppContent() {
     );
   }
 
-  const openFreqIncome = useCallback(() => {
-    setFreqInput(String(currentSummary.freqIncome || 0));
-    setFreqVisible(true);
-  }, [currentSummary.freqIncome]);
   const exitSearch = useCallback(() => setSearchActive(false), []);
   const loadOlder = useCallback(
     () => setLoadedMonthCount((count) => count + 1),
@@ -1583,7 +1554,6 @@ function AppContent() {
     () => searchModalRef.current?.open(searchFilters),
     [searchFilters],
   );
-  const closeFreqIncome = useCallback(() => setFreqVisible(false), []);
   const closeConfirm = useCallback(() => setConfirmConfig(null), []);
   const closeHistory = useCallback(() => setHistoryVisible(false), []);
   const closePinSetup = useCallback(() => setPinSetupVisible(false), []);
@@ -1642,7 +1612,6 @@ function AppContent() {
               selectedRows={selectedRows}
               currencySymbol={currencySymbol}
               copy={copy}
-              onEditFreq={openFreqIncome}
               onExitSearch={exitSearch}
               onOpenDetail={handleTransactionPress}
               onEdit={openEdit}
@@ -1911,15 +1880,6 @@ function AppContent() {
         copy={copy}
         currencySymbol={currencySymbol}
         onSubmit={submitDraft}
-      />
-      <FreqIncomeModal
-        visible={freqVisible}
-        colors={colors}
-        value={freqInput}
-        setValue={setFreqInput}
-        copy={copy}
-        onClose={closeFreqIncome}
-        onSubmit={saveFreqIncome}
       />
       <DetailModal
         ref={detailModalRef}

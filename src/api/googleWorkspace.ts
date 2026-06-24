@@ -438,7 +438,7 @@ export async function saveTransaction(token: string, spreadsheetId: string, draf
   const targetRow = await findChronologicalInsertionRow(token, spreadsheetId, dateObj);
   await insertBlankRow(token, spreadsheetId, sheetId, targetRow);
   await writeRow(token, spreadsheetId, targetRow, buildTransactionRow(tx));
-  await ensureMonthlySummaryRowByDate(token, spreadsheetId, dateObj);
+  await ensureMonthlySummaryRowByDate(token, spreadsheetId, dateObj, tx.type === "INGRESO FRECUENTE");
   return { ...tx, rowId: targetRow };
 }
 
@@ -449,7 +449,7 @@ export async function insertTransactionAtRow(token: string, spreadsheetId: strin
   const safeRow = Math.max(2, targetRow);
   await insertBlankRow(token, spreadsheetId, sheetId, safeRow);
   await writeRow(token, spreadsheetId, safeRow, buildTransactionRow(tx));
-  await ensureMonthlySummaryRowByDate(token, spreadsheetId, dateObj);
+  await ensureMonthlySummaryRowByDate(token, spreadsheetId, dateObj, tx.type === "INGRESO FRECUENTE");
   return { ...tx, rowId: safeRow };
 }
 
@@ -459,6 +459,7 @@ export async function updateTransaction(token: string, spreadsheetId: string, ro
 
   const oldRow = await readSingleRow(token, spreadsheetId, rowId);
   const oldDate = parseSheetDate(oldRow[0]);
+  const oldType = normalizeType(String(oldRow[3] || ""));
   const oldMs = oldDate ? new Date(oldDate.getFullYear(), oldDate.getMonth(), oldDate.getDate()).getTime() : 0;
   const newMs = new Date(newDateObj.getFullYear(), newDateObj.getMonth(), newDateObj.getDate()).getTime();
 
@@ -468,13 +469,13 @@ export async function updateTransaction(token: string, spreadsheetId: string, ro
     const targetRow = await findChronologicalInsertionRow(token, spreadsheetId, newDateObj);
     await insertBlankRow(token, spreadsheetId, sheetId, targetRow);
     await writeRow(token, spreadsheetId, targetRow, buildTransactionRow(tx));
-    await ensureMonthlySummaryRowByDate(token, spreadsheetId, newDateObj);
-    await ensureMonthlySummaryRowByDate(token, spreadsheetId, oldDate);
+    await ensureMonthlySummaryRowByDate(token, spreadsheetId, newDateObj, tx.type === "INGRESO FRECUENTE");
+    await ensureMonthlySummaryRowByDate(token, spreadsheetId, oldDate, oldType === "INGRESO FRECUENTE");
     return { ...tx, rowId: targetRow };
   }
 
   await writeRow(token, spreadsheetId, rowId, buildTransactionRow(tx));
-  await ensureMonthlySummaryRowByDate(token, spreadsheetId, newDateObj);
+  await ensureMonthlySummaryRowByDate(token, spreadsheetId, newDateObj, tx.type === "INGRESO FRECUENTE" || oldType === "INGRESO FRECUENTE");
   return { ...tx, rowId };
 }
 
@@ -544,35 +545,7 @@ function unwrapAmountFormula(expression: string, type: Transaction["type"]) {
   return trimmed;
 }
 
-export async function updateFreqIncome(token: string, spreadsheetId: string, monthYear: string, amount: number) {
-  const rowNumber = await ensureMonthlySummaryRowByMonthYear(token, spreadsheetId, monthYear);
-  const range = `${SHEET_NAMES.summary}!B${rowNumber}`;
-  await googleFetch(token, `${valuesUrl(spreadsheetId, range)}?valueInputOption=USER_ENTERED`, {
-    method: "PUT",
-    body: JSON.stringify({ values: [[amount]] }),
-  });
-}
-
-async function ensureMonthlySummaryRowByMonthYear(token: string, spreadsheetId: string, monthYear: string) {
-  const [monthName, year] = monthYear.split(" ");
-  const month = [
-    "ENERO",
-    "FEBRERO",
-    "MARZO",
-    "ABRIL",
-    "MAYO",
-    "JUNIO",
-    "JULIO",
-    "AGOSTO",
-    "SEPTIEMBRE",
-    "OCTUBRE",
-    "NOVIEMBRE",
-    "DICIEMBRE",
-  ].indexOf(normalizeHeader(monthName));
-  return ensureMonthlySummaryRowByDate(token, spreadsheetId, new Date(Number(year), Math.max(0, month), 1));
-}
-
-async function ensureMonthlySummaryRowByDate(token: string, spreadsheetId: string, date: Date) {
+async function ensureMonthlySummaryRowByDate(token: string, spreadsheetId: string, date: Date, refreshFrequentIncome = false) {
   const [data, locale] = await Promise.all([
     googleFetch<{ values?: unknown[][] }>(token, valuesUrl(spreadsheetId, `${SHEET_NAMES.summary}!A1:I`)),
     getSpreadsheetLocale(token, spreadsheetId),
@@ -585,9 +558,11 @@ async function ensureMonthlySummaryRowByDate(token: string, spreadsheetId: strin
     if (rowDate && getMonthYear(rowDate) === monthYear) {
       const rowNumber = i + 1;
       const firstDay = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-01`;
-      await googleFetch(token, `${valuesUrl(spreadsheetId, `${SHEET_NAMES.summary}!C${rowNumber}:I${rowNumber}`)}?valueInputOption=USER_ENTERED`, {
+      const startColumn = refreshFrequentIncome ? "B" : "C";
+      const formulas = buildSummaryRowFormulas(rowNumber, firstDay, locale).slice(refreshFrequentIncome ? 1 : 2);
+      await googleFetch(token, `${valuesUrl(spreadsheetId, `${SHEET_NAMES.summary}!${startColumn}${rowNumber}:I${rowNumber}`)}?valueInputOption=USER_ENTERED`, {
         method: "PUT",
-        body: JSON.stringify({ values: [buildSummaryRowFormulas(rowNumber, firstDay, locale).slice(2)] }),
+        body: JSON.stringify({ values: [formulas] }),
       });
       return rowNumber;
     }
@@ -619,7 +594,7 @@ function buildSummaryRowFormulas(rowNumber: number, firstDay: string, locale: st
     `=${dialect.sumifs}(${txSheet}!$B:$B${dialect.sep}${txSheet}!$A:$A${dialect.sep}">="&$A${rowNumber}${dialect.sep}${txSheet}!$A:$A${dialect.sep}"<="&${dialect.eomonth}($A${rowNumber}${dialect.sep}0)${dialect.sep}${txSheet}!$D:$D${dialect.sep}"${type}")`;
   return [
     firstDay,
-    0,
+    sumByType("INGRESO FRECUENTE"),
     sumByType("INGRESO NO FRECUENTE"),
     `=B${rowNumber}+C${rowNumber}`,
     sumByType("GASTO FRECUENTE"),

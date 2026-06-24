@@ -94,6 +94,7 @@ test("spreadsheet creation preserves the exact name, tabs, and locale formulas",
   assert.deepEqual(createBody.sheets.map(({ properties }) => properties.title), ["INGRESOS Y GASTOS", "RESUMEN POR MES"]);
 
   const valuesBody = requests.find(({ url }) => url.includes("/values:batchUpdate")).body;
+  assert.match(valuesBody.data[1].values[1][1], /INGRESO FRECUENTE/);
   assert.match(valuesBody.data[1].values[1][2], /SUMAR\.SI\.CONJUNTO/);
   assert.match(valuesBody.data[1].values[1][2], /FIN\.MES/);
 });
@@ -145,6 +146,40 @@ test("saving a transaction inserts the row chronologically and refreshes its mon
   ]);
   const formulaWrite = requests.find(({ url, method }) => url.includes("RESUMEN POR MES!C2:I2") && method === "PUT");
   assert.match(formulaWrite.body.values[0][0], /SUMAR\.SI\.CONJUNTO/);
+});
+
+test("saving frequent income refreshes the frequent-income summary formula", async (t) => {
+  const requests = [];
+  installFetch(t, async (input, init = {}) => {
+    const url = decodeURIComponent(String(input));
+    const body = init.body ? JSON.parse(init.body) : null;
+    requests.push({ url, method: init.method || "GET", body });
+    if (url.includes("fields=sheets.properties(sheetId,title)")) {
+      return json({ sheets: [{ properties: { sheetId: 7, title: "INGRESOS Y GASTOS" } }] });
+    }
+    if (url.includes("INGRESOS Y GASTOS!A2:A")) return json({});
+    if (url.includes("INGRESOS Y GASTOS!F1")) return json({ values: [["ETIQUETAS"]] });
+    if (url.includes("RESUMEN POR MES!A1:I") && (init.method || "GET") === "GET") {
+      return json({ values: [
+        ["MES", "INGRESO FRECUENTE", "INGRESO NO FRECUENTE", "TOTAL INGRESOS", "GASTO FRECUENTE", "GASTO NO FRECUENTE", "TOTAL GASTOS", "NETO MENSUAL", "NETO SIN ING FRECUENTE"],
+        ["Enero 2026"],
+      ] });
+    }
+    if (url.includes("fields=properties.locale")) return json({ properties: { locale: "es_PE" } });
+    return json({});
+  });
+
+  await saveTransaction("token", "write-sheet", {
+    date: "2026-01-15",
+    amount: "1000",
+    detail: "Sueldo",
+    type: "INGRESO FRECUENTE",
+    createdAt: "11:22:33",
+    tags: [],
+  });
+
+  const formulaWrite = requests.find(({ url, method }) => url.includes("RESUMEN POR MES!B2:I2") && method === "PUT");
+  assert.match(formulaWrite.body.values[0][0], /INGRESO FRECUENTE/);
 });
 
 test("Google API failures expose status and response details", async (t) => {

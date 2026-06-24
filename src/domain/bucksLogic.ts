@@ -149,10 +149,11 @@ export function calculateSummaries(transactions: Transaction[], freqIncomeByMont
     const date = new Date(tx.rawDate);
     const key = getMonthYear(date);
     const current = byMonth.get(key) || {
-      monthYear: key, freqIncome: freqIncomeByMonth[key] || 0, nonFreqIncome: 0,
+      monthYear: key, freqIncome: 0, nonFreqIncome: 0,
       totalIncome: 0, freqExpense: 0, nonFreqExpense: 0,
       totalExpense: 0, netMonthly: 0, netNoFreq: 0,
     };
+    if (tx.type === "INGRESO FRECUENTE") current.freqIncome += Number(tx.amount) || 0;
     if (tx.type === "INGRESO NO FRECUENTE") current.nonFreqIncome += Number(tx.amount) || 0;
     if (tx.type === "GASTO FRECUENTE") current.freqExpense += Number(tx.amount) || 0;
     if (tx.type === "GASTO NO FRECUENTE") current.nonFreqExpense += Number(tx.amount) || 0;
@@ -160,7 +161,10 @@ export function calculateSummaries(transactions: Transaction[], freqIncomeByMont
   });
 
   Object.keys(freqIncomeByMonth).forEach((key) => {
-    if (!byMonth.has(key)) {
+    const current = byMonth.get(key);
+    if (current && current.freqIncome === 0) {
+      current.freqIncome = freqIncomeByMonth[key];
+    } else if (!current) {
       byMonth.set(key, {
         monthYear: key, freqIncome: freqIncomeByMonth[key], nonFreqIncome: 0,
         totalIncome: 0, freqExpense: 0, nonFreqExpense: 0,

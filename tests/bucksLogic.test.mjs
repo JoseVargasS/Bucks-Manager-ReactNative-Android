@@ -419,6 +419,19 @@ test("calculateSummaries includes months with only freqIncome", () => {
   assert.equal(result[0].netMonthly, 800);
 });
 
+test("calculateSummaries counts directly added frequent income", () => {
+  const result = calculateSummaries([{
+    rowId: 1,
+    rawDate: "2026-02-10T00:00:00.000Z",
+    amount: 900,
+    detail: "Sueldo",
+    type: "INGRESO FRECUENTE",
+    tags: [],
+  }], {});
+  assert.equal(result[0].freqIncome, 900);
+  assert.equal(result[0].totalIncome, 900);
+});
+
 test("calculateSummaries sorts months chronologically", () => {
   const transactions = [
     {

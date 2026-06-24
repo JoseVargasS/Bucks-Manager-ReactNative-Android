@@ -21,6 +21,7 @@ Bucks Manager is an Expo/React Native client with no custom backend. Google Sign
 - Tabs: `INGRESOS Y GASTOS`, `RESUMEN POR MES`.
 - Transaction columns: date, amount/formula, detail, exact transaction type, creation time, tags.
 - Exact types: `INGRESO FRECUENTE`, `INGRESO NO FRECUENTE`, `GASTO FRECUENTE`, `GASTO NO FRECUENTE`.
+- Frequent income is created through the transaction form. Legacy monthly summary values remain a read-only fallback when a month has no frequent-income transactions.
 - Legacy header aliases, accents, whitespace, and line breaks remain accepted.
 - User-entered descriptions are never translated or normalized.
 

@@ -58,7 +58,8 @@ The script in `scripts/run-android.ps1` sets Java and Android SDK paths and targ
 - Hydrate the local financial cache before waiting on Google Sheets, then revalidate in the background.
 - Reuse the saved spreadsheet ID before calling `findCompatibleSheets()`.
 - Keep `reloadFromGoogle()` deduplicated and preserve `pendingSyncRef`; an older read must not overwrite optimistic writes.
-- Add, edit, delete, move, and frequent-income interactions must update locally before remote reconciliation.
+- Add, edit, delete, and move interactions must update locally before remote reconciliation.
+- Add frequent income as a normal transaction with type `INGRESO FRECUENTE`; the legacy monthly summary value is read-only fallback data.
 - If column F already has the normalized `ETIQUETAS` header, do not repeat tag migration or formatting writes.
 - Keep Drive structure validation bounded. Do not make it fully sequential or launch an unbounded request burst.
 - Keep transaction grouping and sorting linear outside the actual sort; avoid date parsing inside sort comparisons or group lookup scans.
