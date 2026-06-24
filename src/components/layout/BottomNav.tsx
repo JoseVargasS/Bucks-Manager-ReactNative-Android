@@ -2,7 +2,7 @@ import { memo, useRef, useEffect } from "react";
 import { Animated, Easing, Pressable, View } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { styles } from "../../styles/globalStyles";
-import { Palette } from "../../theme/colors";
+import { Palette, dark } from "../../theme/colors";
 import { Tab, MaterialIconName } from "../../types";
 import { UiCopy } from "../../i18n";
 import { Text } from "../ui/AppText";
@@ -22,7 +22,7 @@ export const BottomNav = memo(function BottomNav({
   onAdd: () => void;
   onSearch: () => void;
 }) {
-  const isDark = colors.bg === "#0f1117";
+  const isDark = colors.bg === dark.bg;
   const glassSurface = isDark
     ? withAlpha(colors.card, 0.72)
     : withAlpha(colors.card, 0.96);

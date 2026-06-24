@@ -1,15 +1,16 @@
 import * as SecureStore from "expo-secure-store";
 import { Tag } from "../types";
+import { dark } from "../theme/colors";
 
 const TAGS_KEY = "bucks_tags";
 
 const DEFAULT_TAGS: Tag[] = [
-  { id: "default-salud", label: "Salud", color: "#FF6B6B" },
-  { id: "default-comida", label: "Comida", color: "#FF8E53" },
-  { id: "default-viaje", label: "Viaje", color: "#4D96FF" },
-  { id: "default-transporte", label: "Transporte", color: "#FFD93D" },
-  { id: "default-ocio", label: "Ocio", color: "#9B59B6" },
-  { id: "default-educacion", label: "Educación", color: "#6BCB77" },
+  { id: "default-salud", label: "Salud", color: dark.tagColors[0] },
+  { id: "default-comida", label: "Comida", color: dark.tagColors[1] },
+  { id: "default-viaje", label: "Viaje", color: dark.tagColors[4] },
+  { id: "default-transporte", label: "Transporte", color: dark.tagColors[2] },
+  { id: "default-ocio", label: "Ocio", color: dark.tagColors[5] },
+  { id: "default-educacion", label: "Educación", color: dark.tagColors[3] },
 ];
 
 function normalizeTags(tags: Tag[]): Tag[] {
@@ -27,7 +28,9 @@ export async function loadTags(): Promise<Tag[]> {
     const tags = normalizeTags(raw ? JSON.parse(raw) : []);
     await saveTags(tags);
     return tags;
-  } catch { return normalizeTags([]); }
+  } catch {
+    return normalizeTags([]);
+  }
 }
 
 export async function saveTags(tags: Tag[]): Promise<void> {
@@ -41,9 +44,11 @@ export function abbreviateTag(label: string): string {
 
 export function tagTextColor(color: string): string {
   const hex = color.replace("#", "");
-  if (hex.length !== 6) return "#fff";
+  if (hex.length !== 6) return dark.tagTextLight;
   const r = parseInt(hex.slice(0, 2), 16);
   const g = parseInt(hex.slice(2, 4), 16);
   const b = parseInt(hex.slice(4, 6), 16);
-  return (r * 299 + g * 587 + b * 114) / 1000 > 150 ? "#18202d" : "#fff";
+  return (r * 299 + g * 587 + b * 114) / 1000 > 150
+    ? dark.tagTextDark
+    : dark.tagTextLight;
 }

@@ -1,5 +1,3 @@
-export type Palette = typeof dark;
-
 export const dark = {
   bg: "#0f1117",
   card: "#171b25",
@@ -27,6 +25,22 @@ export const dark = {
   freqExpenseRow: "rgba(224,107,107,0.10)",
   overlay: "rgba(0,0,0,0.72)",
   shadow: "#000000",
+  tagColors: [
+    "#FF6B6B",
+    "#FF8E53",
+    "#FFD93D",
+    "#6BCB77",
+    "#4D96FF",
+    "#9B59B6",
+    "#3498DB",
+    "#1ABC9C",
+    "#F39C12",
+    "#E74C3C",
+    "#2ECC71",
+    "#E91E63",
+  ],
+  tagTextLight: "#ffffff",
+  tagTextDark: "#18202d",
 };
 
 export const light = {
@@ -56,31 +70,164 @@ export const light = {
   freqExpenseRow: "rgba(190,75,75,0.09)",
   overlay: "rgba(42,31,20,0.36)",
   shadow: "#3a3028",
+  tagColors: [
+    "#FF6B6B",
+    "#FF8E53",
+    "#FFD93D",
+    "#6BCB77",
+    "#4D96FF",
+    "#9B59B6",
+    "#3498DB",
+    "#1ABC9C",
+    "#F39C12",
+    "#E74C3C",
+    "#2ECC71",
+    "#E91E63",
+  ],
+  tagTextLight: "#ffffff",
+  tagTextDark: "#18202d",
 };
 
-export type ColorSchemePreference = "lime" | "ocean" | "violet" | "amber" | "mono";
+type PaletteBase = typeof dark;
+export interface Palette extends Omit<PaletteBase, "tagColors"> {
+  tagColors: string[];
+}
 
-const accents: Record<ColorSchemePreference, { dark: Partial<Palette>; light: Partial<Palette> }> = {
+export type ColorSchemePreference =
+  | "lime"
+  | "ocean"
+  | "violet"
+  | "amber"
+  | "mono";
+
+const accents: Record<
+  ColorSchemePreference,
+  { dark: Partial<Palette>; light: Partial<Palette> }
+> = {
   lime: { dark: {}, light: {} },
   ocean: {
-    dark: { primary: "#66e3ff", primarySoft: "rgba(102,227,255,0.15)", onPrimary: "#06222a", blue: "#66e3ff", infoSoft: "rgba(102,227,255,0.13)", editBg: "#102a31", editBorder: "#4fbdd3" },
-    light: { primary: "#157a92", primarySoft: "rgba(21,122,146,0.16)", onPrimary: "#ffffff", blue: "#157a92", infoSoft: "rgba(21,122,146,0.12)", editBg: "#d9f1f5", editBorder: "#157a92" },
+    dark: {
+      primary: "#66e3ff",
+      primarySoft: "rgba(102,227,255,0.15)",
+      onPrimary: "#06222a",
+      blue: "#66e3ff",
+      infoSoft: "rgba(102,227,255,0.13)",
+      editBg: "#102a31",
+      editBorder: "#4fbdd3",
+    },
+    light: {
+      primary: "#157a92",
+      primarySoft: "rgba(21,122,146,0.16)",
+      onPrimary: "#ffffff",
+      blue: "#157a92",
+      infoSoft: "rgba(21,122,146,0.12)",
+      editBg: "#d9f1f5",
+      editBorder: "#157a92",
+    },
   },
   violet: {
-    dark: { primary: "#c4a7ff", primarySoft: "rgba(196,167,255,0.16)", onPrimary: "#1b1036", blue: "#bba2f5", infoSoft: "rgba(196,167,255,0.13)", editBg: "#281d3d", editBorder: "#9c7ce0" },
-    light: { primary: "#7654b5", primarySoft: "rgba(118,84,181,0.16)", onPrimary: "#ffffff", blue: "#7654b5", infoSoft: "rgba(118,84,181,0.12)", editBg: "#ece4fa", editBorder: "#7654b5" },
+    dark: {
+      primary: "#c4a7ff",
+      primarySoft: "rgba(196,167,255,0.16)",
+      onPrimary: "#1b1036",
+      blue: "#bba2f5",
+      infoSoft: "rgba(196,167,255,0.13)",
+      editBg: "#281d3d",
+      editBorder: "#9c7ce0",
+    },
+    light: {
+      primary: "#7654b5",
+      primarySoft: "rgba(118,84,181,0.16)",
+      onPrimary: "#ffffff",
+      blue: "#7654b5",
+      infoSoft: "rgba(118,84,181,0.12)",
+      editBg: "#ece4fa",
+      editBorder: "#7654b5",
+    },
   },
   amber: {
-    dark: { primary: "#ffc857", primarySoft: "rgba(255,200,87,0.16)", onPrimary: "#2b1900", blue: "#f0b947", infoSoft: "rgba(255,200,87,0.13)", editBg: "#302510", editBorder: "#d9a63d" },
-    light: { primary: "#a56700", primarySoft: "rgba(165,103,0,0.16)", onPrimary: "#ffffff", blue: "#966000", infoSoft: "rgba(165,103,0,0.12)", editBg: "#f6e8c8", editBorder: "#a56700" },
+    dark: {
+      primary: "#ffc857",
+      primarySoft: "rgba(255,200,87,0.16)",
+      onPrimary: "#2b1900",
+      blue: "#f0b947",
+      infoSoft: "rgba(255,200,87,0.13)",
+      editBg: "#302510",
+      editBorder: "#d9a63d",
+    },
+    light: {
+      primary: "#a56700",
+      primarySoft: "rgba(165,103,0,0.16)",
+      onPrimary: "#ffffff",
+      blue: "#966000",
+      infoSoft: "rgba(165,103,0,0.12)",
+      editBg: "#f6e8c8",
+      editBorder: "#a56700",
+    },
   },
   mono: {
-    dark: { bg: "#080809", card: "#151516", input: "#242426", border: "#3b3b3e", borderStrong: "#66666b", text: "#ffffff", textSub: "#a6a6aa", muted: "#a6a6aa", primary: "#ffffff", primarySoft: "rgba(255,255,255,0.16)", onPrimary: "#080809", green: "#ffffff", incomeSoft: "#505054", red: "#d0d0d4", expenseSoft: "#343437", yellow: "#a2a2a7", warnSoft: "#202022", blue: "#e2e2e5", infoSoft: "#303033", disabled: "#333336", switchTrack: "#28282a", editBg: "#2d2d30", editBorder: "#dddddf", freqExpenseRow: "#29292c", shadow: "#000000" },
-    light: { bg: "#ededed", card: "#ffffff", input: "#e3e3e3", border: "#c5c5c5", borderStrong: "#8f8f8f", text: "#101010", textSub: "#5f5f5f", muted: "#5f5f5f", primary: "#111111", primarySoft: "rgba(17,17,17,0.14)", onPrimary: "#ffffff", green: "#111111", incomeSoft: "#bdbdbf", red: "#454548", expenseSoft: "#dedee0", yellow: "#69696d", warnSoft: "#f4f4f4", blue: "#292929", infoSoft: "#d5d5d7", disabled: "#cccccc", switchTrack: "#d5d5d5", editBg: "#d9d9db", editBorder: "#202020", freqExpenseRow: "#e4e4e6", overlay: "rgba(0,0,0,0.40)", shadow: "#202020" },
+    dark: {
+      bg: "#080809",
+      card: "#151516",
+      input: "#242426",
+      border: "#3b3b3e",
+      borderStrong: "#66666b",
+      text: "#ffffff",
+      textSub: "#a6a6aa",
+      muted: "#a6a6aa",
+      primary: "#ffffff",
+      primarySoft: "rgba(255,255,255,0.16)",
+      onPrimary: "#080809",
+      green: "#ffffff",
+      incomeSoft: "#505054",
+      red: "#d0d0d4",
+      expenseSoft: "#343437",
+      yellow: "#a2a2a7",
+      warnSoft: "#202022",
+      blue: "#e2e2e5",
+      infoSoft: "#303033",
+      disabled: "#333336",
+      switchTrack: "#28282a",
+      editBg: "#2d2d30",
+      editBorder: "#dddddf",
+      freqExpenseRow: "#29292c",
+      shadow: "#000000",
+    },
+    light: {
+      bg: "#ededed",
+      card: "#ffffff",
+      input: "#e3e3e3",
+      border: "#c5c5c5",
+      borderStrong: "#8f8f8f",
+      text: "#101010",
+      textSub: "#5f5f5f",
+      muted: "#5f5f5f",
+      primary: "#111111",
+      primarySoft: "rgba(17,17,17,0.14)",
+      onPrimary: "#ffffff",
+      green: "#111111",
+      incomeSoft: "#bdbdbf",
+      red: "#454548",
+      expenseSoft: "#dedee0",
+      yellow: "#69696d",
+      warnSoft: "#f4f4f4",
+      blue: "#292929",
+      infoSoft: "#d5d5d7",
+      disabled: "#cccccc",
+      switchTrack: "#d5d5d5",
+      editBg: "#d9d9db",
+      editBorder: "#202020",
+      freqExpenseRow: "#e4e4e6",
+      overlay: "rgba(0,0,0,0.40)",
+      shadow: "#202020",
+    },
   },
 };
 
-export function getPalette(theme: "dark" | "light", scheme: ColorSchemePreference): Palette {
+export function getPalette(
+  theme: "dark" | "light",
+  scheme: ColorSchemePreference,
+): Palette {
   const base = theme === "dark" ? dark : light;
   return { ...base, ...accents[scheme][theme] };
 }

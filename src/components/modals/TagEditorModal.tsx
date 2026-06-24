@@ -16,21 +16,6 @@ import { loadTags, saveTags } from "../../utils/tags";
 import { useModalTransition } from "../ui/useModalTransition";
 import { Text, TextInput } from "../ui/AppText";
 
-const PRESET_COLORS = [
-  "#FF6B6B",
-  "#FF8E53",
-  "#FFD93D",
-  "#6BCB77",
-  "#4D96FF",
-  "#9B59B6",
-  "#3498DB",
-  "#1ABC9C",
-  "#F39C12",
-  "#E74C3C",
-  "#2ECC71",
-  "#E91E63",
-];
-
 export function TagEditorModal({
   visible,
   colors,
@@ -47,7 +32,7 @@ export function TagEditorModal({
   onClose: () => void;
 }) {
   const [newLabel, setNewLabel] = useState("");
-  const [newColor, setNewColor] = useState(PRESET_COLORS[0]);
+  const [newColor, setNewColor] = useState(colors.tagColors[0]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingLabel, setEditingLabel] = useState("");
   const [editingColor, setEditingColor] = useState("");
@@ -103,7 +88,7 @@ export function TagEditorModal({
       { id: `${Date.now()}`, label, color: newColor },
     ]);
     setNewLabel("");
-    setNewColor(PRESET_COLORS[0]);
+    setNewColor(colors.tagColors[0]);
   };
 
   const handleDelete = useCallback(
@@ -194,7 +179,7 @@ export function TagEditorModal({
             </View>
 
             <View style={{ flexDirection: "row", gap: 6, flexWrap: "wrap" }}>
-              {PRESET_COLORS.map((c) => (
+              {colors.tagColors.map((c) => (
                 <TouchableOpacity
                   key={c}
                   onPress={() => setNewColor(c)}
@@ -306,7 +291,7 @@ const TagRow = memo(function TagRow({
           <View
             style={{ flexDirection: "row", gap: 4, flex: 1, flexWrap: "wrap" }}
           >
-            {PRESET_COLORS.map((color) => (
+            {colors.tagColors.map((color) => (
               <TouchableOpacity
                 key={color}
                 onPress={() => onChangeColor(color)}
