@@ -13,14 +13,20 @@ export function getLatestTransactionDate(transactions: Transaction[]) {
 }
 
 export function parseLocalDateTime(value: string, endOfDay: boolean) {
-  const [year, month, day] = value.split("-").map(Number);
-  if (!year || !month || !day) return Number.NaN;
-  return new Date(year, month - 1, day, endOfDay ? 23 : 0, endOfDay ? 59 : 0, endOfDay ? 59 : 0, endOfDay ? 999 : 0).getTime();
+  const parts = value.split("-");
+  if (parts.length !== 3) return Number.NaN;
+  const [year, month, day] = parts.map(Number);
+  if (!Number.isInteger(year) || year < 1 || !Number.isInteger(month) || !Number.isInteger(day)) return Number.NaN;
+  const date = new Date(year, month - 1, day, endOfDay ? 23 : 0, endOfDay ? 59 : 0, endOfDay ? 59 : 0, endOfDay ? 999 : 0);
+  if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) return Number.NaN;
+  return date.getTime();
 }
 
 export function parseMonthKey(value: string) {
-  const [year, month] = value.split("-").map(Number);
-  if (!year || !month) return Number.NaN;
+  const parts = value.split("-");
+  if (parts.length !== 2) return Number.NaN;
+  const [year, month] = parts.map(Number);
+  if (!Number.isInteger(year) || year < 1 || !Number.isInteger(month) || month < 1 || month > 12) return Number.NaN;
   return year * 12 + (month - 1);
 }
 

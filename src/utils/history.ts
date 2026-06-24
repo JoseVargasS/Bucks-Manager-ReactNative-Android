@@ -1,20 +1,23 @@
 import * as SecureStore from "expo-secure-store";
-import { HistoryEntry } from "../types";
+import { TRANSACTION_TYPES } from "../domain/bucksLogic";
+import type { HistoryEntry, Transaction } from "../types";
 
 const HISTORY_KEY = "bucks_history";
 const MAX_DAYS = 30;
 
-function pruneExpired(entries: HistoryEntry[]): HistoryEntry[] {
+function pruneExpired(entries: unknown[]): HistoryEntry[] {
   const cutoff = Date.now() - MAX_DAYS * 24 * 60 * 60 * 1000;
-  return entries.filter((e) => new Date(e.timestamp).getTime() > cutoff);
+  return entries.filter((entry): entry is HistoryEntry =>
+    isHistoryEntry(entry) && new Date(entry.timestamp).getTime() > cutoff,
+  );
 }
 
 export async function loadHistory(): Promise<HistoryEntry[]> {
   try {
     const raw = await SecureStore.getItemAsync(HISTORY_KEY);
     if (!raw) return [];
-    const parsed: HistoryEntry[] = JSON.parse(raw);
-    return pruneExpired(parsed);
+    const parsed = JSON.parse(raw) as unknown;
+    return Array.isArray(parsed) ? pruneExpired(parsed) : [];
   } catch {
     return [];
   }
@@ -39,4 +42,20 @@ export async function addHistoryEntry(entry: Omit<HistoryEntry, "id" | "timestam
 export async function removeHistoryEntry(id: string): Promise<void> {
   const existing = await loadHistory();
   await saveHistory(existing.filter((e) => e.id !== id));
+}
+
+function isHistoryEntry(value: unknown): value is HistoryEntry {
+  if (!value || typeof value !== "object") return false;
+  const entry = value as Partial<HistoryEntry>;
+  const tx = entry.transaction as Partial<Transaction> | undefined;
+  return typeof entry.id === "string"
+    && typeof entry.timestamp === "string"
+    && (entry.action === "create" || entry.action === "edit" || entry.action === "delete")
+    && !!tx
+    && Number.isFinite(tx.rowId)
+    && typeof tx.rawDate === "string"
+    && !Number.isNaN(Date.parse(tx.rawDate))
+    && Number.isFinite(tx.amount)
+    && typeof tx.detail === "string"
+    && TRANSACTION_TYPES.includes(tx.type as Transaction["type"]);
 }

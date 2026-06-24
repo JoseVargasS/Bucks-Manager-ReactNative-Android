@@ -44,10 +44,14 @@ export function parseSpanishDate(value: string): Date | null {
   if (parts.length !== 3) return null;
   const month = SHORT_MONTHS.indexOf(parts[1].toLowerCase());
   if (month < 0) return null;
+  const day = Number(parts[0]);
   let year = Number(parts[2]);
-  if (year < 100) year += 2000;
-  const date = new Date(year, month, Number(parts[0]));
-  return Number.isNaN(date.getTime()) ? null : date;
+  if (!Number.isInteger(day) || !Number.isInteger(year) || day < 1) return null;
+  if (year >= 0 && year < 100) year += 2000;
+  const date = new Date(year, month, day);
+  return date.getFullYear() === year && date.getMonth() === month && date.getDate() === day
+    ? date
+    : null;
 }
 
 /** Devuelve "Mes Año" para un Date dado (ej: "Enero 2026") */

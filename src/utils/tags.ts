@@ -1,5 +1,5 @@
 import * as SecureStore from "expo-secure-store";
-import { Tag } from "../types";
+import type { Tag } from "../types";
 import { dark } from "../theme/colors";
 
 const TAGS_KEY = "bucks_tags";

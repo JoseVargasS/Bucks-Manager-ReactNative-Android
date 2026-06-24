@@ -1,17 +1,6 @@
 import assert from "node:assert/strict";
-import { registerHooks } from "node:module";
 import test from "node:test";
-
-registerHooks({
-  resolve(specifier, context, nextResolve) {
-    try {
-      return nextResolve(specifier, context);
-    } catch (error) {
-      if (specifier.startsWith(".")) return nextResolve(`${specifier}.ts`, context);
-      throw error;
-    }
-  },
-});
+import "./setup.mjs";
 
 const {
   getLatestTransactionDate,
@@ -96,6 +85,9 @@ test("parseLocalDateTime returns NaN for invalid input", () => {
   assert.ok(Number.isNaN(parseLocalDateTime("invalid", false)));
   assert.ok(Number.isNaN(parseLocalDateTime("2026", false)));
   assert.ok(Number.isNaN(parseLocalDateTime("", false)));
+  assert.ok(Number.isNaN(parseLocalDateTime("2026-02-31", false)));
+  assert.ok(Number.isNaN(parseLocalDateTime("2026-13-01", false)));
+  assert.ok(Number.isNaN(parseLocalDateTime("0000-01-01", false)));
 });
 
 // --- parseMonthKey ---
@@ -109,6 +101,9 @@ test("parseMonthKey returns NaN for invalid input", () => {
   assert.ok(Number.isNaN(parseMonthKey("invalid")));
   assert.ok(Number.isNaN(parseMonthKey("2026")));
   assert.ok(Number.isNaN(parseMonthKey("")));
+  assert.ok(Number.isNaN(parseMonthKey("2026-00")));
+  assert.ok(Number.isNaN(parseMonthKey("2026-13")));
+  assert.ok(Number.isNaN(parseMonthKey("0000-01")));
 });
 
 // --- buildExportFileName ---

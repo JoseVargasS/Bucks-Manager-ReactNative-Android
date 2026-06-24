@@ -1,18 +1,6 @@
 import assert from "node:assert/strict";
-import { registerHooks } from "node:module";
 import test from "node:test";
-
-registerHooks({
-  resolve(specifier, context, nextResolve) {
-    try {
-      return nextResolve(specifier, context);
-    } catch (error) {
-      if (specifier.startsWith("."))
-        return nextResolve(`${specifier}.ts`, context);
-      throw error;
-    }
-  },
-});
+import "./setup.mjs";
 
 const {
   formatMoney,
@@ -492,6 +480,12 @@ test("parseSpanishDate parses DD-mes-AA format", () => {
   assert.equal(parseSpanishDate("15-xxx-26"), null);
 });
 
+test("parseSpanishDate rejects impossible calendar dates", () => {
+  assert.equal(parseSpanishDate("31-feb-26"), null);
+  assert.equal(parseSpanishDate("00-ene-26"), null);
+  assert.equal(parseSpanishDate("texto"), null);
+});
+
 test("getMonthYear returns Month Year string", () => {
   const date = new Date("2026-01-15T00:00:00.000Z");
   assert.equal(getMonthYear(date), "Enero 2026");
@@ -513,6 +507,11 @@ test("calculateExpression evaluates math expressions", () => {
   assert.equal(calculateExpression("(10+5)*2"), 30);
   assert.equal(calculateExpression("invalid"), 0);
   assert.equal(calculateExpression(""), 0);
+});
+
+test("calculateExpression returns zero for empty, invalid, or non-finite expressions", () => {
+  assert.equal(calculateExpression("("), 0);
+  assert.equal(calculateExpression("1/0"), 0);
 });
 
 // --- Constants ---

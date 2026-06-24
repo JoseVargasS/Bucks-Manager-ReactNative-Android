@@ -98,8 +98,6 @@ const BottomNavItem = memo(function BottomNavItem({
 }) {
   const primary = useColor("primary");
   const primarySoft = useColor("primarySoft");
-  const muted = useColor("muted");
-  const text = useColor("text");
 
   const pressed = useRef(new Animated.Value(0)).current;
   const localActive = useRef(new Animated.Value(active ? 1 : 0)).current;

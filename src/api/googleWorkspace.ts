@@ -391,6 +391,7 @@ export async function readTransactions(token: string, spreadsheetId: string) {
       const date = parseSheetDate(row[0]);
       if (!date) return null;
       const type = normalizeType(String(row[3] || ""));
+      if (!type) return null;
       return {
         rowId: index + 1,
         date: formatDateForSheet(date),
@@ -756,12 +757,13 @@ function parseCreatedAt(value: unknown) {
   return Number.isNaN(date.getTime()) ? String(value) : date.toISOString();
 }
 
-function normalizeType(value: string): Transaction["type"] {
-  const upper = value.toUpperCase();
+function normalizeType(value: string): Transaction["type"] | null {
+  const upper = value.trim().toUpperCase();
   if (upper === "INGRESO FRECUENTE") return "INGRESO FRECUENTE";
   if (upper === "INGRESO NO FRECUENTE") return "INGRESO NO FRECUENTE";
   if (upper === "GASTO FRECUENTE") return "GASTO FRECUENTE";
-  return "GASTO NO FRECUENTE";
+  if (upper === "GASTO NO FRECUENTE") return "GASTO NO FRECUENTE";
+  return null;
 }
 
 function parseTags(value: unknown): string[] {

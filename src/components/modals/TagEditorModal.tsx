@@ -37,7 +37,6 @@ export function TagEditorModal({
   const [editingLabel, setEditingLabel] = useState("");
   const [editingColor, setEditingColor] = useState("");
   const persistQueue = useRef(Promise.resolve());
-  const saveRevision = useRef(0);
   const transition = useModalTransition(visible, 12, 0.985);
 
   const commitTags = useCallback(

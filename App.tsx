@@ -108,7 +108,6 @@ import {
   SearchFilters,
   SummaryRow,
   Tab,
-  ThemeMode,
   LanguageMode,
   FontPreference,
   MaterialIconName,
