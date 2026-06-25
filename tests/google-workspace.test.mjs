@@ -124,7 +124,7 @@ test("saving a transaction inserts the row chronologically and refreshes its mon
 
   const saved = await saveTransaction("token", "write-sheet", {
     date: "2026-01-15",
-    amount: "=10+5",
+    amount: "=-(10+5)",
     detail: "Prueba",
     type: "GASTO NO FRECUENTE",
     createdAt: "11:22:33",
@@ -133,12 +133,13 @@ test("saving a transaction inserts the row chronologically and refreshes its mon
 
   assert.equal(saved.rowId, 3);
   assert.equal(saved.amount, -15);
+  assert.equal(saved.formula, "-(10+5)");
   const insert = requests.find(({ body }) => body?.requests?.[0]?.insertDimension);
   assert.equal(insert.body.requests[0].insertDimension.range.startIndex, 2);
   const rowWrite = requests.find(({ url, method }) => url.includes("INGRESOS Y GASTOS!A3:F3") && method === "PUT");
   assert.deepEqual(rowWrite.body.values[0], [
     "2026-01-15",
-    "=-ABS(10+5)",
+    "=-(10+5)",
     "Prueba",
     "GASTO NO FRECUENTE",
     "11:22:33",

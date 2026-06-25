@@ -65,7 +65,7 @@ export function TagEditorModal({
         .catch(() => undefined)
         .then(() => saveTags(next))
         .catch(() => {
-          void loadTags().then(setTags);
+          void loadTags(copy.languageCode === "en" ? "en" : "es").then(setTags);
           Alert.alert(
             copy.languageCode === "en" ? "Tags" : "Etiquetas",
             copy.languageCode === "en"

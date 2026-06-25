@@ -366,9 +366,6 @@ function AppContent() {
     loadHistory()
       .then(setHistoryEntries)
       .catch(() => undefined);
-    loadTags()
-      .then(setTagsList)
-      .catch(() => undefined);
 
     const sub = AppState.addEventListener("change", (nextState) => {
       if (nextState === "background") {
@@ -378,6 +375,12 @@ function AppContent() {
     });
     return () => sub.remove();
   }, []);
+
+  useEffect(() => {
+    loadTags(language)
+      .then(setTagsList)
+      .catch(() => undefined);
+  }, [language]);
 
   useEffect(() => {
     if (!bootstrapping) SplashScreen.hideAsync().catch(() => undefined);

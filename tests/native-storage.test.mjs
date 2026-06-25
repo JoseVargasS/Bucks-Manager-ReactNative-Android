@@ -86,6 +86,19 @@ test("tags merge defaults with saved values and deduplicate labels", async () =>
   assert.deepEqual(JSON.parse(secureStoreMock.values.get("bucks_tags")), tags);
 });
 
+test("tags localize default labels for English", async () => {
+  secureStoreMock.values.set("bucks_tags", JSON.stringify([
+    { id: "default-comida", label: "Comida", color: "#ffffff" },
+    { id: "custom", label: "Home", color: "#000000" },
+  ]));
+
+  const tags = await loadTags("en");
+  assert.ok(tags.some(({ label }) => label === "Food"));
+  assert.ok(tags.some(({ label }) => label === "Health"));
+  assert.ok(tags.some(({ label }) => label === "Home"));
+  assert.equal(tags.some(({ label }) => label === "Comida"), false);
+});
+
 test("tags fall back to defaults when saved JSON is corrupt", async () => {
   secureStoreMock.values.set("bucks_tags", "not json");
   const tags = await loadTags();

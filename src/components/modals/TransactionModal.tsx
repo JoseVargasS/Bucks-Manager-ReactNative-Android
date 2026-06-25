@@ -1,7 +1,7 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 import { Alert, Animated, BackHandler, Keyboard, ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import { calculateExpression, normalizeAmountExpression, TRANSACTION_TYPES } from "../../domain/bucksLogic";
+import { calculateExpression, isValidTransactionDraft, normalizeAmountExpression, TRANSACTION_TYPES } from "../../domain/bucksLogic";
 import { styles } from "../../styles/globalStyles";
 import { Field } from "../ui/Field";
 import { Select } from "../ui/Select";
@@ -30,6 +30,7 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
   const [tagsOpen, setTagsOpen] = useState(false);
   const [tagsFrame, setTagsFrame] = useState({ left: 14, top: 160, width: 320, maxHeight: 200 });
   const [kbHeight, setKbHeight] = useState(0);
+  const [validationError, setValidationError] = useState("");
   const scrollRef = useRef<ScrollView>(null);
   const modalRef = useRef<View>(null);
   const tagsRef = useRef<View>(null);
@@ -70,6 +71,7 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
       setEditingTx(nextEditingTx);
       setCalVisible(false);
       setTagsOpen(false);
+      setValidationError("");
       submittingRef.current = false;
       setVisible(true);
     },
@@ -117,9 +119,15 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
   function submit() {
     if (submittingRef.current) return;
     if (!formDraft.date || !formDraft.amount || !formDraft.detail.trim()) {
+      setValidationError("");
       Alert.alert(copy.incompleteData, copy.completeRequired);
       return;
     }
+    if (!isValidTransactionDraft(formDraft)) {
+      setValidationError(copy.invalidAmount);
+      return;
+    }
+    setValidationError("");
     submittingRef.current = true;
     pendingSubmit.current = { draft: { ...formDraft, tags: [...(formDraft.tags || [])] }, editingTx };
     close();
@@ -159,7 +167,12 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
               options={typeOptions}
               onSelect={(type: string) => {
                 setTagsOpen(false);
-                setFormDraft((current) => ({ ...current, type: type as TransactionType }));
+                setValidationError("");
+                setFormDraft((current) => ({
+                  ...current,
+                  type: type as TransactionType,
+                  tags: type.startsWith("GASTO") ? current.tags : [],
+                }));
               }}
               colors={colors}
               placeholder={copy.selectType}
@@ -188,7 +201,10 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
               <Text style={[styles.moneyPrefix, { color: colors.text }]}>{currencySymbol}</Text>
               <TextInput
                 value={formDraft.amount}
-                onChangeText={(amount: string) => setFormDraft((current) => ({ ...current, amount }))}
+                onChangeText={(amount: string) => {
+                  setValidationError("");
+                  setFormDraft((current) => ({ ...current, amount }));
+                }}
                 placeholder="Ej: (100+50)*25-10/2"
                 placeholderTextColor={colors.muted}
                 keyboardType="decimal-pad"
@@ -200,13 +216,18 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
                 <Text numberOfLines={1} style={[styles.moneyPreview, { color: amountState.preview < 0 ? colors.red : colors.green, fontSize: 16 }]}>{amountState.text}</Text>
               )}
             </View>
+            {!!validationError && (
+              <Text style={{ color: colors.red, fontSize: 12, fontWeight: "600", marginTop: -12, marginBottom: 12 }}>
+                {validationError}
+              </Text>
+            )}
             <View style={styles.calcToolbar}>
               {["+", "-", "*", "/", "(", ")"].map((token) => (
-                <TouchableOpacity key={token} style={[styles.calcChip, { backgroundColor: colors.infoSoft }]} onPress={() => setFormDraft((current) => ({ ...current, amount: `${current.amount}${token}` }))}>
+                <TouchableOpacity key={token} style={[styles.calcChip, { backgroundColor: colors.infoSoft }]} onPress={() => { setValidationError(""); setFormDraft((current) => ({ ...current, amount: `${current.amount}${token}` })); }}>
                   <Text style={[styles.calcChipText, { color: colors.blue }]}>{token === "*" ? "×" : token}</Text>
                 </TouchableOpacity>
               ))}
-              <TouchableOpacity style={[styles.calcChip, { backgroundColor: colors.expenseSoft }]} onPress={() => setFormDraft((current) => ({ ...current, amount: current.amount.slice(0, -1) }))}>
+              <TouchableOpacity style={[styles.calcChip, { backgroundColor: colors.expenseSoft }]} onPress={() => { setValidationError(""); setFormDraft((current) => ({ ...current, amount: current.amount.slice(0, -1) })); }}>
                 <MaterialCommunityIcons name="backspace-outline" size={17} color={colors.red} />
               </TouchableOpacity>
             </View>

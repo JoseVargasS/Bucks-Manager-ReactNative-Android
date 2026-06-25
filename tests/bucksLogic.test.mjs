@@ -5,6 +5,7 @@ import "./setup.mjs";
 const {
   formatMoney,
   buildTransactionFromDraft,
+  isValidTransactionDraft,
   insertChronologically,
   applySearch,
   calculateSummaries,
@@ -52,13 +53,13 @@ test("buildTransactionFromDraft creates income with positive amount", () => {
   assert.equal(tx.type, "INGRESO FRECUENTE");
   assert.ok(tx.rawDate.startsWith("2026-01-15"));
   assert.ok(tx.createdAt);
-  assert.deepEqual(tx.tags, ["Trabajo"]);
+  assert.deepEqual(tx.tags, []);
 });
 
 test("buildTransactionFromDraft creates expense with negative amount", () => {
   const draft = {
     date: "2026-01-15",
-    amount: "50",
+    amount: "-50",
     detail: "Comida",
     type: "GASTO NO FRECUENTE",
     tags: ["Comida"],
@@ -92,6 +93,47 @@ test("buildTransactionFromDraft preserves createdAt if provided", () => {
   };
   const tx = buildTransactionFromDraft(draft, 5);
   assert.equal(tx.createdAt, "2026-01-14T10:00:00.000Z");
+});
+
+test("buildTransactionFromDraft rejects signs that conflict with transaction type", () => {
+  const incomeDraft = {
+    date: "2026-01-15",
+    amount: "100",
+    detail: "Devolucion",
+    type: "INGRESO NO FRECUENTE",
+  };
+  const expenseDraft = {
+    date: "2026-01-15",
+    amount: "-100",
+    detail: "Comida",
+    type: "GASTO FRECUENTE",
+  };
+  const income = buildTransactionFromDraft(incomeDraft, 2);
+  const expense = buildTransactionFromDraft(expenseDraft, 3);
+
+  assert.equal(income.amount, 100);
+  assert.equal(expense.amount, -100);
+  assert.throws(() => buildTransactionFromDraft({ ...incomeDraft, amount: "-100" }, 4), /Invalid transaction draft/);
+  assert.throws(() => buildTransactionFromDraft({ ...expenseDraft, amount: "100" }, 5), /Invalid transaction draft/);
+});
+
+test("transaction draft validation rejects zero, bad dates, and empty details", () => {
+  const valid = {
+    date: "2026-01-15",
+    amount: "-100",
+    detail: "Comida",
+    type: "GASTO NO FRECUENTE",
+  };
+
+  assert.equal(isValidTransactionDraft(valid), true);
+  assert.equal(isValidTransactionDraft({ ...valid, amount: "100" }), false);
+  assert.equal(isValidTransactionDraft({ ...valid, type: "INGRESO NO FRECUENTE" }), false);
+  assert.equal(isValidTransactionDraft({ ...valid, amount: "0" }), false);
+  assert.equal(isValidTransactionDraft({ ...valid, amount: "10-10" }), false);
+  assert.equal(isValidTransactionDraft({ ...valid, date: "fecha" }), false);
+  assert.equal(isValidTransactionDraft({ ...valid, date: "2026-02-31" }), false);
+  assert.equal(isValidTransactionDraft({ ...valid, detail: " " }), false);
+  assert.throws(() => buildTransactionFromDraft({ ...valid, amount: "0" }, 4), /Invalid transaction draft/);
 });
 
 // --- insertChronologically ---

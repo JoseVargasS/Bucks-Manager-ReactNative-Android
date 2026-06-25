@@ -808,13 +808,7 @@ function formatCreatedAtForSheet(value?: string) {
 function formatAmountForSheet(tx: Transaction) {
   const expression = sanitizeAmountExpression(tx.formula || "");
   if (!expression) return tx.amount;
-  if (/^-?\d+(\.\d+)?$/.test(expression)) {
-    const value = expression.replace(/^-/, "");
-    return tx.type.startsWith("GASTO") ? `=-${value}` : `=${value}`;
-  }
-  return tx.type.startsWith("GASTO")
-    ? `=-ABS(${expression})`
-    : `=ABS(${expression})`;
+  return `=${expression}`;
 }
 
 function sanitizeAmountExpression(value: string) {

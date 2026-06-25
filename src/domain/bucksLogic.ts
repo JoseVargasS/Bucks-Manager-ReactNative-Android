@@ -83,14 +83,40 @@ function isMathExpression(value: string): boolean {
 }
 
 /** Aplica signo al monto según tipo: gastos → negativo, ingresos → positivo */
-function normalizeDraftAmount(draft: TransactionDraft): number {
-  const calculated = Number(calculateExpression(normalizeAmountExpression(draft.amount)));
+export function normalizeDraftAmount(draft: TransactionDraft): number {
+  const calculated = getDraftAmountValue(draft);
   if (draft.type.startsWith("GASTO")) return -Math.abs(calculated);
   return Math.abs(calculated);
 }
 
+export function isValidTransactionDraft(draft: TransactionDraft): boolean {
+  const amount = getDraftAmountValue(draft);
+  return Boolean(
+    draft.date
+      && isValidDraftDate(draft.date)
+      && draft.detail.trim()
+      && Math.abs(amount) > 0
+      && (draft.type.startsWith("INGRESO") ? amount > 0 : amount < 0),
+  );
+}
+
+function getDraftAmountValue(draft: TransactionDraft): number {
+  return Number(calculateExpression(normalizeAmountExpression(draft.amount)));
+}
+
+function isValidDraftDate(value: string): boolean {
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return false;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const date = new Date(`${value}T00:00:00`);
+  return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day;
+}
+
 /** Construye un Transaction completo a partir de un borrador y un rowId */
 export function buildTransactionFromDraft(draft: TransactionDraft, rowId: number): Transaction {
+  if (!isValidTransactionDraft(draft)) throw new Error("Invalid transaction draft");
   const date = new Date(`${draft.date}T00:00:00`);
   const amount = normalizeDraftAmount(draft);
   return {
@@ -102,7 +128,7 @@ export function buildTransactionFromDraft(draft: TransactionDraft, rowId: number
     detail: draft.detail.trim(),
     type: draft.type,
     createdAt: draft.createdAt || new Date().toISOString(),
-    tags: draft.tags,
+    tags: draft.type.startsWith("GASTO") ? draft.tags : [],
   };
 }
 
