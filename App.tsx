@@ -29,7 +29,9 @@ import {
   formatDateToISO,
   insertChronologically,
   MONTH_NAMES,
+  recalculateSummariesForMonths,
   SHEET_NAMES,
+  uniqueMonthKeys,
 } from "./src/domain/bucksLogic";
 import {
   createBucksSpreadsheet,
@@ -1297,7 +1299,15 @@ function AppContent() {
         : renumberTransactions(
             insertChronologically(currentTransactions, optimistic),
           );
-      const nextSummaries = calculateSummaries(next, currentFreqIncome);
+      const affectedMonths = currentEdit
+        ? uniqueMonthKeys([currentEdit, optimistic])
+        : uniqueMonthKeys([optimistic]);
+      const nextSummaries = recalculateSummariesForMonths(
+        next,
+        currentFreqIncome,
+        affectedMonths,
+        summaries,
+      );
       setTransactions(next);
       setSummaries(nextSummaries);
       persistFinancialState(next, nextSummaries, currentFreqIncome);
@@ -1348,7 +1358,13 @@ function AppContent() {
     const next = renumberTransactions(
       transactions.filter((item) => item.rowId !== tx.rowId),
     );
-    const nextSummaries = calculateSummaries(next, freqIncome);
+    const affectedMonths = uniqueMonthKeys([tx]);
+    const nextSummaries = recalculateSummariesForMonths(
+      next,
+      freqIncome,
+      affectedMonths,
+      summaries,
+    );
     setTransactions(next);
     setSummaries(nextSummaries);
     persistFinancialState(next, nextSummaries, freqIncome);
@@ -1374,7 +1390,13 @@ function AppContent() {
     const next = renumberTransactions(
       transactions.filter((item) => !selectedIds.has(item.rowId)),
     );
-    const nextSummaries = calculateSummaries(next, freqIncome);
+    const affectedMonths = uniqueMonthKeys(selected);
+    const nextSummaries = recalculateSummariesForMonths(
+      next,
+      freqIncome,
+      affectedMonths,
+      summaries,
+    );
     setTransactions(next);
     setSummaries(nextSummaries);
     persistFinancialState(next, nextSummaries, freqIncome);
@@ -1436,7 +1458,12 @@ function AppContent() {
         const next = [...transactions];
         [next[index], next[targetIndex]] = [next[targetIndex], next[index]];
         const moved = next.map((item, idx) => ({ ...item, rowId: idx + 2 }));
-        const nextSummaries = calculateSummaries(moved, freqIncome);
+        const nextSummaries = recalculateSummariesForMonths(
+          moved,
+          freqIncome,
+          [],
+          summaries,
+        );
         setTransactions(moved);
         setSummaries(nextSummaries);
         persistFinancialState(moved, nextSummaries, freqIncome);
@@ -1486,7 +1513,13 @@ function AppContent() {
       (a, b) => new Date(a.rawDate).getTime() - new Date(b.rawDate).getTime(),
     );
     const restored = next.map((item, idx) => ({ ...item, rowId: idx + 2 }));
-    const nextSummaries = calculateSummaries(restored, freqIncome);
+    const affectedMonths = uniqueMonthKeys([entry.transaction]);
+    const nextSummaries = recalculateSummariesForMonths(
+      restored,
+      freqIncome,
+      affectedMonths,
+      summaries,
+    );
     setTransactions(restored);
     setSummaries(nextSummaries);
     persistFinancialState(restored, nextSummaries, freqIncome);

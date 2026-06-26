@@ -9,6 +9,10 @@ const {
   insertChronologically,
   applySearch,
   calculateSummaries,
+  calculateMonthSummary,
+  getTransactionMonthKey,
+  recalculateSummariesForMonths,
+  uniqueMonthKeys,
   formatDateToISO,
   formatDateForSheet,
   parseSpanishDate,
@@ -588,4 +592,137 @@ test("MONTH_NAMES exports all twelve months in Spanish", () => {
   assert.equal(MONTH_NAMES.length, 12);
   assert.equal(MONTH_NAMES[0], "Enero");
   assert.equal(MONTH_NAMES[11], "Diciembre");
+});
+
+// --- calculateMonthSummary ---
+test("calculateMonthSummary sums all four transaction types", () => {
+  const transactions = [
+    { rowId: 1, rawDate: "2026-01-15", amount: 1000, detail: "x", type: "INGRESO FRECUENTE", tags: [] },
+    { rowId: 2, rawDate: "2026-01-16", amount: 500, detail: "x", type: "INGRESO NO FRECUENTE", tags: [] },
+    { rowId: 3, rawDate: "2026-01-17", amount: -200, detail: "x", type: "GASTO FRECUENTE", tags: [] },
+    { rowId: 4, rawDate: "2026-01-18", amount: -100, detail: "x", type: "GASTO NO FRECUENTE", tags: [] },
+  ];
+  const row = calculateMonthSummary(transactions, {}, "Enero 2026");
+  assert.equal(row.monthYear, "Enero 2026");
+  assert.equal(row.freqIncome, 1000);
+  assert.equal(row.nonFreqIncome, 500);
+  assert.equal(row.totalIncome, 1500);
+  assert.equal(row.freqExpense, -200);
+  assert.equal(row.nonFreqExpense, -100);
+  assert.equal(row.totalExpense, -300);
+  assert.equal(row.netMonthly, 1200);
+  assert.equal(row.netNoFreq, 200);
+});
+
+test("calculateMonthSummary falls back to freqIncomeByMonth when no transactions contribute", () => {
+  const row = calculateMonthSummary([], { "Febrero 2026": 800 }, "Febrero 2026");
+  assert.equal(row.freqIncome, 800);
+  assert.equal(row.nonFreqIncome, 0);
+  assert.equal(row.netNoFreq, 0);
+});
+
+test("calculateMonthSummary prefers transactions over freqIncomeByMonth when both exist", () => {
+  const transactions = [
+    { rowId: 1, rawDate: "2026-01-15", amount: 500, detail: "x", type: "INGRESO FRECUENTE", tags: [] },
+  ];
+  const row = calculateMonthSummary(transactions, { "Enero 2026": 999 }, "Enero 2026");
+  assert.equal(row.freqIncome, 500);
+});
+
+// --- getTransactionMonthKey ---
+test("getTransactionMonthKey returns the Spanish month name and year", () => {
+  const tx = { rowId: 1, rawDate: "2026-03-15", amount: 100, detail: "x", type: "GASTO NO FRECUENTE", tags: [] };
+  assert.equal(getTransactionMonthKey(tx), "Marzo 2026");
+});
+
+test("getTransactionMonthKey prefers rawDateMs when present", () => {
+  const date = new Date(2024, 6, 4);
+  const tx = {
+    rowId: 1,
+    rawDate: "1999-01-01",
+    rawDateMs: date.getTime(),
+    amount: 100,
+    detail: "x",
+    type: "GASTO NO FRECUENTE",
+    tags: [],
+  };
+  assert.equal(getTransactionMonthKey(tx), "Julio 2024");
+});
+
+test("getTransactionMonthKey parses YYYY-MM-DD as local date to avoid timezone shifts", () => {
+  const tx = { rowId: 1, rawDate: "2026-03-01", amount: 100, detail: "x", type: "GASTO NO FRECUENTE", tags: [] };
+  assert.equal(getTransactionMonthKey(tx), "Marzo 2026");
+});
+
+// --- recalculateSummariesForMonths ---
+test("recalculateSummariesForMonths updates only the requested months", () => {
+  const transactions = [
+    { rowId: 1, rawDate: "2026-01-15", amount: -100, detail: "x", type: "GASTO NO FRECUENTE", tags: [] },
+    { rowId: 2, rawDate: "2026-02-15", amount: -200, detail: "x", type: "GASTO NO FRECUENTE", tags: [] },
+    { rowId: 3, rawDate: "2026-03-15", amount: -300, detail: "x", type: "GASTO NO FRECUENTE", tags: [] },
+  ];
+  const existing = [
+    { monthYear: "Enero 2026", freqIncome: 0, nonFreqIncome: 0, totalIncome: 0, freqExpense: -100, nonFreqExpense: 0, totalExpense: -100, netMonthly: -100, netNoFreq: -100 },
+    { monthYear: "Febrero 2026", freqIncome: 0, nonFreqIncome: 0, totalIncome: 0, freqExpense: -200, nonFreqExpense: 0, totalExpense: -200, netMonthly: -200, netNoFreq: -200 },
+    { monthYear: "Marzo 2026", freqIncome: 0, nonFreqIncome: 0, totalIncome: 0, freqExpense: -300, nonFreqExpense: 0, totalExpense: -300, netMonthly: -300, netNoFreq: -300 },
+  ];
+  const next = recalculateSummariesForMonths(
+    transactions,
+    {},
+    ["Febrero 2026"],
+    existing,
+  );
+  assert.equal(next.length, 3);
+  assert.equal(next.find((row) => row.monthYear === "Enero 2026").freqExpense, -100);
+  assert.equal(next.find((row) => row.monthYear === "Febrero 2026").nonFreqExpense, -200);
+  assert.equal(next.find((row) => row.monthYear === "Marzo 2026").freqExpense, -300);
+});
+
+test("recalculateSummariesForMonths appends new months not in existing", () => {
+  const transactions = [
+    { rowId: 1, rawDate: "2026-04-15", amount: -400, detail: "x", type: "GASTO NO FRECUENTE", tags: [] },
+  ];
+  const existing = [
+    { monthYear: "Enero 2026", freqIncome: 0, nonFreqIncome: 0, totalIncome: 0, freqExpense: -100, nonFreqExpense: 0, totalExpense: -100, netMonthly: -100, netNoFreq: -100 },
+  ];
+  const next = recalculateSummariesForMonths(transactions, {}, ["Abril 2026"], existing);
+  assert.equal(next.length, 2);
+  assert.equal(next[0].monthYear, "Enero 2026");
+  assert.equal(next[1].monthYear, "Abril 2026");
+  assert.equal(next[1].nonFreqExpense, -400);
+});
+
+test("recalculateSummariesForMonths returns existing when no months requested", () => {
+  const existing = [
+    { monthYear: "Enero 2026", freqIncome: 0, nonFreqIncome: 0, totalIncome: 0, freqExpense: -100, nonFreqExpense: 0, totalExpense: -100, netMonthly: -100, netNoFreq: -100 },
+  ];
+  assert.equal(recalculateSummariesForMonths([], {}, [], existing), existing);
+});
+
+test("recalculateSummariesForMonths moves a transaction between months correctly", () => {
+  const editedTransactions = [
+    { rowId: 1, rawDate: "2026-03-01", amount: -100, detail: "x", type: "GASTO NO FRECUENTE", tags: [] },
+  ];
+  const original = [
+    { monthYear: "Febrero 2026", freqIncome: 0, nonFreqIncome: 0, totalIncome: 0, freqExpense: 0, nonFreqExpense: -100, totalExpense: -100, netMonthly: -100, netNoFreq: -100 },
+  ];
+  const next = recalculateSummariesForMonths(
+    editedTransactions,
+    {},
+    ["Febrero 2026", "Marzo 2026"],
+    original,
+  );
+  assert.equal(next.find((row) => row.monthYear === "Febrero 2026").nonFreqExpense, 0);
+  assert.equal(next.find((row) => row.monthYear === "Marzo 2026").nonFreqExpense, -100);
+});
+
+// --- uniqueMonthKeys ---
+test("uniqueMonthKeys deduplicates month keys across many transactions", () => {
+  const transactions = [
+    { rowId: 1, rawDate: "2026-01-15", amount: 1, detail: "x", type: "GASTO NO FRECUENTE", tags: [] },
+    { rowId: 2, rawDate: "2026-01-20", amount: 2, detail: "x", type: "GASTO NO FRECUENTE", tags: [] },
+    { rowId: 3, rawDate: "2026-02-15", amount: 3, detail: "x", type: "GASTO NO FRECUENTE", tags: [] },
+  ];
+  const keys = uniqueMonthKeys(transactions);
+  assert.deepEqual(keys.sort(), ["Enero 2026", "Febrero 2026"]);
 });

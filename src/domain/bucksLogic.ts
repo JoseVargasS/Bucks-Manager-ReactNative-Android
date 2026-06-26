@@ -183,43 +183,114 @@ export function applySearch(
     .slice(0, 150);
 }
 
-/** Agrupa transacciones por mes y calcula totales para la vista RESUMEN POR MES */
-export function calculateSummaries(transactions: Transaction[], freqIncomeByMonth: Record<string, number>): SummaryRow[] {
-  const byMonth = new Map<string, SummaryRow>();
+/** Calcula el resumen de UN mes a partir de las transacciones de ese mes y el freqIncome persistido. */
+export function calculateMonthSummary(
+  transactions: Transaction[],
+  freqIncomeByMonth: Record<string, number>,
+  monthKey: string,
+): SummaryRow {
+  const row: SummaryRow = {
+    monthYear: monthKey,
+    freqIncome: 0,
+    nonFreqIncome: 0,
+    totalIncome: 0,
+    freqExpense: 0,
+    nonFreqExpense: 0,
+    totalExpense: 0,
+    netMonthly: 0,
+    netNoFreq: 0,
+  };
   transactions.forEach((tx) => {
-    const date = new Date(tx.rawDate);
-    const key = getMonthYear(date);
-    const current: SummaryRow = byMonth.get(key) || {
-      monthYear: key, freqIncome: 0, nonFreqIncome: 0,
-      totalIncome: 0, freqExpense: 0, nonFreqExpense: 0,
-      totalExpense: 0, netMonthly: 0, netNoFreq: 0,
-    };
-    if (tx.type === "INGRESO FRECUENTE") current.freqIncome += Number(tx.amount) || 0;
-    if (tx.type === "INGRESO NO FRECUENTE") current.nonFreqIncome += Number(tx.amount) || 0;
-    if (tx.type === "GASTO FRECUENTE") current.freqExpense += Number(tx.amount) || 0;
-    if (tx.type === "GASTO NO FRECUENTE") current.nonFreqExpense += Number(tx.amount) || 0;
-    byMonth.set(key, current);
+    if (tx.type === "INGRESO FRECUENTE") row.freqIncome += Number(tx.amount) || 0;
+    if (tx.type === "INGRESO NO FRECUENTE") row.nonFreqIncome += Number(tx.amount) || 0;
+    if (tx.type === "GASTO FRECUENTE") row.freqExpense += Number(tx.amount) || 0;
+    if (tx.type === "GASTO NO FRECUENTE") row.nonFreqExpense += Number(tx.amount) || 0;
   });
+  if (row.freqIncome === 0) {
+    row.freqIncome = freqIncomeByMonth[monthKey] || 0;
+  }
+  row.totalIncome = row.freqIncome + row.nonFreqIncome;
+  row.totalExpense = row.freqExpense + row.nonFreqExpense;
+  row.netMonthly = row.totalIncome + row.totalExpense;
+  row.netNoFreq = row.totalIncome + row.totalExpense - row.freqIncome;
+  return row;
+}
 
-  Object.keys(freqIncomeByMonth).forEach((key) => {
-    const current = byMonth.get(key);
-    if (current && current.freqIncome === 0) {
-    } else if (!current) {
-      byMonth.set(key, {
-        monthYear: key, freqIncome: freqIncomeByMonth[key], nonFreqIncome: 0,
-        totalIncome: 0, freqExpense: 0, nonFreqExpense: 0,
-        totalExpense: 0, netMonthly: 0, netNoFreq: 0,
-      });
+/** Devuelve el monthKey ("Marzo 2026") para una transacción */
+export function getTransactionMonthKey(tx: Transaction): string {
+  const date = tx.rawDateMs != null ? new Date(tx.rawDateMs) : parseLocalDate(tx.rawDate);
+  return getMonthYear(date);
+}
+
+/** Parsea una fecha ISO o YYYY-MM-DD como local midnight (evita corrimientos por zona UTC) */
+function parseLocalDate(rawDate: string): Date {
+  if (!rawDate) return new Date(NaN);
+  const isoMatch = rawDate.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (isoMatch) {
+    const year = Number(isoMatch[1]);
+    const month = Number(isoMatch[2]) - 1;
+    const day = Number(isoMatch[3]);
+    return new Date(year, month, day);
+  }
+  return new Date(rawDate);
+}
+
+/** Recalcula solo los summaries de los meses indicados, preservando el resto de un array previo */
+export function recalculateSummariesForMonths(
+  transactions: Transaction[],
+  freqIncomeByMonth: Record<string, number>,
+  monthKeys: string[],
+  existingSummaries: SummaryRow[],
+): SummaryRow[] {
+  if (monthKeys.length === 0) return existingSummaries;
+  const monthSet = new Set(monthKeys);
+  const byMonth = new Map<string, Transaction[]>();
+  transactions.forEach((tx) => {
+    const key = getTransactionMonthKey(tx);
+    if (!monthSet.has(key)) return;
+    const list = byMonth.get(key);
+    if (list) list.push(tx);
+    else byMonth.set(key, [tx]);
+  });
+  const updated = existingSummaries.map((row) =>
+    monthSet.has(row.monthYear)
+      ? calculateMonthSummary(byMonth.get(row.monthYear) || [], freqIncomeByMonth, row.monthYear)
+      : row,
+  );
+  monthKeys.forEach((key) => {
+    if (!updated.some((row) => row.monthYear === key)) {
+      updated.push(calculateMonthSummary(byMonth.get(key) || [], freqIncomeByMonth, key));
     }
   });
+  updated.sort((a, b) => monthYearToDate(a.monthYear).getTime() - monthYearToDate(b.monthYear).getTime());
+  return updated;
+}
 
-  return Array.from(byMonth.values())
-    .map((row) => {
-      const totalIncome = row.freqIncome + row.nonFreqIncome;
-      const totalExpense = row.freqExpense + row.nonFreqExpense;
-      return { ...row, totalIncome, totalExpense, netMonthly: totalIncome + totalExpense, netNoFreq: totalIncome + totalExpense - row.freqIncome };
-    })
-    .sort((a, b) => monthYearToDate(a.monthYear).getTime() - monthYearToDate(b.monthYear).getTime());
+/** Devuelve el conjunto único de monthKeys para un grupo de transacciones */
+export function uniqueMonthKeys(transactions: Transaction[]): string[] {
+  const set = new Set<string>();
+  transactions.forEach((tx) => set.add(getTransactionMonthKey(tx)));
+  return Array.from(set);
+}
+
+/** Agrupa transacciones por mes y calcula totales para la vista RESUMEN POR MES */
+export function calculateSummaries(transactions: Transaction[], freqIncomeByMonth: Record<string, number>): SummaryRow[] {
+  const byMonth = new Map<string, Transaction[]>();
+  transactions.forEach((tx) => {
+    const key = getTransactionMonthKey(tx);
+    const list = byMonth.get(key);
+    if (list) list.push(tx);
+    else byMonth.set(key, [tx]);
+  });
+
+  const monthKeys = new Set<string>(byMonth.keys());
+  Object.keys(freqIncomeByMonth).forEach((key) => monthKeys.add(key));
+
+  const rows = Array.from(monthKeys).map((monthKey) =>
+    calculateMonthSummary(byMonth.get(monthKey) || [], freqIncomeByMonth, monthKey),
+  );
+  rows.sort((a, b) => monthYearToDate(a.monthYear).getTime() - monthYearToDate(b.monthYear).getTime());
+  return rows;
 }
 
 /** Convierte "Enero 2026" → Date del primer día de ese mes */
