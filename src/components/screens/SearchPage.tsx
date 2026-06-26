@@ -15,7 +15,7 @@ export function SearchPage({ colors, copy, currencySymbol, tags, filters, setFil
 }) {
   const tagOptions = useMemo(() => [
     { label: copy.allTags, value: "" },
-    ...tags.map((tag) => ({ label: tag.label, value: tag.label, color: tag.color })),
+    ...tags.map((tag) => ({ label: tag.label, value: tag.id, color: tag.color })),
   ], [copy.allTags, tags]);
 
   return (

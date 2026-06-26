@@ -6,7 +6,7 @@ import { Palette } from "../../theme/colors";
 import { MaterialIconName, Tag, Transaction } from "../../types";
 import { formatMoney } from "../../domain/bucksLogic";
 import { formatCreatedTime, typeColor, typeFill, typeLabelFull } from "../../utils/formats";
-import { tagTextColor } from "../../utils/tags";
+import { tagTextColor, findTagById } from "../../utils/tags";
 import { UiCopy } from "../../i18n";
 import { useModalTransition } from "../ui/useModalTransition";
 import { Text } from "../ui/AppText";
@@ -84,11 +84,13 @@ export const DetailModal = forwardRef<DetailModalHandle, { colors: Palette; curr
                 <View style={[styles.detailDescription, { backgroundColor: colors.input }]}>
                   <Text style={[styles.detailSectionLabel, { color: colors.muted }]}>{copy.tagsTitle}</Text>
                   <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-                    {current.tags.map((label) => {
-                      const tagColor = tags.find((tag) => tag.label === label)?.color || colors.muted;
+                    {current.tags.map((id) => {
+                      const tag = findTagById(id, tags);
+                      const tagColor = tag?.color || colors.muted;
+                      const tagLabel = tag?.label || id;
                       return (
-                        <View key={label} style={{ maxWidth: "100%", borderRadius: 8, paddingHorizontal: 9, paddingVertical: 5, backgroundColor: tagColor }}>
-                          <Text numberOfLines={1} style={{ color: tagTextColor(tagColor), fontSize: 12, fontWeight: "700" }}>{label}</Text>
+                        <View key={id} style={{ maxWidth: "100%", borderRadius: 8, paddingHorizontal: 9, paddingVertical: 5, backgroundColor: tagColor }}>
+                          <Text numberOfLines={1} style={{ color: tagTextColor(tagColor), fontSize: 12, fontWeight: "700" }}>{tagLabel}</Text>
                         </View>
                       );
                     })}

@@ -59,6 +59,7 @@ type TransactionRowProps = {
   searchActive: boolean;
   searchText: string;
   tagColorMap: Record<string, string>;
+  tagLabelMap: Record<string, string>;
   onOpenDetail: (tx: Transaction) => void;
   onMove: (tx: Transaction) => void;
   onToggleSelection: (tx: Transaction) => void;
@@ -77,6 +78,7 @@ const TransactionRow = memo(function TransactionRow({
   searchActive,
   searchText,
   tagColorMap,
+  tagLabelMap,
   onOpenDetail,
   onMove,
   onToggleSelection,
@@ -195,6 +197,7 @@ const TransactionRow = memo(function TransactionRow({
           </Text>
           {visibleTags.map((tag) => {
             const tagColor = tagColorMap[tag] || colors.muted;
+            const tagLabel = tagLabelMap[tag] || tag;
             return (
               <View
                 key={tag}
@@ -212,7 +215,7 @@ const TransactionRow = memo(function TransactionRow({
                     color: tagTextColor(tagColor),
                   }}
                 >
-                  {abbreviateTag(tag)}
+                  {abbreviateTag(tagLabel)}
                 </Text>
               </View>
             );
@@ -327,7 +330,14 @@ export const ExpensesView = memo(function ExpensesView({
   const tagColorMap = useMemo(() => {
     const map: Record<string, string> = {};
     tagsList.forEach((t) => {
-      map[t.label] = t.color;
+      map[t.id] = t.color;
+    });
+    return map;
+  }, [tagsList]);
+  const tagLabelMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    tagsList.forEach((t) => {
+      map[t.id] = t.label;
     });
     return map;
   }, [tagsList]);
@@ -518,6 +528,7 @@ export const ExpensesView = memo(function ExpensesView({
         searchActive={searchActive}
         searchText={searchText}
         tagColorMap={tagColorMap}
+        tagLabelMap={tagLabelMap}
         onOpenDetail={onOpenDetail}
         onMove={onMove}
         onToggleSelection={onToggleSelection}
@@ -536,6 +547,7 @@ export const ExpensesView = memo(function ExpensesView({
       searchText,
       selectedRowSet,
       tagColorMap,
+      tagLabelMap,
     ],
   );
 
@@ -649,6 +661,7 @@ export const ExpensesView = memo(function ExpensesView({
                   {currentTagBubble.tags.map((tag) => {
                     const tc = tagColorMap[tag] || colors.muted;
                     const textColor = tagTextColor(tc);
+                    const tagLabel = tagLabelMap[tag] || tag;
                     return (
                       <View
                         key={tag}
@@ -668,7 +681,7 @@ export const ExpensesView = memo(function ExpensesView({
                             color: textColor,
                           }}
                         >
-                          {tag}
+                          {tagLabel}
                         </Text>
                       </View>
                     );

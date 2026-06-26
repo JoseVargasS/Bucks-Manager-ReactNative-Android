@@ -12,6 +12,7 @@ import { typeColor, typeFill, typeLabelFull } from "../../utils/formats";
 import { UiCopy } from "../../i18n";
 import { useModalTransition } from "../ui/useModalTransition";
 import { getBlankDraft } from "../../utils/transactions";
+import { labelForTagId } from "../../utils/tags";
 import { Text, TextInput } from "../ui/AppText";
 
 export type TransactionModalHandle = {
@@ -188,7 +189,9 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
                   style={{ minHeight: 42, paddingHorizontal: 12, borderRadius: 10, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.input, flexDirection: "row", alignItems: "center", gap: 8 }}
                 >
                   <Text numberOfLines={1} style={{ flex: 1, color: (formDraft.tags || []).length ? colors.text : colors.muted, fontWeight: "600" }}>
-                    {(formDraft.tags || []).length ? (formDraft.tags || []).join(", ") : copy.tagsTitle}
+                    {(formDraft.tags || []).length
+                      ? (formDraft.tags || []).map((id) => labelForTagId(id, tags)).join(", ")
+                      : copy.tagsTitle}
                   </Text>
                   <MaterialCommunityIcons name={tagsOpen ? "chevron-up" : "chevron-down"} size={20} color={colors.muted} />
                 </TouchableOpacity>
@@ -259,7 +262,7 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
             <View style={[styles.selectMenu, { left: tagsFrame.left, top: tagsFrame.top, width: tagsFrame.width, maxHeight: tagsFrame.maxHeight, backgroundColor: colors.card, borderColor: colors.border, zIndex: 40 }]}>
               <ScrollView contentContainerStyle={{ padding: 8, flexDirection: "row", flexWrap: "wrap", gap: 8 }} keyboardShouldPersistTaps="always" showsVerticalScrollIndicator={false}>
                 {tags.map((tag) => {
-                  const selected = (formDraft.tags || []).includes(tag.label);
+                  const selected = (formDraft.tags || []).includes(tag.id);
                   return (
                     <TouchableOpacity
                       key={tag.id}
@@ -267,7 +270,7 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
                       onPress={() => {
                         setFormDraft((currentDraft) => {
                           const current = currentDraft.tags || [];
-                          return { ...currentDraft, tags: current.includes(tag.label) ? current.filter((item) => item !== tag.label) : [...current, tag.label] };
+                          return { ...currentDraft, tags: current.includes(tag.id) ? current.filter((item) => item !== tag.id) : [...current, tag.id] };
                         });
                       }}
                     >

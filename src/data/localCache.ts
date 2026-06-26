@@ -3,7 +3,7 @@ import * as FileSystem from "expo-file-system/legacy";
 import { TRANSACTION_TYPES } from "../domain/bucksLogic";
 import type { SummaryRow, Transaction } from "../types";
 
-const CACHE_VERSION = 1;
+const CACHE_VERSION = 2;
 const CACHE_FILE = `${FileSystem.documentDirectory || FileSystem.cacheDirectory}bucks-finance-cache.json`;
 
 export type FinancialCache = {
@@ -20,7 +20,7 @@ export async function loadFinancialCache(spreadsheetId: string) {
     const info = await FileSystem.getInfoAsync(CACHE_FILE);
     if (!info.exists) return null;
     const parsed = JSON.parse(await FileSystem.readAsStringAsync(CACHE_FILE)) as unknown;
-    if (!isCache(parsed) || parsed.spreadsheetId !== spreadsheetId) return null;
+    if (!isCacheShape(parsed) || parsed.spreadsheetId !== spreadsheetId) return null;
     return parsed;
   } catch {
     return null;
@@ -35,10 +35,11 @@ export async function deleteFinancialCache() {
   await FileSystem.deleteAsync(CACHE_FILE, { idempotent: true });
 }
 
-function isCache(value: unknown): value is FinancialCache {
+function isCacheShape(value: unknown): value is FinancialCache {
   if (!value || typeof value !== "object") return false;
   const candidate = value as Partial<FinancialCache>;
-  return candidate.schemaVersion === CACHE_VERSION
+  const version = candidate.schemaVersion ?? 1;
+  return version <= CACHE_VERSION
     && typeof candidate.spreadsheetId === "string"
     && (candidate.lastSyncedAt === null || typeof candidate.lastSyncedAt === "string")
     && Array.isArray(candidate.transactions)

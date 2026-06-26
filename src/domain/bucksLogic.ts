@@ -138,7 +138,7 @@ export function buildTransactionFromDraft(draft: TransactionDraft, rowId: number
   };
 }
 
-/** Inserta una transacción en orden cronológico y renumera todos los rowId */
+/** Inserta una transacciï¿½n en orden cronolï¿½gico y renumera todos los rowId */
 export function insertChronologically(transactions: Transaction[], tx: Transaction): Transaction[] {
   const next = [...transactions];
   const targetMs = tx.rawDateMs ?? Date.parse(tx.rawDate);
@@ -151,7 +151,11 @@ export function insertChronologically(transactions: Transaction[], tx: Transacti
   else next.splice(index, 0, tx);
   return next.map((item, idx) => ({ ...item, rowId: idx + 2 }));
 }
-export function applySearch(transactions: Transaction[], filters: SearchFilters): Transaction[] {
+export function applySearch(
+  transactions: Transaction[],
+  filters: SearchFilters,
+  tagLabelsById: Record<string, string> = {},
+): Transaction[] {
   const text = filters.text.toLowerCase().trim();
   const tag = (filters.tag || "").trim();
   const min = filters.minAmount ? Number(filters.minAmount) : null;
@@ -163,7 +167,10 @@ export function applySearch(transactions: Transaction[], filters: SearchFilters)
     .filter((tx) => {
       const abs = Math.abs(Number(tx.amount) || 0);
       const date = tx.rawDateMs ?? Date.parse(tx.rawDate);
-      const haystack = `${tx.detail} ${tx.type} ${(tx.tags || []).join(" ")}`.toLowerCase();
+      const tagLabels = (tx.tags || [])
+        .map((id) => tagLabelsById[id] ?? id)
+        .join(" ");
+      const haystack = `${tx.detail} ${tx.type} ${tagLabels}`.toLowerCase();
       if (text && !haystack.includes(text)) return false;
       if (tag && !(tx.tags || []).includes(tag)) return false;
       if (min !== null && abs < min) return false;

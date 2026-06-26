@@ -15,6 +15,16 @@ const DEFAULT_TAGS = [
 
 const DEFAULT_TAG_IDS = new Set(DEFAULT_TAGS.map((tag) => tag.id));
 
+export function slugifyTagLabel(label: string): string {
+  const slug = label
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return `custom-${slug}`;
+}
+
 function getDefaultTags(language: LanguageMode): Tag[] {
   return DEFAULT_TAGS.map((tag) => ({
     id: tag.id,
@@ -66,4 +76,65 @@ export function tagTextColor(color: string): string {
   return (r * 299 + g * 587 + b * 114) / 1000 > 150
     ? dark.tagTextDark
     : dark.tagTextLight;
+}
+
+export function findTagById(id: string, tagsList: Tag[]): Tag | undefined {
+  return tagsList.find((tag) => tag.id === id);
+}
+
+export function labelForTagId(id: string, tagsList: Tag[]): string {
+  return findTagById(id, tagsList)?.label ?? id;
+}
+
+export function colorForTagId(
+  id: string,
+  tagsList: Tag[],
+  fallback: string,
+): string {
+  return findTagById(id, tagsList)?.color ?? fallback;
+}
+
+export function migrateTagReferences(
+  refs: string[],
+  tagsList: Tag[],
+): string[] {
+  if (!refs?.length) return refs ?? [];
+  if (!tagsList.length) return [...refs];
+  const byId = new Map(tagsList.map((tag) => [tag.id, tag]));
+  const byLabel = new Map<string, Tag>();
+  tagsList.forEach((tag) => byLabel.set(tag.label.trim().toLowerCase(), tag));
+  DEFAULT_TAGS.forEach((defaultTag) => {
+    const existing = byId.get(defaultTag.id);
+    const fallbackLabel = existing?.label ?? defaultTag.es;
+    const fallbackColor = existing?.color ?? defaultTag.color;
+    byLabel.set(defaultTag.es.toLowerCase(), { id: defaultTag.id, label: fallbackLabel, color: fallbackColor });
+    byLabel.set(defaultTag.en.toLowerCase(), { id: defaultTag.id, label: fallbackLabel, color: fallbackColor });
+  });
+  const seen = new Set<string>();
+  const migrated: string[] = [];
+  refs.forEach((ref) => {
+    if (!ref) return;
+    const exactById = byId.get(ref);
+    if (exactById) {
+      if (!seen.has(exactById.id)) {
+        seen.add(exactById.id);
+        migrated.push(exactById.id);
+      }
+      return;
+    }
+    const byLowerLabel = byLabel.get(ref.trim().toLowerCase());
+    if (byLowerLabel) {
+      if (!seen.has(byLowerLabel.id)) {
+        seen.add(byLowerLabel.id);
+        migrated.push(byLowerLabel.id);
+      }
+      return;
+    }
+    const orphanId = slugifyTagLabel(ref);
+    if (!seen.has(orphanId)) {
+      seen.add(orphanId);
+      migrated.push(orphanId);
+    }
+  });
+  return migrated;
 }

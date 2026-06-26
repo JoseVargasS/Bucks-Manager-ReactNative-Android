@@ -4,7 +4,7 @@ import { fileSystemMock, secureStoreMock } from "./setup.mjs";
 
 const { addHistoryEntry, loadHistory, removeHistoryEntry } = await import("../src/utils/history.ts");
 const { clearPin, isPinEnabled, savePin, verifyPin } = await import("../src/utils/pin.ts");
-const { abbreviateTag, loadTags, saveTags, tagTextColor } = await import("../src/utils/tags.ts");
+const { abbreviateTag, loadTags, saveTags, tagTextColor, migrateTagReferences, slugifyTagLabel, labelForTagId, findTagById } = await import("../src/utils/tags.ts");
 const { deleteFinancialCache, loadFinancialCache, saveFinancialCache } = await import("../src/data/localCache.ts");
 
 beforeEach(() => {
@@ -115,7 +115,7 @@ test("financial cache round-trips valid data and respects spreadsheet ownership"
     freqIncome: { "Enero 2026": 100 },
   };
   await saveFinancialCache(cache);
-  assert.deepEqual(await loadFinancialCache("sheet-1"), { ...cache, schemaVersion: 1 });
+  assert.deepEqual(await loadFinancialCache("sheet-1"), { ...cache, schemaVersion: 2 });
   assert.equal(await loadFinancialCache("sheet-2"), null);
 
   await deleteFinancialCache();
@@ -143,4 +143,52 @@ test("financial cache exposes write failures instead of reporting a false save",
     saveFinancialCache({ spreadsheetId: "sheet-1", lastSyncedAt: null, transactions: [], summaries: [], freqIncome: {} }),
     /disk full/,
   );
+});
+
+const tagsCatalog = [
+  { id: "default-comida", label: "Comida", color: "#111111" },
+  { id: "default-salud", label: "Salud", color: "#222222" },
+  { id: "custom-vacaciones", label: "Vacaciones", color: "#333333" },
+];
+
+test("slugifyTagLabel produces stable id from label", () => {
+  assert.equal(slugifyTagLabel("Mi Tag Personal"), "custom-mi-tag-personal");
+  assert.equal(slugifyTagLabel("Café & Paseo"), "custom-cafe-paseo");
+  assert.equal(slugifyTagLabel(""), "custom-");
+  assert.equal(slugifyTagLabel("Educación"), "custom-educacion");
+});
+
+test("migrateTagReferences resolves existing ids unchanged", () => {
+  const result = migrateTagReferences(["default-comida", "custom-vacaciones"], tagsCatalog);
+  assert.deepEqual(result, ["default-comida", "custom-vacaciones"]);
+});
+
+test("migrateTagReferences migrates legacy labels to ids keeping color via id", () => {
+  const result = migrateTagReferences(["Food", "Vacaciones"], tagsCatalog);
+  assert.deepEqual(result, ["default-comida", "custom-vacaciones"]);
+});
+
+test("migrateTagReferences creates orphan id for unknown label preserving the text", () => {
+  const result = migrateTagReferences(["Bono extra"], tagsCatalog);
+  assert.deepEqual(result, ["custom-bono-extra"]);
+});
+
+test("migrateTagReferences deduplicates when legacy and id point to the same tag", () => {
+  const result = migrateTagReferences(["Comida", "default-comida"], tagsCatalog);
+  assert.deepEqual(result, ["default-comida"]);
+});
+
+test("migrateTagReferences handles empty input safely", () => {
+  assert.deepEqual(migrateTagReferences([], tagsCatalog), []);
+  assert.deepEqual(migrateTagReferences(["Comida"], []), ["Comida"]);
+});
+
+test("labelForTagId falls back to id when tag was deleted", () => {
+  assert.equal(labelForTagId("default-comida", tagsCatalog), "Comida");
+  assert.equal(labelForTagId("ghost-id", tagsCatalog), "ghost-id");
+});
+
+test("findTagById returns the tag or undefined", () => {
+  assert.deepEqual(findTagById("default-comida", tagsCatalog), tagsCatalog[0]);
+  assert.equal(findTagById("ghost", tagsCatalog), undefined);
 });

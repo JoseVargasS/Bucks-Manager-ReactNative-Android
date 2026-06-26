@@ -224,10 +224,22 @@ const accents: Record<
   },
 };
 
+const paletteCache = new Map<string, Palette>();
+const PALETTE_CACHE_LIMIT = 12;
+
 export function getPalette(
   theme: "dark" | "light",
   scheme: ColorSchemePreference,
 ): Palette {
+  const cacheKey = `${theme}|${scheme}`;
+  const cached = paletteCache.get(cacheKey);
+  if (cached) return cached;
   const base = theme === "dark" ? dark : light;
-  return { ...base, ...accents[scheme][theme] };
+  const palette = { ...base, ...accents[scheme][theme] } as Palette;
+  if (paletteCache.size >= PALETTE_CACHE_LIMIT) {
+    const firstKey = paletteCache.keys().next().value;
+    if (firstKey !== undefined) paletteCache.delete(firstKey);
+  }
+  paletteCache.set(cacheKey, palette);
+  return palette;
 }

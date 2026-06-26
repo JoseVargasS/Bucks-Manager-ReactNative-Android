@@ -13,7 +13,7 @@ import { styles } from "../../styles/globalStyles";
 import { Palette } from "../../theme/colors";
 import { Tag } from "../../types";
 import { UiCopy } from "../../i18n";
-import { loadTags, saveTags } from "../../utils/tags";
+import { loadTags, saveTags, slugifyTagLabel } from "../../utils/tags";
 import { useModalTransition } from "../ui/useModalTransition";
 import { Text, TextInput } from "../ui/AppText";
 
@@ -101,9 +101,10 @@ export function TagEditorModal({
     const label = newLabel.trim();
     if (!label) return;
     const key = label.toLocaleLowerCase();
+    const newId = slugifyTagLabel(label);
     commitTags([
-      ...tags.filter((tag) => tag.label.trim().toLocaleLowerCase() !== key),
-      { id: `${Date.now()}`, label, color: newColor },
+      ...tags.filter((tag) => tag.label.trim().toLocaleLowerCase() !== key && tag.id !== newId),
+      { id: newId, label, color: newColor },
     ]);
     setNewLabel("");
     setNewColor(colors.tagColors[0]);

@@ -57,7 +57,7 @@ import {
   removeHistoryEntry,
 } from "./src/utils/history";
 import { isPinEnabled, savePin, verifyPin, clearPin } from "./src/utils/pin";
-import { loadTags } from "./src/utils/tags";
+import { loadTags, migrateTagReferences } from "./src/utils/tags";
 import {
   deleteFinancialCache,
   loadFinancialCache,
@@ -123,7 +123,7 @@ import {
   detectDeviceCurrencySymbol,
   detectDeviceLanguage,
 } from "./src/utils/helpers";
-import { UI_COPY, UI_MONTH_NAMES } from "./src/i18n";
+import { UI_COPY, UI_MONTH_NAMES, UiCopy } from "./src/i18n";
 
 SplashScreen.preventAutoHideAsync().catch(() => undefined);
 SplashScreen.setOptions({ duration: 220, fade: true });
@@ -268,9 +268,55 @@ const defaultExportConfig: ExportConfig = {
 };
 const TAB_ORDER: Tab[] = ["expenses", "summary", "settings"];
 
+function migrateTransactionTags(
+  transactions: Transaction[],
+  tagsList: { id: string; label: string; color: string }[],
+): Transaction[] {
+  if (!transactions.length || !tagsList.length) return transactions;
+  let changed = false;
+  const next = transactions.map((tx) => {
+    if (!tx.tags?.length) return tx;
+    const migrated = migrateTagReferences(tx.tags, tagsList);
+    const isSame =
+      migrated.length === tx.tags.length
+      && migrated.every((id, index) => id === tx.tags![index]);
+    if (isSame) return tx;
+    changed = true;
+    return { ...tx, tags: migrated };
+  });
+  return changed ? next : transactions;
+}
+
 function AppContent() {
   const { colors, theme, colorScheme, toggleTheme, setColorScheme } =
     useTheme();
+  const themeProgress = useRef(
+    new Animated.Value(theme === "dark" ? 1 : 0),
+  ).current;
+  const themeAnimRef = useRef<Animated.CompositeAnimation | null>(null);
+  const themeBgDark = useMemo(() => getPalette("dark", colorScheme).bg, [colorScheme]);
+  const themeBgLight = useMemo(() => getPalette("light", colorScheme).bg, [colorScheme]);
+  const themeProgressBg = useMemo(
+    () =>
+      themeProgress.interpolate({
+        inputRange: [0, 1],
+        outputRange: [themeBgLight, themeBgDark],
+      }),
+    [themeProgress, themeBgLight, themeBgDark],
+  );
+  const toggleThemeWithCrossfade = useCallback(() => {
+    const goingDark = theme !== "dark";
+    const target = goingDark ? 1 : 0;
+    themeAnimRef.current?.stop();
+    themeAnimRef.current = Animated.timing(themeProgress, {
+      toValue: target,
+      duration: 180,
+      easing: Easing.inOut(Easing.cubic),
+      useNativeDriver: false,
+    });
+    themeAnimRef.current.start();
+    toggleTheme();
+  }, [theme, themeProgress, toggleTheme]);
   const [language, setLanguage] = useState<LanguageMode>(detectDeviceLanguage);
   const copy = UI_COPY[language];
   const [currencySymbol, setCurrencySymbol] = useState(
@@ -382,7 +428,11 @@ function AppContent() {
 
   useEffect(() => {
     loadTags(language)
-      .then(setTagsList)
+      .then((loaded) => {
+        setTagsList(loaded);
+        setTransactions((current) => migrateTransactionTags(current, loaded));
+        setSummaries((current) => current);
+      })
       .catch(() => undefined);
   }, [language]);
 
@@ -408,9 +458,16 @@ function AppContent() {
   }, [hasLocalData]);
 
   // --- Derived data ---
+  const tagLabelsById = useMemo(() => {
+    const map: Record<string, string> = {};
+    tagsList.forEach((tag) => {
+      map[tag.id] = tag.label;
+    });
+    return map;
+  }, [tagsList]);
   const visibleTransactions = useMemo(() => {
     const source = searchActive
-      ? applySearch(transactions, searchFilters)
+      ? applySearch(transactions, searchFilters, tagLabelsById)
       : filterTransactionsByRollingPeriod(
           transactions,
           month,
@@ -425,6 +482,7 @@ function AppContent() {
     loadedMonthCount,
     searchActive,
     searchFilters,
+    tagLabelsById,
   ]);
 
   const currentSummary = useMemo(() => {
@@ -1570,220 +1628,152 @@ function AppContent() {
   const closeExport = useCallback(() => setExportVisible(false), []);
   const closeTagEditor = useCallback(() => setTagEditorVisible(false), []);
 
-  function renderTabPage(targetTab: Tab) {
-    const contentTopInset =
-      headerTopInset + (targetTab === "expenses" ? 112 : 62);
-    const pageTitle =
-      targetTab === "expenses"
-        ? copy.expenses
-        : targetTab === "summary"
-          ? copy.summary
-          : copy.settings;
-    const pageSubtitle =
-      targetTab === "expenses"
-        ? `${uiMonthNames[month]} ${year}`
-        : targetTab === "summary"
-          ? copy.summarySubtitle
-          : copy.settingsSubtitle;
-    const isCurrent = targetTab === tab;
-    const screenColors = colors;
-    const screenIsDark = theme === "dark";
-    const showStatus = Boolean(
-      loading || (syncStatusText && !pendingSync && !isSyncing),
-    );
+  const tabPageProps = useMemo(
+    () => ({
+      tabWidth,
+      expenses: {
+        contentTopInset: headerTopInset + 112,
+        colors,
+        summary: currentSummary,
+        transactions: visibleTransactions,
+        searchActive,
+        searchText: searchFilters.text,
+        selectedRows,
+        currencySymbol,
+        copy,
+        onExitSearch: exitSearch,
+        onOpenDetail: handleTransactionPress,
+        onEdit: openEdit,
+        onDeleteSelected: requestDeleteSelected,
+        onMove: openMoveMenu,
+        onToggleSelection: toggleSelection,
+        onLoadOlder: loadOlder,
+        tagsList,
+      },
+      summary: {
+        contentTopInset: headerTopInset + 62,
+        colors,
+        copy,
+        summaries,
+        transactions,
+        freqIncome,
+        availableYears,
+        currencySymbol,
+      },
+      settings: {
+        contentTopInset: headerTopInset + 62,
+        colors,
+        copy,
+        language,
+        accountInfo,
+        currencySymbol,
+        fontPreference,
+        colorSchemeLabel,
+        pinEnabled,
+        tagsCount: tagsList.length,
+        onOpenLanguage: openLanguagePicker,
+        onOpenCurrency: openCurrencyPicker,
+        onOpenFont: openFontPicker,
+        onOpenColorScheme: openColorSchemePicker,
+        onOpenPin: handlePinOpen,
+        onOpenTags: openTagEditor,
+        onSwitch: openAccountManager,
+        onDisconnect: requestDisconnectGoogle,
+        onOpenExport: openExport,
+      },
+      loadingBar: {
+        visible: Boolean(
+          loading || (syncStatusText && !pendingSync && !isSyncing),
+        ),
+        syncing: loading || isSyncing,
+        cardColor: colors.card,
+        primaryColor: colors.primary,
+        mutedColor: colors.muted,
+        text: syncStatusText || copy.syncing,
+      },
+    }),
+    [
+      tabWidth,
+      headerTopInset,
+      colors,
+      currentSummary,
+      visibleTransactions,
+      searchActive,
+      searchFilters.text,
+      selectedRows,
+      currencySymbol,
+      copy,
+      exitSearch,
+      handleTransactionPress,
+      openEdit,
+      requestDeleteSelected,
+      openMoveMenu,
+      toggleSelection,
+      loadOlder,
+      tagsList,
+      summaries,
+      transactions,
+      freqIncome,
+      availableYears,
+      accountInfo,
+      language,
+      fontPreference,
+      colorSchemeLabel,
+      pinEnabled,
+      openLanguagePicker,
+      openCurrencyPicker,
+      openFontPicker,
+      openColorSchemePicker,
+      handlePinOpen,
+      openTagEditor,
+      openAccountManager,
+      requestDisconnectGoogle,
+      openExport,
+      loading,
+      syncStatusText,
+      pendingSync,
+      isSyncing,
+    ],
+  );
 
-    return (
-      <View
-        key={targetTab}
-        pointerEvents={isCurrent ? "auto" : "none"}
-        importantForAccessibility={isCurrent ? "auto" : "no-hide-descendants"}
-        style={{ width: tabWidth, height: "100%", position: "relative" }}
-      >
-        <View
-          style={[
-            { flex: 1 },
-            targetTab === "settings" && { paddingTop: contentTopInset },
-          ]}
-        >
-          {showStatus && (
-            <View
-              style={[
-                styles.loadingBar,
-                styles.loadingOverlay,
-                { backgroundColor: screenColors.card },
-              ]}
-            >
-              {(loading || isSyncing) && (
-                <ActivityIndicator color={screenColors.primary} />
-              )}
-              <Text style={{ color: screenColors.muted }}>
-                {syncStatusText || copy.syncing}
-              </Text>
-            </View>
-          )}
-          {targetTab === "expenses" ? (
-            <ExpensesView
-              colors={screenColors}
-              summary={currentSummary}
-              transactions={visibleTransactions}
-              searchActive={searchActive}
-              searchText={searchFilters.text}
-              selectedRows={selectedRows}
-              currencySymbol={currencySymbol}
-              copy={copy}
-              onExitSearch={exitSearch}
-              onOpenDetail={handleTransactionPress}
-              onEdit={openEdit}
-              onDeleteSelected={requestDeleteSelected}
-              onMove={openMoveMenu}
-              onToggleSelection={toggleSelection}
-              onLoadOlder={loadOlder}
-              topInset={contentTopInset}
-              tagsList={tagsList}
-            />
-          ) : targetTab === "summary" ? (
-            <SummaryView
-              colors={screenColors}
-              copy={copy}
-              summaries={summaries}
-              transactions={transactions}
-              freqIncome={freqIncome}
-              availableYears={availableYears}
-              topInset={contentTopInset}
-              currencySymbol={currencySymbol}
-            />
-          ) : (
-            <SettingsView
-              colors={screenColors}
-              copy={copy}
-              accountInfo={accountInfo}
-              language={language}
-              currencySymbol={currencySymbol}
-              fontPreference={fontPreference}
-              colorSchemeLabel={colorSchemeLabel}
-              pinEnabled={pinEnabled}
-              tagsCount={tagsList.length}
-              onOpenLanguage={openLanguagePicker}
-              onOpenCurrency={openCurrencyPicker}
-              onOpenFont={openFontPicker}
-              onOpenColorScheme={openColorSchemePicker}
-              onOpenPin={handlePinOpen}
-              onOpenTags={openTagEditor}
-              onSwitch={openAccountManager}
-              onDisconnect={requestDisconnectGoogle}
-              onOpenExport={openExport}
-            />
-          )}
-        </View>
-
-        <View
-          style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            right: 0,
-            zIndex: 20,
-          }}
-          pointerEvents="box-none"
-        >
-          {(targetTab === "expenses" || targetTab === "summary") && (
-            <HeaderFade color={screenColors.bg} height={headerFadeHeight} />
-          )}
-          <View pointerEvents="box-none" style={{ paddingTop: headerTopInset }}>
-            <View
-              style={[
-                styles.topBar,
-                styles.topBarMobile,
-                { backgroundColor: "transparent" },
-              ]}
-            >
-              <HeaderTitleFade color={screenColors.bg} />
-              <View style={styles.headerLeft}>
-                <View
-                  style={[
-                    styles.headerLogo,
-                    { backgroundColor: screenColors.primary },
-                  ]}
-                >
-                  <MaterialCommunityIcons
-                    name="sack"
-                    size={19}
-                    color={screenColors.onPrimary}
-                  />
-                </View>
-                <View style={styles.titleBlock}>
-                  <Text
-                    numberOfLines={1}
-                    style={[
-                      styles.pageTitle,
-                      styles.pageTitleMobile,
-                      screenIsDark
-                        ? styles.headerReadableTextDark
-                        : styles.headerReadableTextLight,
-                      {
-                        color: screenColors.text,
-                        textShadowColor: screenColors.shadow,
-                      },
-                    ]}
-                  >
-                    {pageTitle}
-                  </Text>
-                  {!!pageSubtitle && (
-                    <Text
-                      numberOfLines={1}
-                      style={[
-                        styles.pageSub,
-                        styles.pageSubMobile,
-                        screenIsDark
-                          ? styles.headerReadableTextDark
-                          : styles.headerReadableTextLight,
-                        {
-                          color: screenColors.muted,
-                          textShadowColor: screenColors.shadow,
-                        },
-                      ]}
-                    >
-                      {pageSubtitle}
-                    </Text>
-                  )}
-                </View>
-              </View>
-              <View style={{ flexDirection: "row", gap: 8 }}>
-                <HeaderActionButton
-                  colors={screenColors}
-                  icon={screenIsDark ? "weather-night" : "white-balance-sunny"}
-                  iconColor={screenColors.yellow}
-                  onPress={toggleTheme}
-                />
-                <HeaderActionButton
-                  colors={screenColors}
-                  icon="history"
-                  iconColor={
-                    historyEntries.length
-                      ? screenColors.primary
-                      : screenColors.muted
-                  }
-                  onPress={openHistory}
-                />
-              </View>
-            </View>
-            {targetTab === "expenses" && (
-              <PeriodControls
-                colors={screenColors}
-                copy={copy}
-                year={year}
-                month={month}
-                availableYears={availableYears}
-                availableMonths={availableMonths}
-                onSelectPeriod={selectPeriod}
-                goToday={goToday}
-              />
-            )}
-          </View>
-        </View>
-      </View>
-    );
-  }
+  const headerProps = useMemo(
+    () => ({
+      tab,
+      bg: colors.bg,
+      isDark: theme === "dark",
+      headerTopInset,
+      headerFadeHeight,
+      expensesSubtitle: `${uiMonthNames[month]} ${year}`,
+      expensesAvailableYears: availableYears,
+      expensesAvailableMonths: availableMonths,
+      expensesYear: year,
+      expensesMonth: month,
+      historyTint: historyEntries.length ? colors.primary : colors.muted,
+      onToggleTheme: toggleThemeWithCrossfade,
+      onOpenHistory: openHistory,
+      onSelectPeriod: selectPeriod,
+      goToday,
+      copy,
+    }),
+    [
+      tab,
+      colors,
+      theme,
+      headerTopInset,
+      headerFadeHeight,
+      uiMonthNames,
+      month,
+      year,
+      availableYears,
+      availableMonths,
+      historyEntries.length,
+      toggleThemeWithCrossfade,
+      openHistory,
+      selectPeriod,
+      goToday,
+      copy,
+    ],
+  );
 
   // --- Render ---
   if (
@@ -1851,7 +1841,7 @@ function AppContent() {
   }
 
   return (
-    <View style={[styles.safe, { backgroundColor: colors.bg }]}>
+    <Animated.View style={[styles.safe, { backgroundColor: themeProgressBg }]}>
       <NativeStatusBar
         barStyle={theme === "dark" ? "light-content" : "dark-content"}
         translucent
@@ -1861,7 +1851,7 @@ function AppContent() {
         style={[
           styles.shell,
           styles.shellCompact,
-          { backgroundColor: colors.bg, paddingTop: 0 },
+          { paddingTop: 0 },
         ]}
       >
         <View
@@ -1878,8 +1868,30 @@ function AppContent() {
               transform: [{ translateX: pagerTranslateX }],
             }}
           >
-            {TAB_ORDER.map(renderTabPage)}
+            <TabPage
+              tab="expenses"
+              isCurrent={tab === "expenses"}
+              props={tabPageProps.expenses}
+              loadingBar={tabPageProps.loadingBar}
+              tabWidth={tabPageProps.tabWidth}
+            />
+            <TabPage
+              tab="summary"
+              isCurrent={tab === "summary"}
+              props={tabPageProps.summary}
+              loadingBar={tabPageProps.loadingBar}
+              tabWidth={tabPageProps.tabWidth}
+            />
+            <TabPage
+              tab="settings"
+              isCurrent={tab === "settings"}
+              props={tabPageProps.settings}
+              loadingBar={tabPageProps.loadingBar}
+              tabWidth={tabPageProps.tabWidth}
+            />
           </Animated.View>
+
+          <HeaderShell {...headerProps} colors={colors} themeProgressBg={themeProgressBg} />
         </View>
 
         <BottomFade color={colors.bg} height={bottomFadeHeight} />
@@ -1961,7 +1973,7 @@ function AppContent() {
         setTags={setTagsList}
         onClose={closeTagEditor}
       />
-    </View>
+    </Animated.View>
   );
 }
 
@@ -2021,10 +2033,13 @@ const HeaderActionButton = memo(function HeaderActionButton({
       }}
     >
       <Pressable
-        onPress={onPress}
-        onPressIn={() => animate(1, 70)}
-        onPressOut={() => animate(0, 110)}
+        onPressIn={() => {
+          animate(1, 60);
+          onPress();
+        }}
+        onPressOut={() => animate(0, 60)}
         accessibilityRole="button"
+        hitSlop={6}
         style={{
           width: 40,
           height: 40,
@@ -2159,3 +2174,329 @@ export default function App() {
     </ThemeProvider>
   );
 }
+
+type ExpensesTabProps = {
+  contentTopInset: number;
+  colors: Palette;
+  summary: SummaryRow;
+  transactions: Transaction[];
+  searchActive: boolean;
+  searchText: string;
+  selectedRows: number[];
+  currencySymbol: string;
+  copy: UiCopy;
+  onExitSearch: () => void;
+  onOpenDetail: (tx: Transaction) => void;
+  onEdit: (tx: Transaction) => void;
+  onDeleteSelected: () => void;
+  onMove: (tx: Transaction) => void;
+  onToggleSelection: (tx: Transaction) => void;
+  onLoadOlder: () => void;
+  tagsList: Tag[];
+};
+
+type SummaryTabProps = {
+  contentTopInset: number;
+  colors: Palette;
+  copy: UiCopy;
+  summaries: SummaryRow[];
+  transactions: Transaction[];
+  freqIncome: Record<string, number>;
+  availableYears: number[];
+  currencySymbol: string;
+};
+
+type SettingsTabProps = {
+  contentTopInset: number;
+  colors: Palette;
+  copy: UiCopy;
+  language: LanguageMode;
+  accountInfo: { name?: string; email?: string } | null;
+  currencySymbol: string;
+  fontPreference: FontPreference;
+  colorSchemeLabel: string;
+  pinEnabled: boolean;
+  tagsCount: number;
+  onOpenLanguage: () => void;
+  onOpenCurrency: () => void;
+  onOpenFont: () => void;
+  onOpenColorScheme: () => void;
+  onOpenPin: () => void;
+  onOpenTags: () => void;
+  onSwitch: () => void;
+  onDisconnect: () => void;
+  onOpenExport: () => void;
+};
+
+type LoadingBarProps = {
+  visible: boolean;
+  syncing: boolean;
+  cardColor: string;
+  primaryColor: string;
+  mutedColor: string;
+  text: string;
+};
+
+type TabPageProps =
+  | {
+      tab: "expenses";
+      isCurrent: boolean;
+      props: ExpensesTabProps;
+      loadingBar: LoadingBarProps;
+      tabWidth: number;
+    }
+  | {
+      tab: "summary";
+      isCurrent: boolean;
+      props: SummaryTabProps;
+      loadingBar: LoadingBarProps;
+      tabWidth: number;
+    }
+  | {
+      tab: "settings";
+      isCurrent: boolean;
+      props: SettingsTabProps;
+      loadingBar: LoadingBarProps;
+      tabWidth: number;
+    };
+
+function TabPageImpl(props: TabPageProps) {
+  const { tab, isCurrent, props: tabProps, loadingBar, tabWidth } = props;
+  const showSettingsTopPad = tab === "settings";
+  return (
+    <View
+      pointerEvents={isCurrent ? "auto" : "none"}
+      importantForAccessibility={isCurrent ? "auto" : "no-hide-descendants"}
+      style={{ width: tabWidth, height: "100%", position: "relative" }}
+    >
+      <View
+        style={[
+          { flex: 1 },
+          showSettingsTopPad && { paddingTop: tabProps.contentTopInset },
+        ]}
+      >
+        {loadingBar.visible && (
+          <View
+            style={[
+              styles.loadingBar,
+              styles.loadingOverlay,
+              { backgroundColor: loadingBar.cardColor },
+            ]}
+          >
+            {loadingBar.syncing && (
+              <ActivityIndicator color={loadingBar.primaryColor} />
+            )}
+            <Text style={{ color: loadingBar.mutedColor }}>{loadingBar.text}</Text>
+          </View>
+        )}
+        {tab === "expenses" ? (
+          <ExpensesView
+            colors={tabProps.colors}
+            summary={tabProps.summary}
+            transactions={tabProps.transactions}
+            searchActive={tabProps.searchActive}
+            searchText={tabProps.searchText}
+            selectedRows={tabProps.selectedRows}
+            currencySymbol={tabProps.currencySymbol}
+            copy={tabProps.copy}
+            onExitSearch={tabProps.onExitSearch}
+            onOpenDetail={tabProps.onOpenDetail}
+            onEdit={tabProps.onEdit}
+            onDeleteSelected={tabProps.onDeleteSelected}
+            onMove={tabProps.onMove}
+            onToggleSelection={tabProps.onToggleSelection}
+            onLoadOlder={tabProps.onLoadOlder}
+            topInset={tabProps.contentTopInset}
+            tagsList={tabProps.tagsList}
+          />
+        ) : tab === "summary" ? (
+          <SummaryView
+            colors={tabProps.colors}
+            copy={tabProps.copy}
+            summaries={tabProps.summaries}
+            transactions={tabProps.transactions}
+            freqIncome={tabProps.freqIncome}
+            availableYears={tabProps.availableYears}
+            topInset={tabProps.contentTopInset}
+            currencySymbol={tabProps.currencySymbol}
+          />
+        ) : (
+          <SettingsView
+            colors={tabProps.colors}
+            copy={tabProps.copy}
+            language={tabProps.language}
+            accountInfo={tabProps.accountInfo}
+            currencySymbol={tabProps.currencySymbol}
+            fontPreference={tabProps.fontPreference}
+            colorSchemeLabel={tabProps.colorSchemeLabel}
+            pinEnabled={tabProps.pinEnabled}
+            tagsCount={tabProps.tagsCount}
+            onOpenLanguage={tabProps.onOpenLanguage}
+            onOpenCurrency={tabProps.onOpenCurrency}
+            onOpenFont={tabProps.onOpenFont}
+            onOpenColorScheme={tabProps.onOpenColorScheme}
+            onOpenPin={tabProps.onOpenPin}
+            onOpenTags={tabProps.onOpenTags}
+            onSwitch={tabProps.onSwitch}
+            onDisconnect={tabProps.onDisconnect}
+            onOpenExport={tabProps.onOpenExport}
+          />
+        )}
+      </View>
+    </View>
+  );
+}
+
+const TabPage = memo(TabPageImpl);
+
+type HeaderShellProps = {
+  tab: Tab;
+  bg: string;
+  isDark: boolean;
+  headerTopInset: number;
+  headerFadeHeight: number;
+  expensesSubtitle: string;
+  expensesAvailableYears: number[];
+  expensesAvailableMonths: number[];
+  expensesYear: number;
+  expensesMonth: number;
+  historyTint: string;
+  onToggleTheme: () => void;
+  onOpenHistory: () => void;
+  onSelectPeriod: (month: number, year: number) => void;
+  goToday: () => void;
+  copy: UiCopy;
+};
+
+function HeaderShellImpl(
+  props: HeaderShellProps & {
+    colors: Palette;
+    themeProgressBg: Animated.AnimatedInterpolation<string>;
+  },
+) {
+  const {
+    tab,
+    bg,
+    themeProgressBg,
+    isDark,
+    headerTopInset,
+    headerFadeHeight,
+    expensesSubtitle,
+    historyTint,
+    onToggleTheme,
+    onOpenHistory,
+    copy,
+    colors,
+  } = props;
+  const pageTitle =
+    tab === "expenses"
+      ? copy.expenses
+      : tab === "summary"
+        ? copy.summary
+        : copy.settings;
+  const pageSubtitle =
+    tab === "expenses"
+      ? expensesSubtitle
+      : tab === "summary"
+        ? copy.summarySubtitle
+        : copy.settingsSubtitle;
+  const showHeaderFade = tab === "expenses" || tab === "summary";
+  return (
+    <Animated.View
+      style={{
+        position: "absolute",
+        top: 0,
+        left: 0,
+        right: 0,
+        zIndex: 20,
+        backgroundColor: themeProgressBg,
+      }}
+      pointerEvents="box-none"
+    >
+      {showHeaderFade && <HeaderFade color={bg} height={headerFadeHeight} />}
+      <View pointerEvents="box-none" style={{ paddingTop: headerTopInset }}>
+        <View
+          style={[
+            styles.topBar,
+            styles.topBarMobile,
+            { backgroundColor: "transparent" },
+          ]}
+        >
+          <HeaderTitleFade color={bg} />
+          <View style={styles.headerLeft}>
+            <View
+              style={[
+                styles.headerLogo,
+                { backgroundColor: colors.primary },
+              ]}
+            >
+              <MaterialCommunityIcons
+                name="sack"
+                size={19}
+                color={colors.onPrimary}
+              />
+            </View>
+            <View style={styles.titleBlock}>
+              <Text
+                numberOfLines={1}
+                style={[
+                  styles.pageTitle,
+                  styles.pageTitleMobile,
+                  isDark
+                    ? styles.headerReadableTextDark
+                    : styles.headerReadableTextLight,
+                  { color: colors.text, textShadowColor: colors.shadow },
+                ]}
+              >
+                {pageTitle}
+              </Text>
+              {!!pageSubtitle && (
+                <Text
+                  numberOfLines={1}
+                  style={[
+                    styles.pageSub,
+                    styles.pageSubMobile,
+                    isDark
+                      ? styles.headerReadableTextDark
+                      : styles.headerReadableTextLight,
+                    { color: colors.muted, textShadowColor: colors.shadow },
+                  ]}
+                >
+                  {pageSubtitle}
+                </Text>
+              )}
+            </View>
+          </View>
+          <View style={{ flexDirection: "row", gap: 8 }}>
+            <HeaderActionButton
+              colors={colors}
+              icon={isDark ? "weather-night" : "white-balance-sunny"}
+              iconColor={colors.yellow}
+              onPress={onToggleTheme}
+            />
+            <HeaderActionButton
+              colors={colors}
+              icon="history"
+              iconColor={historyTint}
+              onPress={onOpenHistory}
+            />
+          </View>
+        </View>
+        {tab === "expenses" && (
+          <PeriodControls
+            colors={colors}
+            copy={copy}
+            year={props.expensesYear}
+            month={props.expensesMonth}
+            availableYears={props.expensesAvailableYears}
+            availableMonths={props.expensesAvailableMonths}
+            onSelectPeriod={props.onSelectPeriod}
+            goToday={props.goToday}
+          />
+        )}
+      </View>
+    </Animated.View>
+  );
+}
+
+const HeaderShell = memo(HeaderShellImpl);
