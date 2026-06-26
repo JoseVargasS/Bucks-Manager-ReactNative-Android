@@ -15,6 +15,8 @@ export const PeriodControls = memo(function PeriodControls({
   availableMonths,
   onSelectPeriod,
   goToday,
+  goPrevMonth,
+  goNextMonth,
 }: {
   colors: Palette;
   copy: UiCopy;
@@ -24,6 +26,8 @@ export const PeriodControls = memo(function PeriodControls({
   availableMonths: number[];
   onSelectPeriod: (month: number, year: number) => void;
   goToday: () => void;
+  goPrevMonth: () => void;
+  goNextMonth: () => void;
 }) {
   const monthNames = copy.languageCode === "en" ? UI_MONTH_NAMES.en : UI_MONTH_NAMES.es;
 
@@ -36,7 +40,7 @@ export const PeriodControls = memo(function PeriodControls({
           onSelect={(v: string) => onSelectPeriod(month, Number(v))}
           colors={colors}
           title={copy.selectYear}
-          style={{ flex: 0, minWidth: 100 }}
+          style={{ flex: 1, minWidth: 0 }}
         />
         <Select
           value={String(month)}
@@ -44,10 +48,16 @@ export const PeriodControls = memo(function PeriodControls({
           onSelect={(v: string) => onSelectPeriod(Number(v), year)}
           colors={colors}
           title={copy.selectMonth}
-          style={{ flex: 1 }}
+          style={{ flex: 1, minWidth: 0 }}
         />
+        <TouchableOpacity onPress={goPrevMonth} style={[styles.periodToday, { backgroundColor: colors.infoSoft }]}>
+          <MaterialCommunityIcons name="chevron-left" size={20} color={colors.blue} />
+        </TouchableOpacity>
         <TouchableOpacity onPress={goToday} style={[styles.periodToday, { backgroundColor: colors.infoSoft }]}>
           <MaterialCommunityIcons name="calendar-today" size={18} color={colors.blue} />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={goNextMonth} style={[styles.periodToday, { backgroundColor: colors.infoSoft }]}>
+          <MaterialCommunityIcons name="chevron-right" size={20} color={colors.blue} />
         </TouchableOpacity>
       </View>
     </View>

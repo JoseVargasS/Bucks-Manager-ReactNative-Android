@@ -1203,6 +1203,16 @@ function AppContent() {
     selectPeriod(today.getMonth(), today.getFullYear());
   }, [selectPeriod]);
 
+  const goPrevMonth = useCallback(() => {
+    const prevMonth = month - 1;
+    selectPeriod(prevMonth < 0 ? 11 : prevMonth, prevMonth < 0 ? year - 1 : year);
+  }, [month, year, selectPeriod]);
+
+  const goNextMonth = useCallback(() => {
+    const nextMonth = month + 1;
+    selectPeriod(nextMonth > 11 ? 0 : nextMonth, nextMonth > 11 ? year + 1 : year);
+  }, [month, year, selectPeriod]);
+
   const openAdd = useCallback(() => {
     transactionModalRef.current?.open(getBlankDraft());
   }, []);
@@ -1786,6 +1796,8 @@ function AppContent() {
       onOpenHistory: openHistory,
       onSelectPeriod: selectPeriod,
       goToday,
+      goPrevMonth,
+      goNextMonth,
       copy,
     }),
     [
@@ -1804,6 +1816,8 @@ function AppContent() {
       openHistory,
       selectPeriod,
       goToday,
+      goPrevMonth,
+      goNextMonth,
       copy,
     ],
   );
@@ -2399,6 +2413,8 @@ type HeaderShellProps = {
   onOpenHistory: () => void;
   onSelectPeriod: (month: number, year: number) => void;
   goToday: () => void;
+  goPrevMonth: () => void;
+  goNextMonth: () => void;
   copy: UiCopy;
 };
 
@@ -2523,6 +2539,8 @@ function HeaderShellImpl(
             availableMonths={props.expensesAvailableMonths}
             onSelectPeriod={props.onSelectPeriod}
             goToday={props.goToday}
+            goPrevMonth={props.goPrevMonth}
+            goNextMonth={props.goNextMonth}
           />
         )}
       </View>
