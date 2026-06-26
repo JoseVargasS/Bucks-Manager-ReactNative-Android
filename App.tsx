@@ -1212,7 +1212,7 @@ function AppContent() {
     transactionModalRef.current?.open(
       {
         date: formatDateToISO(tx.rawDate),
-        amount: tx.formula ? `=${tx.formula}` : String(Math.abs(tx.amount)),
+        amount: tx.formula ? `=${tx.formula}` : String(tx.amount),
         detail: tx.detail,
         type: tx.type,
         createdAt: tx.createdAt,
@@ -1899,6 +1899,7 @@ function AppContent() {
               height: "100%",
               flexDirection: "row",
               transform: [{ translateX: pagerTranslateX }],
+              zIndex: 0,
             }}
           >
             <TabPage
@@ -1924,7 +1925,7 @@ function AppContent() {
             />
           </Animated.View>
 
-          <HeaderShell {...headerProps} colors={colors} themeProgressBg={themeProgressBg} />
+          <HeaderShell {...headerProps} colors={colors} />
         </View>
 
         <BottomFade color={colors.bg} height={bottomFadeHeight} />
@@ -2104,9 +2105,9 @@ const HeaderFade = memo(function HeaderFade({
     >
       <Defs>
         <LinearGradient id="headerFade" x1="0" y1="0" x2="0" y2="1">
-          <Stop offset="0" stopColor={color} stopOpacity="0.94" />
-          <Stop offset="0.38" stopColor={color} stopOpacity="0.72" />
-          <Stop offset="0.72" stopColor={color} stopOpacity="0.24" />
+          <Stop offset="0" stopColor={color} stopOpacity="0.55" />
+          <Stop offset="0.38" stopColor={color} stopOpacity="0.35" />
+          <Stop offset="0.72" stopColor={color} stopOpacity="0.10" />
           <Stop offset="1" stopColor={color} stopOpacity="0" />
         </LinearGradient>
       </Defs>
@@ -2135,8 +2136,8 @@ const HeaderTitleFade = memo(function HeaderTitleFade({
           x2="1"
           y2="0"
         >
-          <Stop offset="0" stopColor={color} stopOpacity="0.96" />
-          <Stop offset="0.58" stopColor={color} stopOpacity="0.82" />
+          <Stop offset="0" stopColor={color} stopOpacity="0.45" />
+          <Stop offset="0.58" stopColor={color} stopOpacity="0.30" />
           <Stop offset="1" stopColor={color} stopOpacity="0" />
         </LinearGradient>
         <LinearGradient
@@ -2404,13 +2405,11 @@ type HeaderShellProps = {
 function HeaderShellImpl(
   props: HeaderShellProps & {
     colors: Palette;
-    themeProgressBg: Animated.AnimatedInterpolation<string>;
   },
 ) {
   const {
     tab,
     bg,
-    themeProgressBg,
     isDark,
     headerTopInset,
     headerFadeHeight,
@@ -2441,8 +2440,7 @@ function HeaderShellImpl(
         top: 0,
         left: 0,
         right: 0,
-        zIndex: 20,
-        backgroundColor: themeProgressBg,
+        zIndex: 30,
       }}
       pointerEvents="box-none"
     >

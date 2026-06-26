@@ -58,7 +58,7 @@ export const BottomNav = memo(function BottomNav({
   const { card, borderStrong, bg } = useColors();
   const isDark = useMemo(() => bg === dark.bg, [bg]);
   const glassSurface = useMemo(
-    () => (isDark ? withAlpha(card, 0.72) : withAlpha(card, 0.96)),
+    () => withAlpha(card, isDark ? 0.85 : 0.82),
     [isDark, card],
   );
   const borderAlpha = useMemo(
