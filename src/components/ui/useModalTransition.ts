@@ -13,30 +13,23 @@ export function useModalTransition(visible: boolean, offset = 16, scaleFrom = 1,
   useLayoutEffect(() => {
     progress.stopAnimation();
     if (!visible && !mounted) return;
-
     if (visible) setMounted(true);
     const animation = Animated.timing(progress, {
       toValue: visible ? 1 : 0,
       duration: visible ? 160 : 120,
-      easing: Easing.out(Easing.cubic),
+      easing: visible ? Easing.out(Easing.cubic) : Easing.in(Easing.cubic),
       useNativeDriver: true,
     });
-    const frame = visible
-      ? requestAnimationFrame(() => animation.start())
-      : undefined;
-
-    if (!visible) {
+    if (visible) {
+      animation.start();
+    } else {
       animation.start(({ finished }) => {
         if (!finished) return;
         setMounted(false);
         onClosedRef.current?.();
       });
     }
-
-    return () => {
-      if (frame !== undefined) cancelAnimationFrame(frame);
-      animation.stop();
-    };
+    return () => animation.stop();
   }, [mounted, progress, visible]);
 
   return {
@@ -50,3 +43,4 @@ export function useModalTransition(visible: boolean, offset = 16, scaleFrom = 1,
     },
   };
 }
+

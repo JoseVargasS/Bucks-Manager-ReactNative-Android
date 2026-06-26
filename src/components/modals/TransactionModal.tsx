@@ -11,6 +11,7 @@ import { Transaction, TransactionDraft, TransactionType, Tag } from "../../types
 import { typeColor, typeFill, typeLabelFull } from "../../utils/formats";
 import { UiCopy } from "../../i18n";
 import { useModalTransition } from "../ui/useModalTransition";
+import { useKeyboardOffset } from "../ui/useKeyboardOffset";
 import { getBlankDraft } from "../../utils/transactions";
 import { labelForTagId } from "../../utils/tags";
 import { Text, TextInput } from "../ui/AppText";
@@ -30,7 +31,7 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
   const [calVisible, setCalVisible] = useState(false);
   const [tagsOpen, setTagsOpen] = useState(false);
   const [tagsFrame, setTagsFrame] = useState({ left: 14, top: 160, width: 320, maxHeight: 200 });
-  const [kbHeight, setKbHeight] = useState(0);
+  const kbHeight = useKeyboardOffset(visible);
   const [validationError, setValidationError] = useState("");
   const scrollRef = useRef<ScrollView>(null);
   const modalRef = useRef<View>(null);
@@ -88,12 +89,10 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
   }, [close, visible]);
 
   useEffect(() => {
-    const showSub = Keyboard.addListener("keyboardDidShow", (e) => {
-      setKbHeight(e.endCoordinates.height);
+    const showSub = Keyboard.addListener("keyboardDidShow", () => {
       if (detailFocusedRef.current) scrollRef.current?.scrollToEnd({ animated: true });
     });
-    const hideSub = Keyboard.addListener("keyboardDidHide", () => setKbHeight(0));
-    return () => { showSub.remove(); hideSub.remove(); };
+    return () => { showSub.remove(); };
   }, []);
 
   const measureTags = useCallback(() => {

@@ -1,9 +1,8 @@
-import { memo, useCallback, useEffect, useRef, useState } from "react";
+import { memo, useCallback, useRef, useState } from "react";
 import {
   Alert,
   Animated,
   FlatList,
-  Keyboard,
   Modal,
   TouchableOpacity,
   View,
@@ -15,6 +14,7 @@ import { Tag } from "../../types";
 import { UiCopy } from "../../i18n";
 import { loadTags, saveTags, slugifyTagLabel } from "../../utils/tags";
 import { useModalTransition } from "../ui/useModalTransition";
+import { useKeyboardOffset } from "../ui/useKeyboardOffset";
 import { Text, TextInput } from "../ui/AppText";
 
 export function TagEditorModal({
@@ -37,26 +37,9 @@ export function TagEditorModal({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingLabel, setEditingLabel] = useState("");
   const [editingColor, setEditingColor] = useState("");
-  const [keyboardOffset, setKeyboardOffset] = useState(0);
+  const keyboardOffset = useKeyboardOffset(visible, (height) => Math.min(height * 0.45, 180));
   const persistQueue = useRef(Promise.resolve());
   const transition = useModalTransition(visible, 12, 0.985);
-
-  useEffect(() => {
-    if (!visible) {
-      setKeyboardOffset(0);
-      return;
-    }
-    const showSub = Keyboard.addListener("keyboardDidShow", (e) => {
-      setKeyboardOffset(Math.min(e.endCoordinates.height * 0.45, 180));
-    });
-    const hideSub = Keyboard.addListener("keyboardDidHide", () =>
-      setKeyboardOffset(0),
-    );
-    return () => {
-      showSub.remove();
-      hideSub.remove();
-    };
-  }, [visible]);
 
   const commitTags = useCallback(
     (next: Tag[]) => {

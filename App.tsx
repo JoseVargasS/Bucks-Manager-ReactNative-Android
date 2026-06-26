@@ -59,7 +59,7 @@ import {
   removeHistoryEntry,
 } from "./src/utils/history";
 import { isPinEnabled, savePin, verifyPin, clearPin } from "./src/utils/pin";
-import { loadTags, migrateTagReferences } from "./src/utils/tags";
+import { loadTags, migrateTransactionTags } from "./src/utils/tags";
 import {
   deleteFinancialCache,
   loadFinancialCache,
@@ -91,6 +91,7 @@ import { PinSetupModal } from "./src/components/modals/PinSetupModal";
 import {
   SearchModal,
   SearchModalHandle,
+  emptySearchFilters,
 } from "./src/components/modals/SearchModal";
 import { TagEditorModal } from "./src/components/modals/TagEditorModal";
 import {
@@ -103,7 +104,6 @@ import {
   Text,
 } from "./src/components/ui/AppText";
 import {
-  ExportFormat,
   HistoryEntry,
   SearchFilters,
   SummaryRow,
@@ -116,9 +116,6 @@ import {
   TransactionDraft,
 } from "./src/types";
 import {
-  getLatestTransactionDate,
-  parseLocalDateTime,
-  parseMonthKey,
   buildExportFileName,
   getPeriodRange,
   getAvailableMonthsForYear,
@@ -144,15 +141,6 @@ const GOOGLE_WORKSPACE_SCOPES = [
 // fast edit cannot race with the reconcile read of an earlier edit. The chain
 // holds the in-flight task only; UI state lives in pendingSyncRef/setPendingSync.
 let syncQueue: Promise<void> = Promise.resolve();
-
-const emptySearch: SearchFilters = {
-  text: "",
-  tag: "",
-  minAmount: "",
-  maxAmount: "",
-  startDate: "",
-  endDate: "",
-};
 const LANGUAGE_KEY = "bucks_language";
 const CURRENCY_SYMBOL_KEY = "bucks_currency_symbol";
 const FONT_KEY = "bucks_font";
@@ -262,32 +250,7 @@ const CURRENCY_OPTIONS = [
     icon: "cash" as const,
   },
 ];
-const defaultExportConfig: ExportConfig = {
-  format: "xlsx" as ExportFormat,
-  rangeMode: "dates" as const,
-  startDate: "",
-  endDate: "",
-};
 const TAB_ORDER: Tab[] = ["expenses", "summary", "settings"];
-
-function migrateTransactionTags(
-  transactions: Transaction[],
-  tagsList: { id: string; label: string; color: string }[],
-): Transaction[] {
-  if (!transactions.length || !tagsList.length) return transactions;
-  let changed = false;
-  const next = transactions.map((tx) => {
-    if (!tx.tags?.length) return tx;
-    const migrated = migrateTagReferences(tx.tags, tagsList);
-    const isSame =
-      migrated.length === tx.tags.length
-      && migrated.every((id, index) => id === tx.tags![index]);
-    if (isSame) return tx;
-    changed = true;
-    return { ...tx, tags: migrated };
-  });
-  return changed ? next : transactions;
-}
 
 function AppContent() {
   const { colors, theme, colorScheme, toggleTheme, setColorScheme } =
@@ -349,15 +312,19 @@ function AppContent() {
     email?: string;
   } | null>(null);
   const [searchFilters, setSearchFilters] =
-    useState<SearchFilters>(emptySearch);
+    useState<SearchFilters>(emptySearchFilters);
   const [searchActive, setSearchActive] = useState(false);
   const [loadedMonthCount, setLoadedMonthCount] = useState(1);
   const [selectedRows, setSelectedRows] = useState<number[]>([]);
   const [historyEntries, setHistoryEntries] = useState<HistoryEntry[]>([]);
   const [historyVisible, setHistoryVisible] = useState(false);
   const [exportVisible, setExportVisible] = useState(false);
-  const [exportConfig, setExportConfig] =
-    useState<ExportConfig>(defaultExportConfig);
+  const [exportConfig, setExportConfig] = useState<ExportConfig>({
+    format: "xlsx",
+    rangeMode: "dates",
+    startDate: "",
+    endDate: "",
+  });
   const [confirmConfig, setConfirmConfig] = useState<ConfirmConfig | null>(
     null,
   );
@@ -545,18 +512,15 @@ function AppContent() {
       : selectedColorScheme.labelEs;
   const savedDataText =
     copy.languageCode === "en" ? "Saved data" : "Datos guardados";
+  const isEn = copy.languageCode === "en";
   const syncStatusText = authError
     ? authError
     : syncError
       ? hasLocalData
-        ? copy.languageCode === "en"
-          ? "Showing saved data"
-          : "Mostrando datos guardados"
+        ? isEn ? "Showing saved data" : "Mostrando datos guardados"
         : syncError
       : pendingSync
-        ? copy.languageCode === "en"
-          ? "Pending sync"
-          : "Pendiente de sincronizar"
+        ? isEn ? "Pending sync" : "Pendiente de sincronizar"
         : isSyncing
           ? hasLocalData
             ? `${savedDataText} · ${copy.syncing.toLowerCase()}`
@@ -979,7 +943,7 @@ function AppContent() {
     setFreqIncome(nextFreqIncome);
     freqIncomeRef.current = nextFreqIncome;
     setLastSyncedAt(syncedAt);
-    const nextHasLocalData = cacheHasData(nextTransactions, summariesToUse);
+    const nextHasLocalData = nextTransactions.length > 0 || summariesToUse.length > 0;
     setHasLocalData(nextHasLocalData);
     hasLocalDataRef.current = nextHasLocalData;
     if (fromCache || nextTransactions.length)
@@ -996,7 +960,7 @@ function AppContent() {
     const summariesToUse = nextSummaries.length
       ? nextSummaries
       : calculateSummaries(nextTransactions, nextFreqIncome);
-    const nextHasLocalData = cacheHasData(nextTransactions, summariesToUse);
+    const nextHasLocalData = nextTransactions.length > 0 || summariesToUse.length > 0;
     setHasLocalData(nextHasLocalData);
     hasLocalDataRef.current = nextHasLocalData;
     if (!sheetId) return;
@@ -1011,27 +975,19 @@ function AppContent() {
 
   function updateInitialPeriod(source: Transaction[]) {
     if (didSetInitialPeriodRef.current || !source.length) return;
-    const latestDate = getLatestTransactionDate(source);
-    if (latestDate) {
-      setMonth(latestDate.getMonth());
-      setYear(latestDate.getFullYear());
+    const today = new Date();
+    let latest: Date | null = null;
+    for (const tx of source) {
+      const date = new Date(tx.rawDate);
+      if (Number.isNaN(date.getTime()) || date > today) continue;
+      if (!latest || date.getTime() > latest.getTime()) latest = date;
+    }
+    if (latest) {
+      setMonth(latest.getMonth());
+      setYear(latest.getFullYear());
       setLoadedMonthCount(1);
     }
     didSetInitialPeriodRef.current = true;
-  }
-
-  function freqIncomeFromSummaries(rows: SummaryRow[]) {
-    return rows.reduce<Record<string, number>>((acc, row) => {
-      acc[row.monthYear] = row.freqIncome;
-      return acc;
-    }, {});
-  }
-
-  function cacheHasData(
-    nextTransactions: Transaction[],
-    nextSummaries: SummaryRow[],
-  ) {
-    return nextTransactions.length > 0 || nextSummaries.length > 0;
   }
 
   function getErrorMessage(error: unknown) {
@@ -1147,7 +1103,7 @@ function AppContent() {
         return;
       }
       const nextFreqIncome = summary.length
-        ? freqIncomeFromSummaries(summary)
+        ? Object.fromEntries(summary.map((row) => [row.monthYear, row.freqIncome]))
         : freqIncomeRef.current;
       const nextSummaries = summary.length
         ? summary
@@ -1203,15 +1159,13 @@ function AppContent() {
     selectPeriod(today.getMonth(), today.getFullYear());
   }, [selectPeriod]);
 
-  const goPrevMonth = useCallback(() => {
-    const prevMonth = month - 1;
-    selectPeriod(prevMonth < 0 ? 11 : prevMonth, prevMonth < 0 ? year - 1 : year);
+  const shiftMonth = useCallback((delta: number) => {
+    const total = month + delta;
+    const nextMonth = (total + 12) % 12;
+    selectPeriod(nextMonth, year + Math.floor(total / 12));
   }, [month, year, selectPeriod]);
-
-  const goNextMonth = useCallback(() => {
-    const nextMonth = month + 1;
-    selectPeriod(nextMonth > 11 ? 0 : nextMonth, nextMonth > 11 ? year + 1 : year);
-  }, [month, year, selectPeriod]);
+  const goPrevMonth = useCallback(() => shiftMonth(-1), [shiftMonth]);
+  const goNextMonth = useCallback(() => shiftMonth(1), [shiftMonth]);
 
   const openAdd = useCallback(() => {
     transactionModalRef.current?.open(getBlankDraft());
@@ -1358,7 +1312,7 @@ function AppContent() {
 
   const clearSearchFilters = useCallback(() => {
     requestAnimationFrame(() => {
-      setSearchFilters(emptySearch);
+      setSearchFilters(emptySearchFilters);
       setSearchActive(false);
     });
   }, []);
@@ -1594,19 +1548,29 @@ function AppContent() {
   }
 
   async function exportRows(cfg: ExportConfig) {
+    const parseDay = (value: string, endOfDay: boolean) => {
+      const [y, m, d] = value.split("-").map(Number);
+      if (!Number.isInteger(y) || !Number.isInteger(m) || !Number.isInteger(d)) return Number.NaN;
+      const date = new Date(y, m - 1, d, endOfDay ? 23 : 0, endOfDay ? 59 : 0, endOfDay ? 59 : 0, endOfDay ? 999 : 0);
+      return Number.isNaN(date.getTime()) ? Number.NaN : date.getTime();
+    };
+    const parseMonth = (value: string) => {
+      const [y, m] = value.split("-").map(Number);
+      return Number.isInteger(y) && Number.isInteger(m) && m >= 1 && m <= 12 ? y * 12 + (m - 1) : Number.NaN;
+    };
     let rows: Transaction[];
     if (cfg.rangeMode === "dates") {
-      const from = cfg.startDate ? parseLocalDateTime(cfg.startDate, false) : 0;
-      const to = cfg.endDate ? parseLocalDateTime(cfg.endDate, true) : Infinity;
+      const from = cfg.startDate ? parseDay(cfg.startDate, false) : 0;
+      const to = cfg.endDate ? parseDay(cfg.endDate, true) : Infinity;
       rows = transactions.filter((tx) => {
-        const t = parseLocalDateTime(formatDateToISO(tx.rawDate), false);
+        const t = parseDay(formatDateToISO(tx.rawDate), false);
         return t >= from && t <= to;
       });
     } else {
-      const fromYM = cfg.startDate ? parseMonthKey(cfg.startDate) : 0;
-      const toYM = cfg.endDate ? parseMonthKey(cfg.endDate) : Infinity;
+      const fromYM = cfg.startDate ? parseMonth(cfg.startDate) : 0;
+      const toYM = cfg.endDate ? parseMonth(cfg.endDate) : Infinity;
       rows = transactions.filter((tx) => {
-        const txYM = parseMonthKey(formatDateToISO(tx.rawDate).slice(0, 7));
+        const txYM = parseMonth(formatDateToISO(tx.rawDate).slice(0, 7));
         return txYM >= fromYM && txYM <= toYM;
       });
     }
