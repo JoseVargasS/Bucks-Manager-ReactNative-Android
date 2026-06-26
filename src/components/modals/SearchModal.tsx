@@ -11,12 +11,21 @@ import { Text } from "../ui/AppText";
 
 export type SearchModalHandle = { open: (filters: SearchFilters) => void };
 
+export const emptySearchFilters: SearchFilters = {
+  text: "",
+  tag: "",
+  minAmount: "",
+  maxAmount: "",
+  startDate: "",
+  endDate: "",
+};
+
 export const SearchModal = forwardRef<SearchModalHandle, {
   colors: Palette; copy: UiCopy; currencySymbol: string; tags: Tag[];
   onClear: () => void; onSubmit: (filters: SearchFilters) => void;
 }>(function SearchModal({ colors, copy, currencySymbol, tags, onClear, onSubmit }, ref) {
   const [visible, setVisible] = useState(false);
-  const [localFilters, setLocalFilters] = useState<SearchFilters>({ text: "", tag: "", minAmount: "", maxAmount: "", startDate: "", endDate: "" });
+  const [localFilters, setLocalFilters] = useState<SearchFilters>(emptySearchFilters);
   const pendingAction = useRef<(() => void) | null>(null);
   const transition = useModalTransition(visible, 24, 1, () => {
     const action = pendingAction.current;
