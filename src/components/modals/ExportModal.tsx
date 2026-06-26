@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { Animated, Modal, ScrollView, TouchableOpacity, View } from "react-native";
+import { Animated, Modal, ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { styles } from "../../styles/globalStyles";
 import { ModalHeader } from "../ui/ModalHeader";
@@ -43,6 +43,8 @@ export function ExportModal({ visible, colors, copy, config, setConfig, minDate,
     return d.toLocaleDateString(locale, { day: "2-digit", month: "short", year: "numeric" }).toUpperCase();
   };
   if (!transition.modalVisible) return null;
+  const mode = config.rangeMode === "months" ? "month" : "date";
+  const minForMode = mode === "month" && minDate ? minDate.slice(0, 7) : minDate;
   return (
     <Modal visible transparent animationType="none" onRequestClose={onClose}>
       <Animated.View style={[styles.modalOverlay, { backgroundColor: colors.overlay }, transition.containerStyle]}>
@@ -84,53 +86,66 @@ export function ExportModal({ visible, colors, copy, config, setConfig, minDate,
                 <Text style={[{ color: config.rangeMode === "months" ? colors.primary : colors.text, fontWeight: "700" }]}>{copy.byMonths}</Text>
               </TouchableOpacity>
             </View>
-            {config.rangeMode === "months" ? (
-              <>
-                <Text style={[styles.label, { color: colors.text, marginTop: 12 }]}>{copy.startMonth}</Text>
-                <TouchableOpacity
-                  style={[{ backgroundColor: colors.input, borderColor: colors.border, borderRadius: 10, paddingHorizontal: 12, minHeight: 42, flexDirection: "row", alignItems: "center", gap: 10, borderWidth: 1 }]}
-                  onPress={() => setCalFrom(true)}
-                >
-                  <MaterialCommunityIcons name="calendar" size={20} color={colors.blue} />
-                  <Text style={{ color: config.startDate ? colors.text : colors.muted, fontWeight: "600", flex: 1 }}>{rangeLabel(config.startDate, true)}</Text>
-                </TouchableOpacity>
-                <CalendarPicker visible={calFrom} value={config.startDate} mode="month" minDate={minDate ? minDate.slice(0, 7) : undefined} onSelect={(v: string) => setConfig({ ...config, startDate: v })} onClose={() => setCalFrom(false)} colors={colors} copy={copy} />
-                <Text style={[styles.label, { color: colors.text, marginTop: 12 }]}>{copy.endMonth}</Text>
-                <TouchableOpacity
-                  style={[{ backgroundColor: colors.input, borderColor: colors.border, borderRadius: 10, paddingHorizontal: 12, minHeight: 42, flexDirection: "row", alignItems: "center", gap: 10, borderWidth: 1 }]}
-                  onPress={() => setCalTo(true)}
-                >
-                  <MaterialCommunityIcons name="calendar" size={20} color={colors.blue} />
-                  <Text style={{ color: config.endDate ? colors.text : colors.muted, fontWeight: "600", flex: 1 }}>{rangeLabel(config.endDate, true)}</Text>
-                </TouchableOpacity>
-                <CalendarPicker visible={calTo} value={config.endDate} mode="month" minDate={minDate ? minDate.slice(0, 7) : undefined} onSelect={(v: string) => setConfig({ ...config, endDate: v })} onClose={() => setCalTo(false)} colors={colors} copy={copy} />
-              </>
-            ) : (
-              <>
-                <Text style={[styles.label, { color: colors.text, marginTop: 12 }]}>{copy.from}</Text>
-                <TouchableOpacity
-                  style={[{ backgroundColor: colors.input, borderColor: colors.border, borderRadius: 10, paddingHorizontal: 12, minHeight: 42, flexDirection: "row", alignItems: "center", gap: 10, borderWidth: 1 }]}
-                  onPress={() => setCalFrom(true)}
-                >
-                  <MaterialCommunityIcons name="calendar" size={20} color={colors.blue} />
-                  <Text style={{ color: config.startDate ? colors.text : colors.muted, fontWeight: "600", flex: 1 }}>{rangeLabel(config.startDate)}</Text>
-                </TouchableOpacity>
-                <CalendarPicker visible={calFrom} value={config.startDate} mode="date" minDate={minDate} onSelect={(v: string) => setConfig({ ...config, startDate: v })} onClose={() => setCalFrom(false)} colors={colors} copy={copy} />
-                <Text style={[styles.label, { color: colors.text, marginTop: 12 }]}>{copy.to}</Text>
-                <TouchableOpacity
-                  style={[{ backgroundColor: colors.input, borderColor: colors.border, borderRadius: 10, paddingHorizontal: 12, minHeight: 42, flexDirection: "row", alignItems: "center", gap: 10, borderWidth: 1 }]}
-                  onPress={() => setCalTo(true)}
-                >
-                  <MaterialCommunityIcons name="calendar" size={20} color={colors.blue} />
-                  <Text style={{ color: config.endDate ? colors.text : colors.muted, fontWeight: "600", flex: 1 }}>{rangeLabel(config.endDate)}</Text>
-                </TouchableOpacity>
-                <CalendarPicker visible={calTo} value={config.endDate} mode="date" minDate={minDate} onSelect={(v: string) => setConfig({ ...config, endDate: v })} onClose={() => setCalTo(false)} colors={colors} copy={copy} />
-              </>
-            )}
+            <RangeField
+              label={mode === "month" ? copy.startMonth : copy.from}
+              value={config.startDate}
+              onChange={(v) => setConfig({ ...config, startDate: v })}
+              pickerMode={mode}
+              pickerMin={minForMode}
+              colors={colors}
+              copy={copy}
+              onOpen={() => setCalFrom(true)}
+              onClose={() => setCalFrom(false)}
+              isOpen={calFrom}
+              displayValue={rangeLabel(config.startDate, mode === "month")}
+            />
+            <RangeField
+              label={mode === "month" ? copy.endMonth : copy.to}
+              value={config.endDate}
+              onChange={(v) => setConfig({ ...config, endDate: v })}
+              pickerMode={mode}
+              pickerMin={minForMode}
+              colors={colors}
+              copy={copy}
+              onOpen={() => setCalTo(true)}
+              onClose={() => setCalTo(false)}
+              isOpen={calTo}
+              displayValue={rangeLabel(config.endDate, mode === "month")}
+            />
             <ActionRow colors={colors} onCancel={onClose} onSubmit={() => { pendingExport.current = config; onClose(); }} submitLabel={copy.exportAction} cancelLabel={copy.cancel} />
           </ScrollView>
         </Animated.View>
       </Animated.View>
-    </Modal>
+</Modal>
   );
 }
+
+function RangeField({ label, value, onChange, pickerMode, pickerMin, colors, copy, onOpen, onClose, isOpen, displayValue }: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  pickerMode: "date" | "month";
+  pickerMin?: string;
+  colors: Palette;
+  copy: UiCopy;
+  onOpen: () => void;
+  onClose: () => void;
+  isOpen: boolean;
+  displayValue: string;
+}) {
+  return (
+    <>
+      <Text style={[styles.label, { color: colors.text, marginTop: 12 }]}>{label}</Text>
+      <TouchableOpacity style={[rangeStyles.trigger, { backgroundColor: colors.input, borderColor: colors.border }]} onPress={onOpen}>
+        <MaterialCommunityIcons name="calendar" size={20} color={colors.blue} />
+        <Text style={{ color: value ? colors.text : colors.muted, fontWeight: "600", flex: 1 }}>{displayValue}</Text>
+      </TouchableOpacity>
+      <CalendarPicker visible={isOpen} value={value} mode={pickerMode} minDate={pickerMin} onSelect={onChange} onClose={onClose} colors={colors} copy={copy} />
+    </>
+  );
+}
+
+const rangeStyles = StyleSheet.create({
+  trigger: { borderRadius: 10, paddingHorizontal: 12, minHeight: 42, flexDirection: "row", alignItems: "center", gap: 10, borderWidth: 1 },
+});
+

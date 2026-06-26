@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { Animated, Modal, TouchableOpacity, View } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { styles } from "../../styles/globalStyles";
@@ -14,50 +14,34 @@ export function PinSetupModal({ visible, colors, copy, onClose, onSave }: {
   onClose: () => void;
   onSave: (pin: string) => void;
 }) {
-  const [phase, setPhase] = useState<"enter" | "confirm">("enter");
   const [firstPin, setFirstPin] = useState("");
-  const [enteredPin, setEnteredPin] = useState("");
   const [wrong, setWrong] = useState(false);
   const pendingPin = useRef<string | null>(null);
   const resetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const transition = useModalTransition(visible, 12, 0.985, () => {
     const pin = pendingPin.current;
     pendingPin.current = null;
-    resetForm();
+    if (resetTimer.current) clearTimeout(resetTimer.current);
+    setFirstPin("");
+    setWrong(false);
     if (pin) onSave(pin);
   });
-
-  useEffect(() => () => {
-    if (resetTimer.current) clearTimeout(resetTimer.current);
-  }, []);
 
   function resetForm() {
     if (resetTimer.current) clearTimeout(resetTimer.current);
     resetTimer.current = null;
-    setPhase("enter");
     setFirstPin("");
-    setEnteredPin("");
     setWrong(false);
   }
 
-  function handleClose() {
-    onClose();
-  }
-
-  function handleFirstPhase(value: string) {
-    setFirstPin(value);
-    setEnteredPin("");
-    setPhase("confirm");
-    setWrong(false);
-  }
-
-  function handleConfirmPhase(value: string) {
-    setEnteredPin(value);
-  }
-
-  function handleConfirm() {
-    if (enteredPin === firstPin) {
-      pendingPin.current = enteredPin;
+  function handleFill(pin: string) {
+    if (firstPin === "") {
+      setFirstPin(pin);
+      setWrong(false);
+      return;
+    }
+    if (pin === firstPin) {
+      pendingPin.current = pin;
       onClose();
     } else {
       setWrong(true);
@@ -65,34 +49,32 @@ export function PinSetupModal({ visible, colors, copy, onClose, onSave }: {
     }
   }
 
-  const inFirstPhase = phase === "enter";
+  const inFirstPhase = firstPin === "";
 
   if (!transition.modalVisible) return null;
   return (
-    <Modal visible transparent animationType="none" onRequestClose={handleClose}>
+    <Modal visible transparent animationType="none" onRequestClose={onClose}>
       <Animated.View style={[styles.modalOverlay, { backgroundColor: colors.overlay }, transition.containerStyle]}>
-        <TouchableOpacity style={styles.optionBackdrop} activeOpacity={1} onPress={handleClose} />
+        <TouchableOpacity style={styles.optionBackdrop} activeOpacity={1} onPress={onClose} />
         <Animated.View style={[styles.recordModal, { backgroundColor: colors.card }, transition.panelStyle]}>
           <View style={[styles.recordHeader, { borderColor: colors.border }]}>
             <Text style={[styles.recordTitle, { color: colors.text }]}>
               <MaterialCommunityIcons name="shield-lock" size={19} color={colors.primary} />{" "}
               {copy.pinSetupTitle}
             </Text>
-            <TouchableOpacity style={[styles.closeBtn, { backgroundColor: colors.input }]} onPress={handleClose}>
+            <TouchableOpacity style={[styles.closeBtn, { backgroundColor: colors.input }]} onPress={onClose}>
               <MaterialCommunityIcons name="close-thick" size={22} color={colors.text} />
             </TouchableOpacity>
           </View>
 
           <View style={{ height: 400 }}>
             <PinScreen
-              key={phase}
+              key={inFirstPhase ? "enter" : "confirm"}
               colors={colors}
               subtitle={inFirstPhase ? copy.pinEnterNew : copy.pinConfirm}
               wrong={wrong}
               bgColor={colors.card}
-              onFill={inFirstPhase ? handleFirstPhase : handleConfirmPhase}
-              confirmPhase={!inFirstPhase}
-              onConfirm={!inFirstPhase ? handleConfirm : undefined}
+              onFill={handleFill}
             />
           </View>
         </Animated.View>
@@ -100,3 +82,4 @@ export function PinSetupModal({ visible, colors, copy, onClose, onSave }: {
     </Modal>
   );
 }
+
