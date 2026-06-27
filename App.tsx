@@ -360,6 +360,7 @@ function AppContent() {
       }
     });
     return () => sub.remove();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -691,6 +692,7 @@ function AppContent() {
         if (value === "remove") setConfirmConfig({ kind: "removeAccount" });
       },
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [colors.red, copy]);
 
   async function getWorkspaceAccessToken(interactive: boolean) {
@@ -1321,6 +1323,7 @@ function AppContent() {
         );
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [accessToken, copy, freqIncome, spreadsheetId, transactions],
   );
 
@@ -1346,7 +1349,7 @@ function AppContent() {
         onSelect: (direction: string) => moveTx(tx, direction as "up" | "down"),
       });
     },
-    [colors.blue, colors.yellow, moveTx],
+    [colors.blue, colors.yellow, copy.moveDownOnePosition, copy.moveRecord, copy.moveUpOnePosition, moveTx],
   );
 
   async function undoDeleteEntry(entry: HistoryEntry) {
@@ -1403,7 +1406,7 @@ function AppContent() {
     } else {
       setPinSetupVisible(true);
     }
-  }, [copy.pinApp, pinEnabled]);
+  }, [copy.pinApp, getErrorMessage, pinEnabled]);
 
   function handlePinSave(value: string) {
     pinLockedRef.current = false;
