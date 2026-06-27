@@ -39,6 +39,10 @@ import {
   deleteTransaction as deleteGoogleTransaction,
   removeTagFromAllRows,
 } from "./src/api/googleWorkspace";
+import {
+  getWorkspaceAccessToken as getWorkspaceAccessTokenBase,
+  syncAccountInfo as syncAccountInfoBase,
+} from "./src/api/googleAuth";
 import { ColorSchemePreference, getPalette } from "./src/theme/colors";
 import { ThemeProvider, useTheme } from "./src/theme/ThemeContext";
 import { getBlankDraft } from "./src/utils/transactions";
@@ -99,7 +103,6 @@ import {
   PIN_DELAY_MS,
   TOKEN_KEY,
   SHEET_KEY,
-  GOOGLE_WORKSPACE_SCOPES,
   TAB_ORDER,
 } from "./src/theme/constants";
 import { useFinancialState } from "./src/hooks/useFinancialState";
@@ -124,7 +127,7 @@ const GOOGLE_WEB_CLIENT_ID =
 // ponytail: module-level promise chain serializes every Sheets mutation so a
 // fast edit cannot race with the reconcile read of an earlier edit. The chain
 // holds the in-flight task only; UI state lives in pendingSyncRef/setPendingSync.
-let syncQueue: Promise<void> = Promise.resolve();
+const syncQueueRef = { current: Promise.resolve() };
 const COLOR_SCHEME_OPTIONS: Array<{
   value: ColorSchemePreference;
   labelEs: string;
@@ -633,24 +636,7 @@ function AppContent() {
   }, [colors.red, copy]);
 
   async function getWorkspaceAccessToken(interactive: boolean) {
-    let current = GoogleSignin.getCurrentUser();
-    if (!current) {
-      const silent = await GoogleSignin.signInSilently();
-      current = silent.type === "success" ? silent.data : null;
-    }
-    const grantedScopes = new Set(current?.scopes || []);
-    const hasWorkspaceScopes = GOOGLE_WORKSPACE_SCOPES.every((scope) =>
-      grantedScopes.has(scope),
-    );
-    if (!hasWorkspaceScopes) {
-      if (!interactive) throw new Error("Faltan permisos de Google Workspace.");
-      const response = await GoogleSignin.addScopes({
-        scopes: GOOGLE_WORKSPACE_SCOPES,
-      });
-      if (!response || response.type !== "success")
-        throw new Error("No se autorizaron los permisos de Drive y Sheets.");
-    }
-    return GoogleSignin.getTokens();
+    return getWorkspaceAccessTokenBase(interactive);
   }
 
   async function connectGoogleWorkspace(
@@ -754,19 +740,8 @@ function AppContent() {
   }
 
   function syncAccountInfo() {
-    const current = GoogleSignin.getCurrentUser();
-    const data = ((
-      current as { data?: { user: { name?: string; email?: string } } }
-    )?.data || current) as {
-      user?: { name?: string; email?: string };
-      name?: string;
-      email?: string;
-    };
-    if (data)
-      setAccountInfo({
-        name: data.user?.name || data.name,
-        email: data.user?.email || data.email,
-      });
+    const info = syncAccountInfoBase();
+    if (info) setAccountInfo(info);
   }
 
   function resetFinancialState() {
@@ -909,7 +884,7 @@ function AppContent() {
     setIsSyncing(true);
     setPendingSync(true);
     setSyncError("");
-    syncQueue = syncQueue
+    syncQueueRef.current = syncQueueRef.current
       .catch(() => undefined)
       .then(() => task())
       .then(() => {
