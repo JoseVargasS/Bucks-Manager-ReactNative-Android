@@ -1014,7 +1014,7 @@ function parseSheetDate(value: unknown) {
 function parseNumericDate(value: string) {
   const match = value
     .trim()
-    .match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})(?:\s+.*)?$/);
+    .match(/^(\d{1,2})[/.-](\d{1,2})[/.-](\d{2,4})(?:\s+.*)?$/);
   if (!match) return null;
   const first = Number(match[1]);
   const second = Number(match[2]);
