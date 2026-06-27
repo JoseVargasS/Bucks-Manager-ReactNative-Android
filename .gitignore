@@ -44,6 +44,9 @@ DESIGN.md
 # graphify knowledge graph (regenerable)
 graphify-out/
 
+# codegraph knowledge graph (regenerable)
+.codegraph/
+
 # typescript
 *.tsbuildinfo
 
