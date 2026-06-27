@@ -27,7 +27,7 @@ export function PinScreen({ colors, copy, title, subtitle, wrong, bgColor, onFil
 
   useEffect(() => {
     if (filled) onFill(digits.join(""));
-  }, [digits.length]);
+  }, [digits, filled, onFill]);
 
   useEffect(() => {
     if (wrong && !showingError) {
@@ -41,7 +41,8 @@ export function PinScreen({ colors, copy, title, subtitle, wrong, bgColor, onFil
         Animated.timing(shake, { toValue: 0, duration: 30, useNativeDriver: true }),
       ]).start(() => setShowingError(false));
     }
-  }, [wrong]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- showingError is intentionally excluded; adding it re-fires the effect
+  }, [wrong, shake]);
 
   function pressDigit(d: string) {
     if (filled || showingError) return;
