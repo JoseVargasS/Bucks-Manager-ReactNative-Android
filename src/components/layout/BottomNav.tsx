@@ -47,13 +47,11 @@ export const BottomNav = memo(function BottomNav({
   tab,
   setTab,
   onAdd,
-  onSearch,
 }: {
   copy: UiCopy;
   tab: Tab;
   setTab: (tab: Tab) => void;
   onAdd: () => void;
-  onSearch: () => void;
 }) {
   const { card, borderStrong, bg } = useColors();
   const isDark = useMemo(() => bg === dark.bg, [bg]);
@@ -87,17 +85,16 @@ export const BottomNav = memo(function BottomNav({
       />
       <View style={styles.bottomNavContent}>
         <BottomNavItem
+          active={tab === "dashboard"}
+          icon="view-dashboard"
+          label={copy.dashboard}
+          onPress={() => selectTab("dashboard")}
+        />
+        <BottomNavItem
           active={tab === "expenses"}
           icon="view-dashboard-outline"
           label={copy.expenses}
           onPress={() => selectTab("expenses")}
-        />
-        <BottomNavItem
-          active={false}
-          optimisticActive={false}
-          icon="magnify"
-          label={copy.search}
-          onPress={onSearch}
         />
         <BottomAddButton onPress={onAdd} />
         <BottomNavItem

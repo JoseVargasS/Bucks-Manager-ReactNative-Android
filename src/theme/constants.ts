@@ -1,3 +1,5 @@
+import type { Tab } from "../types";
+
 export const ANIM_SPLASH_DURATION = 220;
 export const ANIM_THEME_CROSSFADE = 180;
 export const ANIM_TAB_PAGER = 210;
@@ -24,4 +26,4 @@ export const GOOGLE_WORKSPACE_SCOPES = [
   "https://www.googleapis.com/auth/spreadsheets",
 ];
 
-export const TAB_ORDER: ("expenses" | "summary" | "settings")[] = ["expenses", "summary", "settings"];
+export const TAB_ORDER: Tab[] = ["dashboard", "expenses", "summary", "settings"];

@@ -74,7 +74,7 @@ export type HistoryEntry = {
   transaction: Transaction;
 };
 
-export type Tab = "expenses" | "summary" | "settings";
+export type Tab = "dashboard" | "expenses" | "summary" | "settings";
 export type ThemeMode = "dark" | "light";
 export type LanguageMode = "es" | "en";
 export type FontPreference =

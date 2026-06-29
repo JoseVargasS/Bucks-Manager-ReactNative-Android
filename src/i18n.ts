@@ -1,6 +1,11 @@
 export const UI_COPY = {
   es: {
     languageCode: "es",
+    dashboard: "Inicio",
+    dashboardSubtitle: "Resumen del mes",
+    recentMovements: "Últimos movimientos",
+    otherLabel: "Otros",
+    expenseByTags: "Gastos por etiqueta",
     expenses: "Gastos",
     search: "Buscar",
     summary: "Análisis",
@@ -175,6 +180,11 @@ export const UI_COPY = {
   },
   en: {
     languageCode: "en",
+    dashboard: "Home",
+    dashboardSubtitle: "Month overview",
+    recentMovements: "Recent movements",
+    otherLabel: "Others",
+    expenseByTags: "Expenses by tag",
     expenses: "Expenses",
     search: "Search",
     summary: "Analysis",

@@ -27,10 +27,10 @@ import {
 import { abbreviateTag, tagTextColor } from "../../utils/tags";
 import { groupTransactionsByDate } from "../../utils/transactions";
 import { styles } from "../../styles/globalStyles";
-import { StatCard } from "../ui/StatCard";
+import { PeriodControls } from "../layout/PeriodControls";
 import { HighlightedText } from "../ui/HighlightedText";
 import { dark, Palette } from "../../theme/colors";
-import { SummaryRow, Tag, Transaction, MaterialIconName } from "../../types";
+import { Tag, Transaction, MaterialIconName } from "../../types";
 import { UiCopy } from "../../i18n";
 import { useModalTransition } from "../ui/useModalTransition";
 import { Text } from "../ui/AppText";
@@ -278,7 +278,6 @@ const TransactionRow = memo(function TransactionRow({
 
 export const ExpensesView = memo(function ExpensesView({
   colors,
-  summary,
   transactions,
   searchActive,
   searchText,
@@ -294,9 +293,16 @@ export const ExpensesView = memo(function ExpensesView({
   onLoadOlder,
   topInset,
   tagsList,
+  month,
+  year,
+  availableYears,
+  availableMonths,
+  onSelectPeriod,
+  goToday,
+  goPrevMonth,
+  goNextMonth,
 }: {
   colors: Palette;
-  summary: SummaryRow;
   transactions: Transaction[];
   searchActive: boolean;
   searchText: string;
@@ -312,6 +318,14 @@ export const ExpensesView = memo(function ExpensesView({
   onLoadOlder: () => void;
   topInset?: number;
   tagsList: Tag[];
+  month: number;
+  year: number;
+  availableYears: number[];
+  availableMonths: number[];
+  onSelectPeriod: (month: number, year: number) => void;
+  goToday: () => void;
+  goPrevMonth: () => void;
+  goNextMonth: () => void;
 }) {
   const groups = useMemo(
     () => groupTransactionsByDate(transactions, copy),
@@ -371,48 +385,18 @@ export const ExpensesView = memo(function ExpensesView({
   const renderListHeader = useCallback(
     () => (
       <>
-        <View style={[styles.statsGrid, styles.statsGridMobile]}>
-          <StatCard
-            title={copy.freqIncome}
-            value={formatMoney(summary.freqIncome, currencySymbol)}
-            tone="income"
-            icon="cash"
+        <View style={{ paddingHorizontal: 14, paddingBottom: 4 }}>
+          <PeriodControls
             colors={colors}
-          />
-          <StatCard
-            title={copy.nonFreqIncome}
-            value={formatMoney(summary.nonFreqIncome, currencySymbol)}
-            tone="income"
-            icon="trending-up"
-            colors={colors}
-          />
-          <StatCard
-            title={copy.freqExpense}
-            value={formatMoney(summary.freqExpense, currencySymbol)}
-            tone="expense"
-            icon="credit-card"
-            colors={colors}
-          />
-          <StatCard
-            title={copy.nonFreqExpense}
-            value={formatMoney(summary.nonFreqExpense, currencySymbol)}
-            tone="expense"
-            icon="trending-down"
-            colors={colors}
-          />
-          <StatCard
-            title={copy.totalExpense}
-            value={formatMoney(summary.totalExpense, currencySymbol)}
-            tone="warn"
-            icon="basket"
-            colors={colors}
-          />
-          <StatCard
-            title={copy.balance}
-            value={formatMoney(summary.netMonthly, currencySymbol)}
-            tone="balance"
-            icon="wallet"
-            colors={colors}
+            copy={copy}
+            year={year}
+            month={month}
+            availableYears={availableYears}
+            availableMonths={availableMonths}
+            onSelectPeriod={onSelectPeriod}
+            goToday={goToday}
+            goPrevMonth={goPrevMonth}
+            goNextMonth={goNextMonth}
           />
         </View>
 
@@ -451,10 +435,16 @@ export const ExpensesView = memo(function ExpensesView({
     [
       colors,
       copy,
-      currencySymbol,
-      onExitSearch,
       searchActive,
-      summary,
+      onExitSearch,
+      year,
+      month,
+      availableYears,
+      availableMonths,
+      onSelectPeriod,
+      goToday,
+      goPrevMonth,
+      goNextMonth,
     ],
   );
 

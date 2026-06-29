@@ -260,7 +260,6 @@ function AppContent() {
     currencySymbol,
     fontPreference,
     copy,
-    uiMonthNames,
     saveLanguage,
     saveCurrencySymbol,
     saveFontPreference,
@@ -291,7 +290,6 @@ function AppContent() {
     setSelectedRows,
     availableYears,
     availableMonths,
-    currentSummary,
     visibleTransactions,
     applyFinancialState,
     persistFinancialState,
@@ -304,7 +302,7 @@ function AppContent() {
     loadOlder,
     toggleSelection,
   } = fin;
-  const [tab, setTab] = useState<Tab>("expenses");
+  const [tab, setTab] = useState<Tab>("dashboard");
   const [accessToken, setAccessToken] = useState("");
   const [spreadsheetId, setSpreadsheetId] = useState("");
   const [bootstrapping, setBootstrapping] = useState(true);
@@ -1407,16 +1405,28 @@ function AppContent() {
   const tabPageProps = useMemo(
     () => ({
       tabWidth,
-      expenses: {
-        contentTopInset: headerTopInset + 112,
+      dashboard: {
+        contentTopInset: headerTopInset + 62,
         colors,
-        summary: currentSummary,
+        copy,
+        allTransactions: transactions,
+        tagsList,
+        currencySymbol,
+        onOpenDetail: handleTransactionPress,
+      },
+      expenses: {
+        contentTopInset: headerTopInset + 62,
+        colors,
         transactions: visibleTransactions,
         searchActive,
         searchText: searchFilters.text,
         selectedRows,
         currencySymbol,
         copy,
+        month,
+        year,
+        availableYears,
+        availableMonths,
         onExitSearch: exitSearch,
         onOpenDetail: handleTransactionPress,
         onEdit: openEdit,
@@ -1424,6 +1434,10 @@ function AppContent() {
         onMove: openMoveMenu,
         onToggleSelection: toggleSelection,
         onLoadOlder: loadOlder,
+        onSelectPeriod: selectPeriod,
+        goToday,
+        goPrevMonth,
+        goNextMonth,
         tagsList,
       },
       summary: {
@@ -1472,13 +1486,16 @@ function AppContent() {
       tabWidth,
       headerTopInset,
       colors,
-      currentSummary,
       visibleTransactions,
       searchActive,
       searchFilters.text,
       selectedRows,
       currencySymbol,
       copy,
+      month,
+      year,
+      availableYears,
+      availableMonths,
       exitSearch,
       handleTransactionPress,
       openEdit,
@@ -1486,11 +1503,14 @@ function AppContent() {
       openMoveMenu,
       toggleSelection,
       loadOlder,
+      selectPeriod,
+      goToday,
+      goPrevMonth,
+      goNextMonth,
       tagsList,
       summaries,
       transactions,
       freqIncome,
-      availableYears,
       accountInfo,
       language,
       fontPreference,
@@ -1519,18 +1539,10 @@ function AppContent() {
       isDark: theme === "dark",
       headerTopInset,
       headerFadeHeight,
-      expensesSubtitle: `${uiMonthNames[month]} ${year}`,
-      expensesAvailableYears: availableYears,
-      expensesAvailableMonths: availableMonths,
-      expensesYear: year,
-      expensesMonth: month,
       historyTint: historyEntries.length ? colors.primary : colors.muted,
       onToggleTheme: toggleThemeWithCrossfade,
       onOpenHistory: openHistory,
-      onSelectPeriod: selectPeriod,
-      goToday,
-      goPrevMonth,
-      goNextMonth,
+      onOpenSearch: openSearch,
       copy,
     }),
     [
@@ -1539,18 +1551,10 @@ function AppContent() {
       theme,
       headerTopInset,
       headerFadeHeight,
-      uiMonthNames,
-      month,
-      year,
-      availableYears,
-      availableMonths,
       historyEntries.length,
       toggleThemeWithCrossfade,
       openHistory,
-      selectPeriod,
-      goToday,
-      goPrevMonth,
-      goNextMonth,
+      openSearch,
       copy,
     ],
   );
@@ -1645,6 +1649,13 @@ function AppContent() {
             }}
           >
             <TabPage
+              tab="dashboard"
+              isCurrent={tab === "dashboard"}
+              props={tabPageProps.dashboard}
+              loadingBar={tabPageProps.loadingBar}
+              tabWidth={tabPageProps.tabWidth}
+            />
+            <TabPage
               tab="expenses"
               isCurrent={tab === "expenses"}
               props={tabPageProps.expenses}
@@ -1676,7 +1687,6 @@ function AppContent() {
           tab={tabRef.current}
           setTab={changeTab}
           onAdd={openAdd}
-          onSearch={openSearch}
         />
       </View>
 

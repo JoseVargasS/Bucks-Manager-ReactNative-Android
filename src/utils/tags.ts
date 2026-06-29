@@ -85,7 +85,12 @@ export function findTagById(id: string, tagsList: Tag[]): Tag | undefined {
 }
 
 export function labelForTagId(id: string, tagsList: Tag[]): string {
-  return findTagById(id, tagsList)?.label ?? id;
+  const byId = findTagById(id, tagsList);
+  if (byId) return byId.label;
+  if (id.startsWith("custom-")) {
+    return id.slice(7).replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+  return id;
 }
 
 export function migrateTagReferences(

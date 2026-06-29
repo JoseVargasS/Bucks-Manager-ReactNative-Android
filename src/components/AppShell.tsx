@@ -13,7 +13,7 @@ import {
 } from "../theme/constants";
 import { FontPreference, LanguageMode, MaterialIconName, SummaryRow, Tab, Tag, Transaction } from "../types";
 import { UiCopy } from "../i18n";
-import { PeriodControls } from "./layout/PeriodControls";
+import { DashboardView } from "./screens/DashboardView";
 import { ExpensesView } from "./screens/ExpensesView";
 import { SummaryView } from "./screens/SummaryView";
 import { SettingsView } from "./screens/SettingsView";
@@ -211,13 +211,16 @@ export const BottomFade = memo(function BottomFade({
 type ExpensesTabProps = {
   contentTopInset: number;
   colors: Palette;
-  summary: SummaryRow;
   transactions: Transaction[];
   searchActive: boolean;
   searchText: string;
   selectedRows: number[];
   currencySymbol: string;
   copy: UiCopy;
+  month: number;
+  year: number;
+  availableYears: number[];
+  availableMonths: number[];
   onExitSearch: () => void;
   onOpenDetail: (tx: Transaction) => void;
   onEdit: (tx: Transaction) => void;
@@ -225,6 +228,10 @@ type ExpensesTabProps = {
   onMove: (tx: Transaction) => void;
   onToggleSelection: (tx: Transaction) => void;
   onLoadOlder: () => void;
+  onSelectPeriod: (month: number, year: number) => void;
+  goToday: () => void;
+  goPrevMonth: () => void;
+  goNextMonth: () => void;
   tagsList: Tag[];
 };
 
@@ -237,6 +244,16 @@ type SummaryTabProps = {
   freqIncome: Record<string, number>;
   availableYears: number[];
   currencySymbol: string;
+};
+
+type DashboardTabProps = {
+  contentTopInset: number;
+  colors: Palette;
+  copy: UiCopy;
+  allTransactions: Transaction[];
+  tagsList: Tag[];
+  currencySymbol: string;
+  onOpenDetail: (tx: Transaction) => void;
 };
 
 type SettingsTabProps = {
@@ -271,6 +288,13 @@ type LoadingBarProps = {
 };
 
 type TabPageProps =
+  | {
+      tab: "dashboard";
+      isCurrent: boolean;
+      props: DashboardTabProps;
+      loadingBar: LoadingBarProps;
+      tabWidth: number;
+    }
   | {
       tab: "expenses";
       isCurrent: boolean;
@@ -322,16 +346,29 @@ function TabPageImpl(props: TabPageProps) {
             <Text style={{ color: loadingBar.mutedColor }}>{loadingBar.text}</Text>
           </View>
         )}
-        {tab === "expenses" ? (
+        {tab === "dashboard" ? (
+          <DashboardView
+            colors={tabProps.colors}
+            copy={tabProps.copy}
+            allTransactions={tabProps.allTransactions}
+            tagsList={tabProps.tagsList}
+            currencySymbol={tabProps.currencySymbol}
+            onOpenDetail={tabProps.onOpenDetail}
+            topInset={tabProps.contentTopInset}
+          />
+        ) : tab === "expenses" ? (
           <ExpensesView
             colors={tabProps.colors}
-            summary={tabProps.summary}
             transactions={tabProps.transactions}
             searchActive={tabProps.searchActive}
             searchText={tabProps.searchText}
             selectedRows={tabProps.selectedRows}
             currencySymbol={tabProps.currencySymbol}
             copy={tabProps.copy}
+            month={tabProps.month}
+            year={tabProps.year}
+            availableYears={tabProps.availableYears}
+            availableMonths={tabProps.availableMonths}
             onExitSearch={tabProps.onExitSearch}
             onOpenDetail={tabProps.onOpenDetail}
             onEdit={tabProps.onEdit}
@@ -339,6 +376,10 @@ function TabPageImpl(props: TabPageProps) {
             onMove={tabProps.onMove}
             onToggleSelection={tabProps.onToggleSelection}
             onLoadOlder={tabProps.onLoadOlder}
+            onSelectPeriod={tabProps.onSelectPeriod}
+            goToday={tabProps.goToday}
+            goPrevMonth={tabProps.goPrevMonth}
+            goNextMonth={tabProps.goNextMonth}
             topInset={tabProps.contentTopInset}
             tagsList={tabProps.tagsList}
           />
@@ -388,18 +429,10 @@ export type HeaderShellProps = {
   isDark: boolean;
   headerTopInset: number;
   headerFadeHeight: number;
-  expensesSubtitle: string;
-  expensesAvailableYears: number[];
-  expensesAvailableMonths: number[];
-  expensesYear: number;
-  expensesMonth: number;
   historyTint: string;
   onToggleTheme: () => void;
   onOpenHistory: () => void;
-  onSelectPeriod: (month: number, year: number) => void;
-  goToday: () => void;
-  goPrevMonth: () => void;
-  goNextMonth: () => void;
+  onOpenSearch: () => void;
   copy: UiCopy;
 };
 
@@ -414,26 +447,28 @@ function HeaderShellImpl(
     isDark,
     headerTopInset,
     headerFadeHeight,
-    expensesSubtitle,
     historyTint,
     onToggleTheme,
     onOpenHistory,
+    onOpenSearch,
     copy,
     colors,
   } = props;
   const pageTitle =
-    tab === "expenses"
-      ? copy.expenses
-      : tab === "summary"
-        ? copy.summary
-        : copy.settings;
+    tab === "dashboard"
+      ? copy.dashboard
+      : tab === "expenses"
+        ? copy.expenses
+        : tab === "summary"
+          ? copy.summary
+          : copy.settings;
   const pageSubtitle =
-    tab === "expenses"
-      ? expensesSubtitle
+    tab === "dashboard"
+      ? copy.dashboardSubtitle
       : tab === "summary"
         ? copy.summarySubtitle
         : copy.settingsSubtitle;
-  const showHeaderFade = tab === "expenses" || tab === "summary";
+  const showHeaderFade = tab === "dashboard" || tab === "expenses" || tab === "summary";
   return (
     <Animated.View
       style={{
@@ -508,26 +543,18 @@ function HeaderShellImpl(
             />
             <HeaderActionButton
               colors={colors}
+              icon="magnify"
+              iconColor={colors.primary}
+              onPress={onOpenSearch}
+            />
+            <HeaderActionButton
+              colors={colors}
               icon="history"
               iconColor={historyTint}
               onPress={onOpenHistory}
             />
           </View>
         </View>
-        {tab === "expenses" && (
-          <PeriodControls
-            colors={colors}
-            copy={copy}
-            year={props.expensesYear}
-            month={props.expensesMonth}
-            availableYears={props.expensesAvailableYears}
-            availableMonths={props.expensesAvailableMonths}
-            onSelectPeriod={props.onSelectPeriod}
-            goToday={props.goToday}
-            goPrevMonth={props.goPrevMonth}
-            goNextMonth={props.goNextMonth}
-          />
-        )}
       </View>
     </Animated.View>
   );
