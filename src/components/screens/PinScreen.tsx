@@ -3,13 +3,9 @@ import { Animated, TouchableOpacity, View } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { type Palette } from "@/theme/colors";
 import { PIN_LENGTH } from "@/theme/constants";
+import { s } from "./PinScreen.styles";
 import { type UiCopy } from "@/i18n";
 import { Text } from "@/components/ui/AppText";
-
-const KEY_W = 68;
-const KEY_H = 52;
-const DOT_SIZE = 18;
-const DOT_GAP = 14;
 
 export function PinScreen({ colors, copy, title, subtitle, wrong, bgColor, onFill }: {
   colors: Palette;
@@ -54,58 +50,55 @@ export function PinScreen({ colors, copy, title, subtitle, wrong, bgColor, onFil
     setDigits((prev) => prev.slice(0, -1));
   }
 
-  const keyStyle = { width: KEY_W, height: KEY_H, borderRadius: 14, backgroundColor: colors.input, alignItems: "center" as const, justifyContent: "center" as const };
-
   return (
-    <View style={{ flex: 1, justifyContent: "center", alignItems: "center", paddingHorizontal: 28, backgroundColor: bgColor }}>
+    <View style={[s.container, { backgroundColor: bgColor }]}>
       {title ? (
-        <Text style={{ fontSize: 17, fontWeight: "700", color: colors.text, marginBottom: 8, textAlign: "center" }}>{title}</Text>
+        <Text style={[s.title, { color: colors.text }]}>{title}</Text>
       ) : null}
       {subtitle ? (
-        <Text style={{ fontSize: 14, fontWeight: "500", color: colors.textSub, marginBottom: 28, textAlign: "center", paddingHorizontal: 12 }}>{subtitle}</Text>
+        <Text style={[s.subtitle, { color: colors.textSub }]}>{subtitle}</Text>
       ) : (
         <View style={{ marginBottom: 28 }} />
       )}
 
-      <Animated.View style={{ flexDirection: "row", gap: DOT_GAP, marginBottom: 36, transform: [{ translateX: shake }] }}>
+      <Animated.View style={[s.dotRow, { transform: [{ translateX: shake }] }]}>
         {Array.from({ length: PIN_LENGTH }, (_, i) => i).map((i) => {
           const dot = digits.length > i;
           return (
             <View
               key={i}
-              style={{
-                width: DOT_SIZE, height: DOT_SIZE, borderRadius: DOT_SIZE / 2,
+              style={[s.dot, {
                 backgroundColor: dot ? (showingError ? colors.red : colors.primary) : "transparent",
                 borderWidth: dot ? 0 : 2,
                 borderColor: colors.borderStrong,
-              }}
+              }]}
             />
           );
         })}
       </Animated.View>
 
       {showingError && (
-        <Text style={{ fontSize: 13, fontWeight: "600", color: colors.red, marginBottom: 16 }}>{copy.pinIncorrect}</Text>
+        <Text style={[s.errorText, { color: colors.red }]}>{copy.pinIncorrect}</Text>
       )}
 
-      <View style={{ gap: 10, alignItems: "center" }}>
+      <View style={s.keypad}>
         {[["1", "2", "3"], ["4", "5", "6"], ["7", "8", "9"]].map((row, rowIndex) => (
-          <View key={rowIndex} style={{ flexDirection: "row", gap: 10, justifyContent: "center" }}>
+          <View key={rowIndex} style={s.keypadRow}>
             {row.map((d) => (
-              <TouchableOpacity key={d} activeOpacity={0.6} onPress={() => pressDigit(d)} style={keyStyle}>
-                <Text style={{ fontSize: 22, fontWeight: "600", color: colors.text, fontVariant: ["tabular-nums"] }}>{d}</Text>
+              <TouchableOpacity key={d} activeOpacity={0.6} onPress={() => pressDigit(d)} style={[s.key, { backgroundColor: colors.input }]}>
+                <Text style={[s.keyText, { color: colors.text }]}>{d}</Text>
               </TouchableOpacity>
             ))}
           </View>
         ))}
-        <View style={{ flexDirection: "row", gap: 10, justifyContent: "center" }}>
-          <TouchableOpacity activeOpacity={0.6} onPress={pressBackspace} style={keyStyle}>
+        <View style={s.keypadRow}>
+          <TouchableOpacity activeOpacity={0.6} onPress={pressBackspace} style={[s.key, { backgroundColor: colors.input }]}>
             <MaterialCommunityIcons name="backspace-outline" size={22} color={colors.text} />
           </TouchableOpacity>
-<TouchableOpacity activeOpacity={0.6} onPress={() => pressDigit("0")} style={keyStyle}>
-            <Text style={{ fontSize: 22, fontWeight: "600", color: colors.text, fontVariant: ["tabular-nums"] }}>0</Text>
+          <TouchableOpacity activeOpacity={0.6} onPress={() => pressDigit("0")} style={[s.key, { backgroundColor: colors.input }]}>
+            <Text style={[s.keyText, { color: colors.text }]}>0</Text>
           </TouchableOpacity>
-          <View style={{ width: KEY_W, height: KEY_H }} />
+          <View style={s.placeholder} />
         </View>
       </View>
     </View>

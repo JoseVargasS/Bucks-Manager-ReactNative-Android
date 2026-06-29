@@ -191,8 +191,8 @@ function deriveSyncStatus(args: {
   pendingSync: boolean;
   isSyncing: boolean;
   hasLocalData: boolean;
-  isEn: boolean;
-  savedDataText: string;
+  showingSavedData: string;
+  pendingSyncLabel: string;
   syncingLabel: string;
 }): string {
   const {
@@ -201,21 +201,17 @@ function deriveSyncStatus(args: {
     pendingSync,
     isSyncing,
     hasLocalData,
-    isEn,
-    savedDataText,
+    showingSavedData,
+    pendingSyncLabel,
     syncingLabel,
   } = args;
   if (authError) return authError;
   if (syncError)
-    return hasLocalData
-      ? isEn
-        ? "Showing saved data"
-        : "Mostrando datos guardados"
-      : syncError;
-  if (pendingSync) return isEn ? "Pending sync" : "Pendiente de sincronizar";
+    return hasLocalData ? showingSavedData : syncError;
+  if (pendingSync) return pendingSyncLabel;
   if (isSyncing)
     return hasLocalData
-      ? `${savedDataText} · ${syncingLabel.toLowerCase()}`
+      ? `${showingSavedData} · ${syncingLabel.toLowerCase()}`
       : syncingLabel;
   return "";
 }
@@ -460,17 +456,14 @@ function AppContent() {
     language === "en"
       ? selectedColorScheme.labelEn
       : selectedColorScheme.labelEs;
-  const savedDataText =
-    copy.languageCode === "en" ? "Saved data" : "Datos guardados";
-  const isEn = copy.languageCode === "en";
   const syncStatusText = deriveSyncStatus({
     authError,
     syncError,
     pendingSync,
     isSyncing,
     hasLocalData,
-    isEn,
-    savedDataText,
+    showingSavedData: copy.showingSavedData,
+    pendingSyncLabel: copy.pendingSyncStatus,
     syncingLabel: copy.syncing,
   });
   // --- Session management ---
@@ -835,7 +828,7 @@ function AppContent() {
       if (response.type !== "success") return;
       const tokens = await getWorkspaceAccessToken(true);
       if (!tokens.accessToken)
-        throw new Error("Google no devolvió access token.");
+        throw new Error(copy.googleSignInError);
       if (switchingAccount) {
         setAccountTransition(true);
         await Promise.all([deleteItemAsync(SHEET_KEY), deleteFinancialCache()]);
@@ -1034,7 +1027,7 @@ function AppContent() {
       .then(async () => {
         const tokens = await GoogleSignin.getTokens();
         const fresh = tokens.accessToken || "";
-        if (!fresh) throw new Error("Sesión expirada. Vuelve a iniciar sesión.");
+        if (!fresh) throw new Error(copy.sessionExpired);
         setAccessToken(fresh);
         await setItemAsync(TOKEN_KEY, fresh).catch(() => undefined);
         return fresh;
@@ -1218,7 +1211,7 @@ function AppContent() {
         for (const tx of selected)
           await deleteGoogleTransaction(freshToken, spreadsheetId, tx.rowId);
         await reloadFromGoogle(freshToken, spreadsheetId, false, true);
-      }, "Eliminar seleccion");
+      }, copy.deleteSelection);
     }
   }
 
@@ -1247,7 +1240,7 @@ function AppContent() {
               direction,
             );
             await reloadFromGoogle(freshToken, spreadsheetId, false, true);
-          }, "Mover registro");
+          }, copy.moveRecord);
           return;
         }
         const index = transactions.findIndex((item) => item.rowId === tx.rowId);
@@ -1347,7 +1340,7 @@ function AppContent() {
           entry.transaction.rowId,
         );
         await reloadFromGoogle(freshToken, spreadsheetId, false, true);
-      }, "Deshacer");
+      }, copy.undoAction);
     }
   }
 

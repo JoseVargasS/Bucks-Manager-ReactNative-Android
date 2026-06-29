@@ -2,6 +2,7 @@ import { useLayoutEffect, useRef, useState } from "react";
 import { Animated, Modal, TouchableOpacity, View } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { styles } from "@/styles/globalStyles";
+import { s } from "./ConfirmModal.styles";
 import { type Palette } from "@/theme/colors";
 import { type Transaction } from "@/types";
 import { formatMoney } from "@/domain/bucksLogic";
@@ -114,27 +115,13 @@ export function ConfirmModal({
             </TouchableOpacity>
           </View>
 
-          <View style={{ padding: 16, gap: 14 }}>
+          <View style={s.body}>
             {current.tx && (
               <View
-                style={{
-                  backgroundColor: colors.input,
-                  borderRadius: 14,
-                  padding: 14,
-                  flexDirection: "row",
-                  alignItems: "center",
-                  gap: 12,
-                }}
+                style={[s.previewCard, { backgroundColor: colors.input }]}
               >
                 <View
-                  style={{
-                    width: 44,
-                    height: 44,
-                    borderRadius: 22,
-                    backgroundColor: accentSoft,
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
+                  style={[s.previewIcon, { backgroundColor: accentSoft }]}
                 >
                   <MaterialCommunityIcons
                     name={
@@ -149,36 +136,20 @@ export function ConfirmModal({
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <Text
                     numberOfLines={1}
-                    style={{
-                      fontSize: 12,
-                      fontWeight: "600",
-                      color: colors.muted,
-                      textTransform: "uppercase",
-                    }}
+                    style={[s.previewLabel, { color: colors.muted }]}
                   >
                     {typeLabel(current.tx.type, copy)}
                   </Text>
                   <Text
                     numberOfLines={1}
-                    style={{
-                      marginTop: 2,
-                      fontSize: 20,
-                      fontWeight: "700",
-                      color: current.tx.amount >= 0 ? colors.green : colors.red,
-                      fontVariant: ["tabular-nums"],
-                    }}
+                    style={[s.previewAmount, { color: current.tx.amount >= 0 ? colors.green : colors.red }]}
                   >
                     {formatMoney(current.tx.amount, currencySymbol)}
                   </Text>
                   {!!current.tx.detail && (
                     <Text
                       numberOfLines={1}
-                      style={{
-                        marginTop: 2,
-                        fontSize: 13,
-                        fontWeight: "500",
-                        color: colors.text,
-                      }}
+                      style={[s.previewDetail, { color: colors.text }]}
                     >
                       {current.tx.detail}
                     </Text>
@@ -188,12 +159,7 @@ export function ConfirmModal({
             )}
 
             <Text
-              style={{
-                fontSize: 14,
-                fontWeight: "500",
-                color: colors.muted,
-                lineHeight: 20,
-              }}
+              style={[s.message, { color: colors.muted }]}
             >
               {message}
             </Text>

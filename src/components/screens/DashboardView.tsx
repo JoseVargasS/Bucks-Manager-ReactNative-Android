@@ -224,6 +224,7 @@ export const DashboardView = memo(function DashboardView({
             colors={colors}
             currencySymbol={currencySymbol}
             formatValue={(v) => formatMoney(v, currencySymbol, 0).replace(/^\+ /, "")}
+            totalLabel={copy.total}
           />
         </View>
       )}

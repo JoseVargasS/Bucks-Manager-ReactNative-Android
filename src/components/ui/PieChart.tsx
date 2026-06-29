@@ -69,12 +69,14 @@ export const PieChart = memo(function PieChart({
   currencySymbol,
   size = 174,
   formatValue,
+  totalLabel = "total",
 }: {
   data: PieSlice[];
   colors: Palette;
   currencySymbol: string;
   size?: number;
   formatValue?: (value: number) => string;
+  totalLabel?: string;
 }) {
   if (!data.length) return null;
 
@@ -150,7 +152,7 @@ export const PieChart = memo(function PieChart({
           fontWeight="500"
           fill={colors.muted}
         >
-          total
+          {totalLabel}
         </SvgText>
       </Svg>
 

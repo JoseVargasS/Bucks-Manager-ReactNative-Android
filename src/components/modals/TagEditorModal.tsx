@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { styles } from "@/styles/globalStyles";
+import { s } from "./TagEditorModal.styles";
 import { type Palette } from "@/theme/colors";
 import { type Tag } from "@/types";
 import { type UiCopy } from "@/i18n";
@@ -49,15 +50,10 @@ export function TagEditorModal({
         .then(() => saveTags(next))
         .catch(() => {
           void loadTags(copy.languageCode === "en" ? "en" : "es").then(setTags);
-          Alert.alert(
-            copy.languageCode === "en" ? "Tags" : "Etiquetas",
-            copy.languageCode === "en"
-              ? "The changes could not be saved."
-              : "No se pudieron guardar los cambios.",
-          );
+          Alert.alert(copy.tagsTitle, copy.tagSaveError);
         });
     },
-    [copy.languageCode, setTags],
+    [copy.languageCode, copy.tagsTitle, copy.tagSaveError, setTags],
   );
 
   const startEdit = useCallback((tag: Tag) => {
@@ -137,7 +133,7 @@ export function TagEditorModal({
                   size={19}
                   color={colors.primary}
                 />{" "}
-                {copy.tagsTitle || "Etiquetas"}
+                {copy.tagsTitle}
               </Text>
               <TouchableOpacity
                 style={[styles.closeBtn, { backgroundColor: colors.input }]}
@@ -151,36 +147,21 @@ export function TagEditorModal({
               </TouchableOpacity>
             </View>
 
-            <View style={{ padding: 14, gap: 10 }}>
+            <View style={s.body}>
               <View
-                style={{ flexDirection: "row", gap: 8, alignItems: "center" }}
+                style={s.addRow}
               >
                 <TextInput
                   value={newLabel}
                   onChangeText={setNewLabel}
-                  placeholder={copy.tagsNewPlaceholder || "Nueva etiqueta"}
+                  placeholder={copy.tagsNewPlaceholder}
                   placeholderTextColor={colors.muted}
-                  style={{
-                    flex: 1,
-                    backgroundColor: colors.input,
-                    borderRadius: 8,
-                    paddingHorizontal: 12,
-                    minHeight: 40,
-                    color: colors.text,
-                    fontWeight: "600",
-                  }}
+                  style={[s.input, { backgroundColor: colors.input, color: colors.text }]}
                   onSubmitEditing={handleAdd}
                 />
                 <TouchableOpacity
                   onPress={handleAdd}
-                  style={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: 20,
-                    backgroundColor: colors.primary,
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
+                  style={[s.addBtn, { backgroundColor: colors.primary }]}
                 >
                   <MaterialCommunityIcons
                     name="plus"
@@ -190,19 +171,12 @@ export function TagEditorModal({
                 </TouchableOpacity>
               </View>
 
-              <View style={{ flexDirection: "row", gap: 6, flexWrap: "wrap" }}>
+              <View style={s.colorSwatches}>
                 {colors.tagColors.map((c) => (
                   <TouchableOpacity
                     key={c}
                     onPress={() => setNewColor(c)}
-                    style={{
-                      width: 28,
-                      height: 28,
-                      borderRadius: 14,
-                      backgroundColor: c,
-                      borderWidth: 2,
-                      borderColor: newColor === c ? colors.text : "transparent",
-                    }}
+                    style={[s.swatch, { backgroundColor: c, borderColor: newColor === c ? colors.text : "transparent" }]}
                   />
                 ))}
               </View>
@@ -214,7 +188,7 @@ export function TagEditorModal({
               <FlatList
                 data={tags}
                 keyExtractor={(t) => t.id}
-                style={{ maxHeight: 260 }}
+                style={s.flatList}
                 keyboardShouldPersistTaps="handled"
                 renderItem={({ item }) => (
                   <TagRow
@@ -274,53 +248,27 @@ const TagRow = memo(function TagRow({
 }) {
   return (
     <View
-      style={{
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 8,
-        paddingVertical: 6,
-      }}
+      style={s.tagRow}
     >
       <View
-        style={{
-          width: 24,
-          height: 24,
-          borderRadius: 12,
-          backgroundColor: tag.color,
-        }}
+        style={[s.tagDot, { backgroundColor: tag.color }]}
       />
       {editing ? (
         <>
           <TextInput
             value={editingLabel}
             onChangeText={onChangeLabel}
-            style={{
-              flex: 1,
-              backgroundColor: colors.input,
-              borderRadius: 6,
-              paddingHorizontal: 8,
-              minHeight: 32,
-              color: colors.text,
-              fontWeight: "600",
-            }}
+            style={[s.editInput, { backgroundColor: colors.input, color: colors.text }]}
             onSubmitEditing={onSave}
           />
           <View
-            style={{ flexDirection: "row", gap: 4, flex: 1, flexWrap: "wrap" }}
+            style={s.editColorRow}
           >
             {colors.tagColors.map((color) => (
               <TouchableOpacity
                 key={color}
                 onPress={() => onChangeColor(color)}
-                style={{
-                  width: 22,
-                  height: 22,
-                  borderRadius: 11,
-                  backgroundColor: color,
-                  borderWidth: 1.5,
-                  borderColor:
-                    editingColor === color ? colors.text : "transparent",
-                }}
+                style={[s.editColorDot, { backgroundColor: color, borderColor: editingColor === color ? colors.text : "transparent" }]}
               />
             ))}
           </View>
@@ -342,23 +290,13 @@ const TagRow = memo(function TagRow({
       ) : (
         <>
           <Text
-            style={{
-              flex: 1,
-              fontWeight: "600",
-              fontSize: 14,
-              color: colors.text,
-            }}
+            style={[s.tagLabel, { color: colors.text }]}
           >
             {tag.label}
           </Text>
           {tag.id.startsWith("custom-") && (
             <Text
-              style={{
-                fontSize: 10,
-                color: colors.muted,
-                fontWeight: "400",
-                marginRight: 4,
-              }}
+              style={[s.customBadge, { color: colors.muted }]}
             >
               {copy.tagCustomBadge}
             </Text>

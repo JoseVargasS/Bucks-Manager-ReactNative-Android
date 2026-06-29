@@ -3,6 +3,7 @@ import { Animated, FlatList, Modal, TouchableOpacity, View } from "react-native"
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { type HistoryEntry } from "@/types";
 import { styles } from "@/styles/globalStyles";
+import { s } from "./HistoryModal.styles";
 import { type Palette } from "@/theme/colors";
 import { formatMoney } from "@/domain/bucksLogic";
 import { formatCreatedTime } from "@/utils/formats";
@@ -36,44 +37,44 @@ export function HistoryModal({ visible, entries, colors, currencySymbol, copy, o
               <MaterialCommunityIcons name="close" size={22} color={colors.text} />
             </TouchableOpacity>
           </View>
-          <View style={{ paddingHorizontal: 16, paddingBottom: 20 }}>
-            <Text style={{ fontSize: 12, fontWeight: "500", color: colors.muted, marginBottom: 12, marginTop: 4 }}>
+          <View style={s.body}>
+            <Text style={[s.subtitle, { color: colors.muted }]}>
               {copy.historySubtitle}
             </Text>
             {deletedOnly.length === 0 ? (
-              <View style={{ paddingVertical: 32, alignItems: "center", gap: 10 }}>
+              <View style={s.emptyState}>
                 <MaterialCommunityIcons name="delete-restore" size={36} color={colors.muted} />
-                <Text style={{ color: colors.muted, fontSize: 14, fontWeight: "500" }}>{copy.historyEmpty}</Text>
+                <Text style={[s.emptyText, { color: colors.muted }]}>{copy.historyEmpty}</Text>
               </View>
             ) : (
               <FlatList
                 data={deletedOnly}
                 keyExtractor={(item) => item.id}
-                style={{ maxHeight: 420 }}
+                style={s.list}
                 showsVerticalScrollIndicator={false}
                 renderItem={({ item }) => (
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 10, borderBottomWidth: 1, borderColor: colors.border }}>
-                    <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: colors.expenseSoft, alignItems: "center", justifyContent: "center" }}>
+                  <View style={[s.listItem, { borderColor: colors.border }]}>
+                    <View style={[s.historyIcon, { backgroundColor: colors.expenseSoft }]}>
                       <MaterialCommunityIcons name="trash-can" size={18} color={colors.red} />
                     </View>
                     <View style={{ flex: 1, minWidth: 0 }}>
-                      <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                        <Text style={{ fontSize: 12, fontWeight: "700", color: colors.red, textTransform: "uppercase" }}>
+                      <View style={s.labelRow}>
+                        <Text style={[s.deleteLabel, { color: colors.red }]}>
                           {copy.delete}
                         </Text>
-                        <Text style={{ fontSize: 11, fontWeight: "500", color: colors.muted }}>
+                        <Text style={[s.timestamp, { color: colors.muted }]}>
                           {formatCreatedTime(item.timestamp)}
                         </Text>
                       </View>
-                      <Text numberOfLines={1} style={{ fontSize: 14, fontWeight: "600", color: colors.text, marginTop: 1 }}>
+                      <Text numberOfLines={1} style={[s.detail, { color: colors.text }]}>
                         {item.transaction.detail || copy.detailPlaceholder}
                       </Text>
-                      <Text style={{ fontSize: 13, fontWeight: "600", color: item.transaction.amount >= 0 ? colors.green : colors.red, fontVariant: ["tabular-nums"], marginTop: 1 }}>
+                      <Text style={[s.amount, { color: item.transaction.amount >= 0 ? colors.green : colors.red }]}>
                         {formatMoney(item.transaction.amount, currencySymbol)}
                       </Text>
                     </View>
                     <TouchableOpacity
-                      style={{ width: 38, height: 38, borderRadius: 12, backgroundColor: colors.input, alignItems: "center", justifyContent: "center" }}
+                      style={[s.undoBtn, { backgroundColor: colors.input }]}
                       onPress={() => onUndo(item)}
                     >
                       <MaterialCommunityIcons name="undo" size={18} color={colors.primary} />
