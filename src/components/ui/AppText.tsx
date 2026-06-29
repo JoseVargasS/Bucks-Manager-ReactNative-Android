@@ -18,6 +18,19 @@ const FONT_FAMILIES: Record<FontPreference, string> = {
   casual: "casual",
   cursive: "cursive",
   smallcaps: "sans-serif-smallcaps",
+  okxsans: "OKXSans",
+  ourfont: "OurFont",
+  studiofeixen: "StudioFeixenSans",
+  twkeverett: "TWKEverett",
+  suisseintl: "SuisseIntl",
+  inter: "Inter",
+  comicsans: "ComicSansMS",
+  fredoka: "Fredoka",
+  jetbrainsmono: "JetBrainsMono",
+  spacemono: "SpaceMono",
+  orbitron: "Orbitron",
+  playfair: "PlayfairDisplay",
+  bebasneue: "BebasNeue",
 };
 
 export function setAppFontPreference(preference: FontPreference) {

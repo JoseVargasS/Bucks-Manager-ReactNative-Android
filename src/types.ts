@@ -85,4 +85,17 @@ export type FontPreference =
   | "light"
   | "casual"
   | "cursive"
-  | "smallcaps";
+  | "smallcaps"
+  | "okxsans"
+  | "ourfont"
+  | "studiofeixen"
+  | "twkeverett"
+  | "suisseintl"
+  | "inter"
+  | "comicsans"
+  | "fredoka"
+  | "jetbrainsmono"
+  | "spacemono"
+  | "orbitron"
+  | "playfair"
+  | "bebasneue";

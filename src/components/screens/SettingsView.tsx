@@ -33,6 +33,19 @@ export const SettingsView = memo(function SettingsView({
     casual: copy.casual,
     cursive: copy.cursive,
     smallcaps: copy.smallCaps,
+    okxsans: copy.okxSans,
+    ourfont: copy.ourFont,
+    studiofeixen: copy.studioFeixen,
+    twkeverett: copy.twkEverett,
+    suisseintl: copy.suisseIntl,
+    inter: copy.inter,
+    comicsans: copy.comicSans,
+    fredoka: copy.fredoka,
+    jetbrainsmono: copy.jetbrainsMono,
+    spacemono: copy.spaceMono,
+    orbitron: copy.orbitron,
+    playfair: copy.playfair,
+    bebasneue: copy.bebasNeue,
   };
   return (
     <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.pageScroll, styles.pageScrollMobile]}>
