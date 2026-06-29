@@ -1,7 +1,10 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { Animated, BackHandler, ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import { styles } from "@/styles/globalStyles";
+import { base } from "@/styles/baseStyles";
+import { detailStyles } from "@/components/modals/DetailModal.styles";
+
+const styles = { ...base, ...detailStyles };
 import { type Palette } from "@/theme/colors";
 import { Z_INDEX_DETAIL } from "@/theme/constants";
 import { type MaterialIconName, type Tag, type Transaction } from "@/types";

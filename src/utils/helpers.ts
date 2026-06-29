@@ -2,6 +2,16 @@ import type { Transaction } from "@/types";
 import type { ExportConfig } from "@/components/modals/ExportModal";
 import { MONTH_NAMES } from "@/domain/bucksLogic";
 
+export function withAlpha(hex: string, alpha: number): string {
+  if (!hex.startsWith("#") || (hex.length !== 7 && hex.length !== 4)) return hex;
+  const expanded = hex.length === 4 ? `#${hex[1]}${hex[1]}${hex[2]}${hex[2]}${hex[3]}${hex[3]}` : hex;
+  const value = Number.parseInt(expanded.slice(1), 16);
+  const r = (value >> 16) & 255;
+  const g = (value >> 8) & 255;
+  const b = value & 255;
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
 export function buildExportFileName(cfg: ExportConfig) {
   const fmtDate = (value: string) => value;
   const fmtMonth = (value: string) => {

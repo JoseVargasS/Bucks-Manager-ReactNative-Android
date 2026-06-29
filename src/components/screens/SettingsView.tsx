@@ -1,7 +1,10 @@
 import { memo } from "react";
 import { ScrollView, Switch, TouchableOpacity, View } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import { styles } from "@/styles/globalStyles";
+import { base } from "@/styles/baseStyles";
+import { settingsStyles } from "@/components/screens/SettingsView.styles";
+
+const styles = { ...base, ...settingsStyles };
 import { type Palette } from "@/theme/colors";
 import { type FontPreference, type MaterialIconName } from "@/types";
 import { type UiCopy } from "@/i18n";

@@ -1,11 +1,15 @@
 import { memo, useMemo, useCallback, useRef } from "react";
 import { Animated, Easing, Pressable, View } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import { styles } from "@/styles/globalStyles";
+import { base } from "@/styles/baseStyles";
+import { bottomNavStyles } from "@/components/layout/BottomNav.styles";
 import { useColors } from "@/theme/ThemeContext";
+
+const styles = { ...base, ...bottomNavStyles };
 import { dark } from "@/theme/colors";
 import { type Tab, type MaterialIconName } from "@/types";
 import { type UiCopy } from "@/i18n";
+import { withAlpha } from "@/utils/helpers";
 import { Text } from "@/components/ui/AppText";
 
 function usePressAnimation(durationIn = 70, durationOut = 110) {
@@ -27,19 +31,6 @@ function usePressAnimation(durationIn = 70, durationOut = 110) {
     }).start();
   }, [pressed, durationOut]);
   return { pressed, onPressIn, onPressOut };
-}
-
-function withAlpha(hex: string, alpha: number) {
-  if (!hex.startsWith("#") || (hex.length !== 7 && hex.length !== 4)) return hex;
-  const expanded =
-    hex.length === 4
-      ? `#${hex[1]}${hex[1]}${hex[2]}${hex[2]}${hex[3]}${hex[3]}`
-      : hex;
-  const value = Number.parseInt(expanded.slice(1), 16);
-  const r = (value >> 16) & 255;
-  const g = (value >> 8) & 255;
-  const b = value & 255;
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
 export const BottomNav = memo(function BottomNav({

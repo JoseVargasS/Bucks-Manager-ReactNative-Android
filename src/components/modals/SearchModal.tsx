@@ -1,7 +1,10 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { Animated, BackHandler, Keyboard, StyleSheet, TouchableOpacity, View } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import { styles } from "@/styles/globalStyles";
+import { base } from "@/styles/baseStyles";
+import { searchModalStyles } from "@/components/modals/SearchModal.styles";
+
+const styles = { ...base, ...searchModalStyles };
 import { type Palette } from "@/theme/colors";
 import { Z_INDEX_SEARCH } from "@/theme/constants";
 import { type SearchFilters, type Tag } from "@/types";

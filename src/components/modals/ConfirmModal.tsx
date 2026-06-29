@@ -1,8 +1,10 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import { Animated, Modal, TouchableOpacity, View } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import { styles } from "@/styles/globalStyles";
+import { base } from "@/styles/baseStyles";
+import { recordModalStyles } from "@/components/modals/TransactionModal.styles";
 import { s } from "./ConfirmModal.styles";
+const styles = { ...base, ...recordModalStyles };
 import { type Palette } from "@/theme/colors";
 import { type Transaction } from "@/types";
 import { formatMoney } from "@/domain/bucksLogic";

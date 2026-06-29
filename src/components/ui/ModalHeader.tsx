@@ -1,7 +1,7 @@
 import { memo } from "react";
 import { TouchableOpacity, View } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import { styles } from "@/styles/globalStyles";
+import { modalHeaderStyles as styles } from "@/components/ui/ModalHeader.styles";
 import { type Palette } from "@/theme/colors";
 import { Text } from "./AppText";
 import { type MaterialIconName } from "@/types";

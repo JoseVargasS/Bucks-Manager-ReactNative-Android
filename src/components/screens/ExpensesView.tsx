@@ -26,7 +26,11 @@ import {
 } from "@/utils/formats";
 import { abbreviateTag, tagTextColor } from "@/utils/tags";
 import { groupTransactionsByDate } from "@/utils/transactions";
-import { styles } from "@/styles/globalStyles";
+import { withAlpha } from "@/utils/helpers";
+import { base } from "@/styles/baseStyles";
+import { expensesStyles } from "@/components/screens/ExpensesView.styles";
+
+const styles = { ...base, ...expensesStyles };
 import { PeriodControls } from "@/components/layout/PeriodControls";
 import { HighlightedText } from "@/components/ui/HighlightedText";
 import { dark, type Palette } from "@/theme/colors";
@@ -34,16 +38,6 @@ import { type Tag, type Transaction, type MaterialIconName } from "@/types";
 import { type UiCopy } from "@/i18n";
 import { useModalTransition } from "@/components/ui/useModalTransition";
 import { Text } from "@/components/ui/AppText";
-
-function withAlpha(hex: string, alpha: number): string {
-  if (!hex.startsWith("#") || (hex.length !== 7 && hex.length !== 4)) return hex;
-  const expanded = hex.length === 4 ? `#${hex[1]}${hex[1]}${hex[2]}${hex[2]}${hex[3]}${hex[3]}` : hex;
-  const value = Number.parseInt(expanded.slice(1), 16);
-  const r = (value >> 16) & 255;
-  const g = (value >> 8) & 255;
-  const b = value & 255;
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-}
 
 type TransactionSection = {
   key: string;

@@ -1,7 +1,10 @@
 import { type Dispatch, type SetStateAction, useMemo } from "react";
 import { ScrollView, TouchableOpacity, View } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import { styles } from "@/styles/globalStyles";
+import { base } from "@/styles/baseStyles";
+import { searchPageStyles } from "@/components/screens/SearchPage.styles";
+
+const styles = { ...base, ...searchPageStyles };
 import { Field } from "@/components/ui/Field";
 import { Select } from "@/components/ui/Select";
 import { type Palette } from "@/theme/colors";

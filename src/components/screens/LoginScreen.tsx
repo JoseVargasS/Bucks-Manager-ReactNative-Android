@@ -1,6 +1,9 @@
 import { ActivityIndicator, TouchableOpacity, View } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import { styles } from "@/styles/globalStyles";
+import { base } from "@/styles/baseStyles";
+import { loginStyles } from "@/components/screens/LoginScreen.styles";
+
+const styles = { ...base, ...loginStyles };
 import { type Palette } from "@/theme/colors";
 import { Text } from "@/components/ui/AppText";
 import { type UiCopy } from "@/i18n";

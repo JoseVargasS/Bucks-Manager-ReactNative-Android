@@ -57,7 +57,14 @@ import {
   deleteFinancialCache,
   loadFinancialCache,
 } from "@/data/localCache";
-import { styles } from "@/styles/globalStyles";
+import { StyleSheet } from "react-native";
+
+const styles = StyleSheet.create({
+  safe: { flex: 1 },
+  shell: { flex: 1, flexDirection: "row", padding: 12, gap: 12 },
+  shellCompact: { flexDirection: "column", padding: 0, gap: 0 },
+  content: { flex: 1 },
+});
 import { BottomNav } from "@/components/layout/BottomNav";
 import { LoginScreen } from "@/components/screens/LoginScreen";
 import { PinScreen } from "@/components/screens/PinScreen";
@@ -108,7 +115,7 @@ import {
 import { useFinancialState } from "@/hooks/useFinancialState";
 import { usePreferences, CURRENCY_OPTIONS } from "@/hooks/usePreferences";
 import { useExport } from "@/hooks/useExport";
-import { getErrorMessage, isAuthError, shouldRescanForSheetError } from "@/utils/errorHelpers";
+import { getErrorMessage, isAuthError, shouldRescanForSheetError } from "@/utils/errorHandler";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import {
   StartupSplash,

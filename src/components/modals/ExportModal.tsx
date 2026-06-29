@@ -1,14 +1,18 @@
 import { useRef, useState } from "react";
 import { Animated, Modal, ScrollView, TouchableOpacity, View } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import { styles } from "@/styles/globalStyles";
+import { base } from "@/styles/baseStyles";
+import { exportModalStyles } from "@/components/modals/ExportModal.styles";
 import { ModalHeader } from "@/components/ui/ModalHeader";
+
+const styles = { ...base, ...exportModalStyles };
 import { ActionRow } from "@/components/ui/ActionRow";
 import { CalendarPicker } from "@/components/ui/CalendarPicker";
 import { type Palette } from "@/theme/colors";
 import { type ExportFormat } from "@/types";
 import { type UiCopy } from "@/i18n";
 import { useModalTransition } from "@/components/ui/useModalTransition";
+import { DEFAULT_LOCALE } from "@/utils/formats";
 import { Text } from "@/components/ui/AppText";
 
 export type ExportConfig = {
@@ -31,7 +35,6 @@ export function ExportModal({ visible, colors, copy, config, setConfig, minDate,
     pendingExport.current = null;
     if (pending) onExport(pending);
   });
-  const DEFAULT_LOCALE = "es-PE";
   const locale = copy.languageCode === "en" ? "en-US" : DEFAULT_LOCALE;
   const rangeLabel = (val: string, isMonth?: boolean) => {
     if (!val) return copy.select;
@@ -137,7 +140,7 @@ function RangeField({ label, value, onChange, pickerMode, pickerMin, colors, cop
   return (
     <>
       <Text style={[styles.label, { color: colors.text, marginTop: 12 }]}>{label}</Text>
-      <TouchableOpacity style={[styles.trigger, { backgroundColor: colors.input, borderColor: colors.border }]} onPress={onOpen}>
+      <TouchableOpacity style={[{ borderRadius: 10, paddingHorizontal: 12, minHeight: 42, flexDirection: "row", alignItems: "center", gap: 10, borderWidth: 1, backgroundColor: colors.input, borderColor: colors.border }]} onPress={onOpen}>
         <MaterialCommunityIcons name="calendar" size={20} color={colors.blue} />
         <Text style={{ color: value ? colors.text : colors.muted, fontWeight: "600", flex: 1 }}>{displayValue}</Text>
       </TouchableOpacity>

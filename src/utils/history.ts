@@ -33,7 +33,7 @@ async function saveHistory(entries: HistoryEntry[]): Promise<void> {
 export async function addHistoryEntry(entry: Omit<HistoryEntry, "id" | "timestamp">): Promise<HistoryEntry> {
   const full: HistoryEntry = {
     ...entry,
-    id: crypto.randomUUID(),
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2, 10),
     timestamp: new Date().toISOString(),
   };
   const existing = await loadHistory();

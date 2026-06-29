@@ -4,7 +4,10 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 
 import { calculateSummaries, formatMoney, MONTH_NAMES } from "@/domain/bucksLogic";
 import { UI_MONTH_NAMES, type UiCopy } from "@/i18n";
-import { styles } from "@/styles/globalStyles";
+import { base } from "@/styles/baseStyles";
+import { summaryStyles } from "@/components/screens/SummaryView.styles";
+
+const styles = { ...base, ...summaryStyles };
 import { type Palette } from "@/theme/colors";
 import { type MaterialIconName, type SummaryRow, type Transaction } from "@/types";
 import { BarChart } from "@/components/ui/BarChart";

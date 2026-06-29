@@ -11,13 +11,4 @@ export const exportModalStyles = StyleSheet.create({
     justifyContent: "center",
     gap: 8,
   },
-  trigger: {
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    minHeight: 42,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    borderWidth: 1,
-  },
 });

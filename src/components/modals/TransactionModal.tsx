@@ -2,7 +2,10 @@ import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRe
 import { Alert, Animated, BackHandler, Keyboard, ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { calculateExpression, isValidTransactionDraft, normalizeAmountExpression, TRANSACTION_TYPES } from "@/domain/bucksLogic";
-import { styles } from "@/styles/globalStyles";
+import { base } from "@/styles/baseStyles";
+import { recordModalStyles } from "@/components/modals/TransactionModal.styles";
+
+const styles = { ...base, ...recordModalStyles };
 import { Z_INDEX_MODAL } from "@/theme/constants";
 import { Field } from "@/components/ui/Field";
 import { Select } from "@/components/ui/Select";

@@ -1,7 +1,10 @@
 import { forwardRef, useCallback, useImperativeHandle, useRef, useState } from "react";
 import { Animated, Modal, StyleSheet, TouchableOpacity, View, ScrollView } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import { styles } from "@/styles/globalStyles";
+import { base } from "@/styles/baseStyles";
+import { optionSheetStyles } from "@/components/modals/OptionSheet.styles";
+
+const styles = { ...base, ...optionSheetStyles };
 import { type Palette } from "@/theme/colors";
 import { type MaterialIconName } from "@/types";
 import { useModalTransition } from "@/components/ui/useModalTransition";

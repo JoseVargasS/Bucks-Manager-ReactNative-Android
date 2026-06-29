@@ -3,7 +3,11 @@ import { Pressable, ScrollView, View } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 
 import { formatMoney, MONTH_NAMES, calculateMonthSummary } from "@/domain/bucksLogic";
-import { styles } from "@/styles/globalStyles";
+import { base } from "@/styles/baseStyles";
+import { dashboardStyles } from "@/components/screens/DashboardView.styles";
+import { expensesStyles } from "@/components/screens/ExpensesView.styles";
+
+const styles = { ...base, ...dashboardStyles, ...expensesStyles };
 import { type Palette } from "@/theme/colors";
 import { type MaterialIconName, type SummaryRow, type Tag, type Transaction } from "@/types";
 import { type UiCopy } from "@/i18n";

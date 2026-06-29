@@ -1,7 +1,7 @@
 import { memo, useCallback, useRef, useState } from "react";
 import { Animated, Easing, Keyboard, Modal, Pressable, ScrollView, StyleSheet, TouchableOpacity, useWindowDimensions, View, type ViewStyle } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import { styles } from "@/styles/globalStyles";
+import { base as styles } from "@/styles/baseStyles";
 import { type Palette } from "@/theme/colors";
 import { useModalTransition } from "./useModalTransition";
 import { Text } from "./AppText";

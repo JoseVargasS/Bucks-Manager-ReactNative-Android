@@ -8,8 +8,10 @@ import {
   View,
 } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import { styles } from "@/styles/globalStyles";
+import { base } from "@/styles/baseStyles";
+import { recordModalStyles } from "@/components/modals/TransactionModal.styles";
 import { s } from "./TagEditorModal.styles";
+const styles = { ...base, ...recordModalStyles };
 import { type Palette } from "@/theme/colors";
 import { type Tag } from "@/types";
 import { type UiCopy } from "@/i18n";
