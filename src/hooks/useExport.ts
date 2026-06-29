@@ -11,9 +11,9 @@ import { Alert } from "react-native";
 import { formatDateToISO, formatMoney } from "../domain/bucksLogic";
 import { formatCreatedTime } from "../utils/formats";
 import { buildExportFileName } from "../utils/helpers";
-import { Transaction } from "../types";
-import { UiCopy } from "../i18n";
-import { ExportConfig } from "../components/modals/ExportModal";
+import { type Transaction } from "../types";
+import { type UiCopy } from "../i18n";
+import { type ExportConfig } from "../components/modals/ExportModal";
 
 type ExportState = {
   exportVisible: boolean;

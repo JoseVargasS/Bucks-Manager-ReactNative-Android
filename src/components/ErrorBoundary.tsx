@@ -32,3 +32,32 @@ export class ErrorBoundary extends Component<Props, State> {
     );
   }
 }
+
+type FeatureBoundaryProps = { children: ReactNode; featureName: string };
+type FeatureBoundaryState = { error: Error | null };
+
+export class FeatureBoundary extends Component<FeatureBoundaryProps, FeatureBoundaryState> {
+  state: FeatureBoundaryState = { error: null };
+
+  static getDerivedStateFromError(error: Error): FeatureBoundaryState {
+    return { error };
+  }
+
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    // eslint-disable-next-line no-console
+    console.error(`[FeatureBoundary:${this.props.featureName}]`, error, info.componentStack);
+  }
+
+  render() {
+    if (!this.state.error) return this.props.children;
+    const C = UI_COPY[detectDeviceLanguage()];
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", padding: 24 }}>
+        <Text style={{ color: SPLASH_SPINNER, fontSize: 16, fontWeight: "600" }}>{C.errorTitle}</Text>
+        <Text style={{ color: "#fff", marginTop: 8, textAlign: "center", fontSize: 13 }}>
+          {C.errorMessage}
+        </Text>
+      </View>
+    );
+  }
+}

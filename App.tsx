@@ -43,7 +43,7 @@ import {
   getWorkspaceAccessToken as getWorkspaceAccessTokenBase,
   syncAccountInfo as syncAccountInfoBase,
 } from "./src/api/googleAuth";
-import { ColorSchemePreference, getPalette } from "./src/theme/colors";
+import { type ColorSchemePreference, getPalette } from "./src/theme/colors";
 import { ThemeProvider, useTheme } from "./src/theme/ThemeContext";
 import { getBlankDraft } from "./src/utils/transactions";
 import {
@@ -63,38 +63,38 @@ import { LoginScreen } from "./src/components/screens/LoginScreen";
 import { PinScreen } from "./src/components/screens/PinScreen";
 import {
   TransactionModal,
-  TransactionModalHandle,
+  type TransactionModalHandle,
 } from "./src/components/modals/TransactionModal";
 import {
   DetailModal,
-  DetailModalHandle,
+  type DetailModalHandle,
 } from "./src/components/modals/DetailModal";
 import { ExportModal } from "./src/components/modals/ExportModal";
 import {
   ConfirmModal,
-  ConfirmConfig,
+  type ConfirmConfig,
 } from "./src/components/modals/ConfirmModal";
 import { HistoryModal } from "./src/components/modals/HistoryModal";
 import { PinSetupModal } from "./src/components/modals/PinSetupModal";
 import {
   SearchModal,
-  SearchModalHandle,
+  type SearchModalHandle,
   emptySearchFilters,
 } from "./src/components/modals/SearchModal";
 import { TagEditorModal } from "./src/components/modals/TagEditorModal";
 import {
   OptionSheet,
-  OptionSheetHandle,
+  type OptionSheetHandle,
 } from "./src/components/modals/OptionSheet";
 import { getAppFontFamily } from "./src/components/ui/AppText";
 import {
-  HistoryEntry,
-  SearchFilters,
-  Tab,
-  MaterialIconName,
-  Tag,
-  Transaction,
-  TransactionDraft,
+  type HistoryEntry,
+  type SearchFilters,
+  type Tab,
+  type MaterialIconName,
+  type Tag,
+  type Transaction,
+  type TransactionDraft,
 } from "./src/types";
 
 import {
@@ -108,7 +108,7 @@ import {
 import { useFinancialState } from "./src/hooks/useFinancialState";
 import { usePreferences, CURRENCY_OPTIONS } from "./src/hooks/usePreferences";
 import { useExport } from "./src/hooks/useExport";
-import { getErrorMessage, isAuthError, shouldRescanForSheetError } from "./src/hooks/useErrorHelpers";
+import { getErrorMessage, isAuthError, shouldRescanForSheetError } from "./src/utils/errorHelpers";
 import { ErrorBoundary } from "./src/components/ErrorBoundary";
 import {
   StartupSplash,

@@ -1,12 +1,12 @@
-import { Dispatch, SetStateAction, useMemo } from "react";
+import { type Dispatch, type SetStateAction, useMemo } from "react";
 import { ScrollView, TouchableOpacity, View } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { styles } from "../../styles/globalStyles";
 import { Field } from "../ui/Field";
 import { Select } from "../ui/Select";
-import { Palette } from "../../theme/colors";
-import { SearchFilters, Tag } from "../../types";
-import { UiCopy } from "../../i18n";
+import { type Palette } from "../../theme/colors";
+import { type SearchFilters, type Tag } from "../../types";
+import { type UiCopy } from "../../i18n";
 import { Text } from "../ui/AppText";
 
 export function SearchPage({ colors, copy, currencySymbol, tags, filters, setFilters, onSubmit, onClear }: {

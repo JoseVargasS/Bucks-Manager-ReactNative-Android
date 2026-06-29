@@ -3,10 +3,10 @@ import {
   StyleSheet,
   Text as NativeText,
   TextInput as NativeTextInput,
-  TextInputProps,
-  TextProps,
+  type TextInputProps,
+  type TextProps,
 } from "react-native";
-import { FontPreference } from "../../types";
+import { type FontPreference } from "../../types";
 
 let fontFamily = "DMSans";
 let fontPreference: FontPreference = "dmsans";

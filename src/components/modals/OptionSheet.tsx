@@ -2,8 +2,8 @@ import { forwardRef, useCallback, useImperativeHandle, useRef, useState } from "
 import { Animated, Modal, StyleSheet, TouchableOpacity, View, ScrollView } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { styles } from "../../styles/globalStyles";
-import { Palette } from "../../theme/colors";
-import { MaterialIconName } from "../../types";
+import { type Palette } from "../../theme/colors";
+import { type MaterialIconName } from "../../types";
 import { useModalTransition } from "../ui/useModalTransition";
 import { Text } from "../ui/AppText";
 

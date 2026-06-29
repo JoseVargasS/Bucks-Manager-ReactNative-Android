@@ -6,8 +6,8 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { getPalette, Palette, ColorSchemePreference } from "./colors";
-import { ThemeMode } from "../types";
+import { getPalette, type Palette, type ColorSchemePreference } from "./colors";
+import { type ThemeMode } from "../types";
 
 const ThemeModeContext = createContext<{
   theme: ThemeMode;

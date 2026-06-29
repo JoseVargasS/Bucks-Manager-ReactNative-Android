@@ -3,8 +3,8 @@ import Svg, { G, Line, Rect, Text as SvgText } from "react-native-svg";
 
 import { MONTH_NAMES } from "../../domain/bucksLogic";
 import { UI_MONTH_NAMES } from "../../i18n";
-import { Palette } from "../../theme/colors";
-import { SummaryRow } from "../../types";
+import { type Palette } from "../../theme/colors";
+import { type SummaryRow } from "../../types";
 import { useAppFontFamily } from "./AppText";
 
 export const BarChart = memo(function BarChart({ rows, colors, language }: { rows: SummaryRow[]; colors: Palette; language: "es" | "en" }) {

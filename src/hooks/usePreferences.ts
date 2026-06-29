@@ -3,15 +3,15 @@ import {
   getItemAsync,
   setItemAsync,
 } from "expo-secure-store";
-import { ColorSchemePreference } from "../theme/colors";
+import { type ColorSchemePreference } from "../theme/colors";
 import { useTheme } from "../theme/ThemeContext";
-import { LanguageMode, FontPreference, MaterialIconName } from "../types";
+import { type LanguageMode, type FontPreference, type MaterialIconName } from "../types";
 import {
   detectDeviceCurrencySymbol,
   detectDeviceLanguage,
 } from "../utils/helpers";
 import { setAppFontPreference } from "../components/ui/AppText";
-import { UiCopy, UI_COPY } from "../i18n";
+import { type UiCopy, UI_COPY } from "../i18n";
 
 const LANGUAGE_KEY = "bucks_language";
 const CURRENCY_SYMBOL_KEY = "bucks_currency_symbol";

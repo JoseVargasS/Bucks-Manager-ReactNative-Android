@@ -2,16 +2,17 @@ import { memo } from "react";
 import { ActivityIndicator, Animated, Image, View } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { appShellStyles } from "./AppShell.styles";
-import { Palette } from "../theme/colors";
+import { type Palette } from "../theme/colors";
 import { SPLASH_BG, SPLASH_SPINNER, SPLASH_INDICATOR_OFFSET } from "../theme/constants";
-import { FontPreference, LanguageMode, SummaryRow, Tab, Tag, Transaction } from "../types";
-import { UiCopy } from "../i18n";
+import { type FontPreference, type LanguageMode, type SummaryRow, type Tab, type Tag, type Transaction } from "../types";
+import { type UiCopy } from "../i18n";
 import { DashboardView } from "./screens/DashboardView";
 import { ExpensesView } from "./screens/ExpensesView";
 import { SummaryView } from "./screens/SummaryView";
 import { SettingsView } from "./screens/SettingsView";
 import { Text } from "./ui/AppText";
 import { HeaderActionButton, HeaderFade, HeaderTitleFade } from "./layout/HeaderFades";
+import { FeatureBoundary } from "./ErrorBoundary";
 
 export function StartupSplash() {
   return (
@@ -197,74 +198,82 @@ function TabPageImpl(props: TabPageProps) {
           </View>
         )}
         {tab === "dashboard" ? (
-          <DashboardView
-            colors={tabProps.colors}
-            copy={tabProps.copy}
-            allTransactions={tabProps.allTransactions}
-            tagsList={tabProps.tagsList}
-            currencySymbol={tabProps.currencySymbol}
-            onOpenDetail={tabProps.onOpenDetail}
-            topInset={tabProps.contentTopInset}
-          />
+          <FeatureBoundary featureName="dashboard">
+            <DashboardView
+              colors={tabProps.colors}
+              copy={tabProps.copy}
+              allTransactions={tabProps.allTransactions}
+              tagsList={tabProps.tagsList}
+              currencySymbol={tabProps.currencySymbol}
+              onOpenDetail={tabProps.onOpenDetail}
+              topInset={tabProps.contentTopInset}
+            />
+          </FeatureBoundary>
         ) : tab === "expenses" ? (
-          <ExpensesView
-            colors={tabProps.colors}
-            transactions={tabProps.transactions}
-            searchActive={tabProps.searchActive}
-            searchText={tabProps.searchText}
-            selectedRows={tabProps.selectedRows}
-            currencySymbol={tabProps.currencySymbol}
-            copy={tabProps.copy}
-            month={tabProps.month}
-            year={tabProps.year}
-            availableYears={tabProps.availableYears}
-            availableMonths={tabProps.availableMonths}
-            onExitSearch={tabProps.onExitSearch}
-            onOpenDetail={tabProps.onOpenDetail}
-            onEdit={tabProps.onEdit}
-            onDeleteSelected={tabProps.onDeleteSelected}
-            onMove={tabProps.onMove}
-            onToggleSelection={tabProps.onToggleSelection}
-            onLoadOlder={tabProps.onLoadOlder}
-            onSelectPeriod={tabProps.onSelectPeriod}
-            goToday={tabProps.goToday}
-            goPrevMonth={tabProps.goPrevMonth}
-            goNextMonth={tabProps.goNextMonth}
-            topInset={tabProps.contentTopInset}
-            tagsList={tabProps.tagsList}
-          />
+          <FeatureBoundary featureName="expenses">
+            <ExpensesView
+              colors={tabProps.colors}
+              transactions={tabProps.transactions}
+              searchActive={tabProps.searchActive}
+              searchText={tabProps.searchText}
+              selectedRows={tabProps.selectedRows}
+              currencySymbol={tabProps.currencySymbol}
+              copy={tabProps.copy}
+              month={tabProps.month}
+              year={tabProps.year}
+              availableYears={tabProps.availableYears}
+              availableMonths={tabProps.availableMonths}
+              onExitSearch={tabProps.onExitSearch}
+              onOpenDetail={tabProps.onOpenDetail}
+              onEdit={tabProps.onEdit}
+              onDeleteSelected={tabProps.onDeleteSelected}
+              onMove={tabProps.onMove}
+              onToggleSelection={tabProps.onToggleSelection}
+              onLoadOlder={tabProps.onLoadOlder}
+              onSelectPeriod={tabProps.onSelectPeriod}
+              goToday={tabProps.goToday}
+              goPrevMonth={tabProps.goPrevMonth}
+              goNextMonth={tabProps.goNextMonth}
+              topInset={tabProps.contentTopInset}
+              tagsList={tabProps.tagsList}
+            />
+          </FeatureBoundary>
         ) : tab === "summary" ? (
-          <SummaryView
-            colors={tabProps.colors}
-            copy={tabProps.copy}
-            summaries={tabProps.summaries}
-            transactions={tabProps.transactions}
-            freqIncome={tabProps.freqIncome}
-            availableYears={tabProps.availableYears}
-            topInset={tabProps.contentTopInset}
-            currencySymbol={tabProps.currencySymbol}
-          />
+          <FeatureBoundary featureName="summary">
+            <SummaryView
+              colors={tabProps.colors}
+              copy={tabProps.copy}
+              summaries={tabProps.summaries}
+              transactions={tabProps.transactions}
+              freqIncome={tabProps.freqIncome}
+              availableYears={tabProps.availableYears}
+              topInset={tabProps.contentTopInset}
+              currencySymbol={tabProps.currencySymbol}
+            />
+          </FeatureBoundary>
         ) : (
-          <SettingsView
-            colors={tabProps.colors}
-            copy={tabProps.copy}
-            language={tabProps.language}
-            accountInfo={tabProps.accountInfo}
-            currencySymbol={tabProps.currencySymbol}
-            fontPreference={tabProps.fontPreference}
-            colorSchemeLabel={tabProps.colorSchemeLabel}
-            pinEnabled={tabProps.pinEnabled}
-            tagsCount={tabProps.tagsCount}
-            onOpenLanguage={tabProps.onOpenLanguage}
-            onOpenCurrency={tabProps.onOpenCurrency}
-            onOpenFont={tabProps.onOpenFont}
-            onOpenColorScheme={tabProps.onOpenColorScheme}
-            onOpenPin={tabProps.onOpenPin}
-            onOpenTags={tabProps.onOpenTags}
-            onSwitch={tabProps.onSwitch}
-            onDisconnect={tabProps.onDisconnect}
-            onOpenExport={tabProps.onOpenExport}
-          />
+          <FeatureBoundary featureName="settings">
+            <SettingsView
+              colors={tabProps.colors}
+              copy={tabProps.copy}
+              language={tabProps.language}
+              accountInfo={tabProps.accountInfo}
+              currencySymbol={tabProps.currencySymbol}
+              fontPreference={tabProps.fontPreference}
+              colorSchemeLabel={tabProps.colorSchemeLabel}
+              pinEnabled={tabProps.pinEnabled}
+              tagsCount={tabProps.tagsCount}
+              onOpenLanguage={tabProps.onOpenLanguage}
+              onOpenCurrency={tabProps.onOpenCurrency}
+              onOpenFont={tabProps.onOpenFont}
+              onOpenColorScheme={tabProps.onOpenColorScheme}
+              onOpenPin={tabProps.onOpenPin}
+              onOpenTags={tabProps.onOpenTags}
+              onSwitch={tabProps.onSwitch}
+              onDisconnect={tabProps.onDisconnect}
+              onOpenExport={tabProps.onOpenExport}
+            />
+          </FeatureBoundary>
         )}
       </View>
     </View>

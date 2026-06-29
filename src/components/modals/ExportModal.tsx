@@ -5,9 +5,9 @@ import { styles } from "../../styles/globalStyles";
 import { ModalHeader } from "../ui/ModalHeader";
 import { ActionRow } from "../ui/ActionRow";
 import { CalendarPicker } from "../ui/CalendarPicker";
-import { Palette } from "../../theme/colors";
-import { ExportFormat } from "../../types";
-import { UiCopy } from "../../i18n";
+import { type Palette } from "../../theme/colors";
+import { type ExportFormat } from "../../types";
+import { type UiCopy } from "../../i18n";
 import { useModalTransition } from "../ui/useModalTransition";
 import { Text } from "../ui/AppText";
 

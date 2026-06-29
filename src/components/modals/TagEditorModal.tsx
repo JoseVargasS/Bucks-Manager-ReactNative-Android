@@ -9,9 +9,9 @@ import {
 } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { styles } from "../../styles/globalStyles";
-import { Palette } from "../../theme/colors";
-import { Tag } from "../../types";
-import { UiCopy } from "../../i18n";
+import { type Palette } from "../../theme/colors";
+import { type Tag } from "../../types";
+import { type UiCopy } from "../../i18n";
 import { loadTags, saveTags, slugifyTagLabel } from "../../utils/tags";
 import { useModalTransition } from "../ui/useModalTransition";
 import { useKeyboardOffset } from "../ui/useKeyboardOffset";

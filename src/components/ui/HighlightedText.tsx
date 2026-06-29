@@ -1,5 +1,5 @@
 import { memo } from "react";
-import { TextStyle } from "react-native";
+import { type TextStyle } from "react-native";
 import { Text } from "./AppText";
 
 export const HighlightedText = memo(function HighlightedText({ text, query, style, highlightStyle }: { text: string; query: string; style: TextStyle | TextStyle[]; highlightStyle: TextStyle }) {

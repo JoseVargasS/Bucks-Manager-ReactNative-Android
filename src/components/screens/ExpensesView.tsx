@@ -29,9 +29,9 @@ import { groupTransactionsByDate } from "../../utils/transactions";
 import { styles } from "../../styles/globalStyles";
 import { PeriodControls } from "../layout/PeriodControls";
 import { HighlightedText } from "../ui/HighlightedText";
-import { dark, Palette } from "../../theme/colors";
-import { Tag, Transaction, MaterialIconName } from "../../types";
-import { UiCopy } from "../../i18n";
+import { dark, type Palette } from "../../theme/colors";
+import { type Tag, type Transaction, type MaterialIconName } from "../../types";
+import { type UiCopy } from "../../i18n";
 import { useModalTransition } from "../ui/useModalTransition";
 import { Text } from "../ui/AppText";
 

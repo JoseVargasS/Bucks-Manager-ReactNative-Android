@@ -1,12 +1,12 @@
 import { useMemo } from "react";
 import { Animated, FlatList, Modal, TouchableOpacity, View } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import { HistoryEntry } from "../../types";
+import { type HistoryEntry } from "../../types";
 import { styles } from "../../styles/globalStyles";
-import { Palette } from "../../theme/colors";
+import { type Palette } from "../../theme/colors";
 import { formatMoney } from "../../domain/bucksLogic";
 import { formatCreatedTime } from "../../utils/formats";
-import { UiCopy } from "../../i18n";
+import { type UiCopy } from "../../i18n";
 import { useModalTransition } from "../ui/useModalTransition";
 import { Text } from "../ui/AppText";
 

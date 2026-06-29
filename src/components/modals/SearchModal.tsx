@@ -2,11 +2,11 @@ import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useSta
 import { Animated, BackHandler, Keyboard, StyleSheet, TouchableOpacity, View } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { styles } from "../../styles/globalStyles";
-import { Palette } from "../../theme/colors";
+import { type Palette } from "../../theme/colors";
 import { Z_INDEX_SEARCH } from "../../theme/constants";
-import { SearchFilters, Tag } from "../../types";
+import { type SearchFilters, type Tag } from "../../types";
 import { SearchPage } from "../screens/SearchPage";
-import { UiCopy } from "../../i18n";
+import { type UiCopy } from "../../i18n";
 import { useModalTransition } from "../ui/useModalTransition";
 import { Text } from "../ui/AppText";
 

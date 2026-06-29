@@ -4,12 +4,12 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 
 import { formatMoney, MONTH_NAMES, calculateMonthSummary } from "../../domain/bucksLogic";
 import { styles } from "../../styles/globalStyles";
-import { Palette } from "../../theme/colors";
-import { MaterialIconName, SummaryRow, Tag, Transaction } from "../../types";
-import { UiCopy } from "../../i18n";
+import { type Palette } from "../../theme/colors";
+import { type MaterialIconName, type SummaryRow, type Tag, type Transaction } from "../../types";
+import { type UiCopy } from "../../i18n";
 import { labelForTagId, tagTextColor } from "../../utils/tags";
 import { StatCard } from "../ui/StatCard";
-import { PieChart, PieSlice } from "../ui/PieChart";
+import { PieChart, type PieSlice } from "../ui/PieChart";
 import { Text } from "../ui/AppText";
 
 function currentMonthKey(): string {

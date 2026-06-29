@@ -3,9 +3,9 @@ import { Animated, Easing, Pressable } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import Svg, { Defs, LinearGradient, Mask, Rect, Stop } from "react-native-svg";
 import { appShellStyles } from "../../components/AppShell.styles";
-import { Palette } from "../../theme/colors";
+import { type Palette } from "../../theme/colors";
 import { ANIM_HEADER_BTN_IN, ANIM_HEADER_BTN_OUT } from "../../theme/constants";
-import { MaterialIconName } from "../../types";
+import { type MaterialIconName } from "../../types";
 
 export const HeaderActionButton = memo(function HeaderActionButton({
   colors,

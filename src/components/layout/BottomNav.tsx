@@ -4,8 +4,8 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { styles } from "../../styles/globalStyles";
 import { useColors } from "../../theme/ThemeContext";
 import { dark } from "../../theme/colors";
-import { Tab, MaterialIconName } from "../../types";
-import { UiCopy } from "../../i18n";
+import { type Tab, type MaterialIconName } from "../../types";
+import { type UiCopy } from "../../i18n";
 import { Text } from "../ui/AppText";
 
 function usePressAnimation(durationIn = 70, durationOut = 110) {
@@ -89,12 +89,14 @@ export const BottomNav = memo(function BottomNav({
           icon="view-dashboard"
           label={copy.dashboard}
           onPress={() => selectTab("dashboard")}
+          testID="tab-dashboard"
         />
         <BottomNavItem
           active={tab === "expenses"}
           icon="view-dashboard-outline"
           label={copy.expenses}
           onPress={() => selectTab("expenses")}
+          testID="tab-expenses"
         />
         <BottomAddButton onPress={onAdd} />
         <BottomNavItem
@@ -102,12 +104,14 @@ export const BottomNav = memo(function BottomNav({
           icon="chart-line"
           label={copy.summary}
           onPress={() => selectTab("summary")}
+          testID="tab-summary"
         />
         <BottomNavItem
           active={tab === "settings"}
           icon="cog-outline"
           label={copy.settings}
           onPress={() => selectTab("settings")}
+          testID="tab-settings"
         />
       </View>
     </View>
@@ -120,12 +124,14 @@ const BottomNavItem = memo(function BottomNavItem({
   icon,
   label,
   onPress,
+  testID,
 }: {
   active: boolean;
   optimisticActive?: boolean;
   icon: MaterialIconName;
   label: string;
   onPress: () => void;
+  testID?: string;
 }) {
   const { primary, primarySoft, muted, text } = useColors();
   const accent = active ? primary : muted;
@@ -165,6 +171,10 @@ const BottomNavItem = memo(function BottomNavItem({
       }}
     >
       <Pressable
+        testID={testID}
+        accessibilityLabel={label}
+        accessibilityRole="button"
+        accessibilityState={{ selected: active }}
         onPress={handlePress}
         onPressIn={onPressIn}
         onPressOut={onPressOut}
@@ -245,6 +255,9 @@ const BottomAddButton = memo(function BottomAddButton({ onPress }: { onPress: ()
       ]}
     >
       <Pressable
+        testID="add-transaction"
+        accessibilityLabel="Add"
+        accessibilityRole="button"
         onPress={onPress}
         onPressIn={onPressIn}
         onPressOut={onPressOut}

@@ -3,10 +3,10 @@ import { ScrollView, View } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 
 import { calculateSummaries, formatMoney, MONTH_NAMES } from "../../domain/bucksLogic";
-import { UI_MONTH_NAMES, UiCopy } from "../../i18n";
+import { UI_MONTH_NAMES, type UiCopy } from "../../i18n";
 import { styles } from "../../styles/globalStyles";
-import { Palette } from "../../theme/colors";
-import { MaterialIconName, SummaryRow, Transaction } from "../../types";
+import { type Palette } from "../../theme/colors";
+import { type MaterialIconName, type SummaryRow, type Transaction } from "../../types";
 import { BarChart } from "../ui/BarChart";
 import { Kpi } from "../ui/Kpi";
 import { Select } from "../ui/Select";
