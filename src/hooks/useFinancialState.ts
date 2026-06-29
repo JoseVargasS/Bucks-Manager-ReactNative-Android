@@ -4,17 +4,17 @@ import {
   applySearch,
   calculateSummaries,
   MONTH_NAMES,
-} from "../domain/bucksLogic";
+} from "@/domain/bucksLogic";
 import {
   sortTransactionsDesc,
   filterTransactionsByRollingPeriod,
-} from "../utils/transactions";
-import { saveFinancialCache } from "../data/localCache";
-import { getPeriodRange, getAvailableMonthsForYear } from "../utils/helpers";
+} from "@/utils/transactions";
+import { saveFinancialCache } from "@/data/localCache";
+import { getPeriodRange, getAvailableMonthsForYear } from "@/utils/helpers";
 import {
   emptySearchFilters,
-} from "../components/modals/SearchModal";
-import type { SearchFilters, SummaryRow, Tag, Transaction } from "../types";
+} from "@/components/modals/SearchModal";
+import type { SearchFilters, SummaryRow, Tag, Transaction } from "@/types";
 
 type FinancialState = {
   transactions: Transaction[];

@@ -1,11 +1,11 @@
 import { forwardRef, useCallback, useImperativeHandle, useRef, useState } from "react";
 import { Animated, Modal, StyleSheet, TouchableOpacity, View, ScrollView } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import { styles } from "../../styles/globalStyles";
-import { type Palette } from "../../theme/colors";
-import { type MaterialIconName } from "../../types";
-import { useModalTransition } from "../ui/useModalTransition";
-import { Text } from "../ui/AppText";
+import { styles } from "@/styles/globalStyles";
+import { type Palette } from "@/theme/colors";
+import { type MaterialIconName } from "@/types";
+import { useModalTransition } from "@/components/ui/useModalTransition";
+import { Text } from "@/components/ui/AppText";
 
 type PickerOption = { label: string; value: string; icon?: MaterialIconName; tone?: string; fontFamily?: string };
 type PickerConfig = { title: string; options: PickerOption[]; selectedValue: string; onSelect: (value: string) => void };

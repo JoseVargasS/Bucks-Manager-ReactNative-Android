@@ -1,15 +1,15 @@
 import { useRef, useState } from "react";
 import { Animated, Modal, ScrollView, TouchableOpacity, View } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import { styles } from "../../styles/globalStyles";
-import { ModalHeader } from "../ui/ModalHeader";
-import { ActionRow } from "../ui/ActionRow";
-import { CalendarPicker } from "../ui/CalendarPicker";
-import { type Palette } from "../../theme/colors";
-import { type ExportFormat } from "../../types";
-import { type UiCopy } from "../../i18n";
-import { useModalTransition } from "../ui/useModalTransition";
-import { Text } from "../ui/AppText";
+import { styles } from "@/styles/globalStyles";
+import { ModalHeader } from "@/components/ui/ModalHeader";
+import { ActionRow } from "@/components/ui/ActionRow";
+import { CalendarPicker } from "@/components/ui/CalendarPicker";
+import { type Palette } from "@/theme/colors";
+import { type ExportFormat } from "@/types";
+import { type UiCopy } from "@/i18n";
+import { useModalTransition } from "@/components/ui/useModalTransition";
+import { Text } from "@/components/ui/AppText";
 
 export type ExportConfig = {
   format: ExportFormat;

@@ -1,11 +1,11 @@
 import { memo } from "react";
 import { ScrollView, Switch, TouchableOpacity, View } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import { styles } from "../../styles/globalStyles";
-import { type Palette } from "../../theme/colors";
-import { type FontPreference, type MaterialIconName } from "../../types";
-import { type UiCopy } from "../../i18n";
-import { Text } from "../ui/AppText";
+import { styles } from "@/styles/globalStyles";
+import { type Palette } from "@/theme/colors";
+import { type FontPreference, type MaterialIconName } from "@/types";
+import { type UiCopy } from "@/i18n";
+import { Text } from "@/components/ui/AppText";
 
 export const SettingsView = memo(function SettingsView({
   colors, copy, accountInfo, language, currencySymbol, fontPreference, pinEnabled,

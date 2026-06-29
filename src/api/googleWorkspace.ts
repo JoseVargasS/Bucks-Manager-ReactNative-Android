@@ -3,7 +3,7 @@ import type {
   SummaryRow,
   Transaction,
   TransactionDraft,
-} from "../types";
+} from "@/types";
 import {
   DEFAULT_SPREADSHEET_LOCALE,
   SHEET_NAMES,
@@ -13,7 +13,7 @@ import {
   formatDateToISO,
   getMonthYear,
   parseCreatedAtMs,
-} from "../domain/bucksLogic";
+} from "@/domain/bucksLogic";
 import {
   findHeaderIndex,
   isTagHeader,

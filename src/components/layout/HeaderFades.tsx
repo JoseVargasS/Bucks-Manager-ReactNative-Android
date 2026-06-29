@@ -2,10 +2,10 @@ import { memo, useRef } from "react";
 import { Animated, Easing, Pressable } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import Svg, { Defs, LinearGradient, Mask, Rect, Stop } from "react-native-svg";
-import { appShellStyles } from "../../components/AppShell.styles";
-import { type Palette } from "../../theme/colors";
-import { ANIM_HEADER_BTN_IN, ANIM_HEADER_BTN_OUT } from "../../theme/constants";
-import { type MaterialIconName } from "../../types";
+import { appShellStyles } from "@/components/AppShell.styles";
+import { type Palette } from "@/theme/colors";
+import { ANIM_HEADER_BTN_IN, ANIM_HEADER_BTN_OUT } from "@/theme/constants";
+import { type MaterialIconName } from "@/types";
 
 export const HeaderActionButton = memo(function HeaderActionButton({
   colors,

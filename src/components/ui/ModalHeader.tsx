@@ -1,10 +1,10 @@
 import { memo } from "react";
 import { TouchableOpacity, View } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import { styles } from "../../styles/globalStyles";
-import { type Palette } from "../../theme/colors";
+import { styles } from "@/styles/globalStyles";
+import { type Palette } from "@/theme/colors";
 import { Text } from "./AppText";
-import { type MaterialIconName } from "../../types";
+import { type MaterialIconName } from "@/types";
 
 export const ModalHeader = memo(function ModalHeader({ title, icon, colors, onClose }: { title: string; icon: MaterialIconName; colors: Palette; onClose: () => void }) {
   return (

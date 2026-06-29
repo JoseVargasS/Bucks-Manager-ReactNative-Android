@@ -1,6 +1,6 @@
-import type { Transaction, TransactionDraft, TransactionType } from "../types";
-import { formatDateToISO } from "../domain/bucksLogic";
-import { UI_COPY, type UiCopy } from "../i18n";
+import type { Transaction, TransactionDraft, TransactionType } from "@/types";
+import { formatDateToISO } from "@/domain/bucksLogic";
+import { UI_COPY, type UiCopy } from "@/i18n";
 import { formatDateGroupLabel } from "./formats";
 
 /** Crea un TransactionDraft vacío con tipo por defecto "GASTO NO FRECUENTE" y fecha actual */

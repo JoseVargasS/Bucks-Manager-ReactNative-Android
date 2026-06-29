@@ -26,7 +26,7 @@ import {
   recalculateSummariesForMonths,
   SHEET_NAMES,
   uniqueMonthKeys,
-} from "./src/domain/bucksLogic";
+} from "@/domain/bucksLogic";
 import {
   createBucksSpreadsheet,
   findCompatibleSheets,
@@ -38,55 +38,55 @@ import {
   updateTransaction as updateGoogleTransaction,
   deleteTransaction as deleteGoogleTransaction,
   removeTagFromAllRows,
-} from "./src/api/googleWorkspace";
+} from "@/api/googleWorkspace";
 import {
   getWorkspaceAccessToken as getWorkspaceAccessTokenBase,
   syncAccountInfo as syncAccountInfoBase,
-} from "./src/api/googleAuth";
-import { type ColorSchemePreference, getPalette } from "./src/theme/colors";
-import { ThemeProvider, useTheme } from "./src/theme/ThemeContext";
-import { getBlankDraft } from "./src/utils/transactions";
+} from "@/api/googleAuth";
+import { type ColorSchemePreference, getPalette } from "@/theme/colors";
+import { ThemeProvider, useTheme } from "@/theme/ThemeContext";
+import { getBlankDraft } from "@/utils/transactions";
 import {
   loadHistory,
   addHistoryEntry,
   removeHistoryEntry,
-} from "./src/utils/history";
-import { isPinEnabled, savePin, verifyPin, clearPin } from "./src/utils/pin";
-import { loadTags, migrateTransactionTags } from "./src/utils/tags";
+} from "@/utils/history";
+import { isPinEnabled, savePin, verifyPin, clearPin } from "@/utils/pin";
+import { loadTags, migrateTransactionTags } from "@/utils/tags";
 import {
   deleteFinancialCache,
   loadFinancialCache,
-} from "./src/data/localCache";
-import { styles } from "./src/styles/globalStyles";
-import { BottomNav } from "./src/components/layout/BottomNav";
-import { LoginScreen } from "./src/components/screens/LoginScreen";
-import { PinScreen } from "./src/components/screens/PinScreen";
+} from "@/data/localCache";
+import { styles } from "@/styles/globalStyles";
+import { BottomNav } from "@/components/layout/BottomNav";
+import { LoginScreen } from "@/components/screens/LoginScreen";
+import { PinScreen } from "@/components/screens/PinScreen";
 import {
   TransactionModal,
   type TransactionModalHandle,
-} from "./src/components/modals/TransactionModal";
+} from "@/components/modals/TransactionModal";
 import {
   DetailModal,
   type DetailModalHandle,
-} from "./src/components/modals/DetailModal";
-import { ExportModal } from "./src/components/modals/ExportModal";
+} from "@/components/modals/DetailModal";
+import { ExportModal } from "@/components/modals/ExportModal";
 import {
   ConfirmModal,
   type ConfirmConfig,
-} from "./src/components/modals/ConfirmModal";
-import { HistoryModal } from "./src/components/modals/HistoryModal";
-import { PinSetupModal } from "./src/components/modals/PinSetupModal";
+} from "@/components/modals/ConfirmModal";
+import { HistoryModal } from "@/components/modals/HistoryModal";
+import { PinSetupModal } from "@/components/modals/PinSetupModal";
 import {
   SearchModal,
   type SearchModalHandle,
   emptySearchFilters,
-} from "./src/components/modals/SearchModal";
-import { TagEditorModal } from "./src/components/modals/TagEditorModal";
+} from "@/components/modals/SearchModal";
+import { TagEditorModal } from "@/components/modals/TagEditorModal";
 import {
   OptionSheet,
   type OptionSheetHandle,
-} from "./src/components/modals/OptionSheet";
-import { getAppFontFamily } from "./src/components/ui/AppText";
+} from "@/components/modals/OptionSheet";
+import { getAppFontFamily } from "@/components/ui/AppText";
 import {
   type HistoryEntry,
   type SearchFilters,
@@ -95,7 +95,7 @@ import {
   type Tag,
   type Transaction,
   type TransactionDraft,
-} from "./src/types";
+} from "@/types";
 
 import {
   ANIM_SPLASH_DURATION,
@@ -104,18 +104,18 @@ import {
   TOKEN_KEY,
   SHEET_KEY,
   TAB_ORDER,
-} from "./src/theme/constants";
-import { useFinancialState } from "./src/hooks/useFinancialState";
-import { usePreferences, CURRENCY_OPTIONS } from "./src/hooks/usePreferences";
-import { useExport } from "./src/hooks/useExport";
-import { getErrorMessage, isAuthError, shouldRescanForSheetError } from "./src/utils/errorHelpers";
-import { ErrorBoundary } from "./src/components/ErrorBoundary";
+} from "@/theme/constants";
+import { useFinancialState } from "@/hooks/useFinancialState";
+import { usePreferences, CURRENCY_OPTIONS } from "@/hooks/usePreferences";
+import { useExport } from "@/hooks/useExport";
+import { getErrorMessage, isAuthError, shouldRescanForSheetError } from "@/utils/errorHelpers";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import {
   StartupSplash,
   BottomFade,
   TabPage,
   HeaderShell,
-} from "./src/components/AppShell";
+} from "@/components/AppShell";
 
 preventAutoHideAsync().catch(() => undefined);
 setSplashOptions({ duration: ANIM_SPLASH_DURATION, fade: true });

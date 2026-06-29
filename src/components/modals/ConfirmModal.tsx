@@ -1,15 +1,15 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import { Animated, Modal, TouchableOpacity, View } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import { styles } from "../../styles/globalStyles";
-import { type Palette } from "../../theme/colors";
-import { type Transaction } from "../../types";
-import { formatMoney } from "../../domain/bucksLogic";
-import { typeLabel } from "../../utils/formats";
-import { type UiCopy } from "../../i18n";
-import { type MaterialIconName } from "../../types";
-import { useModalTransition } from "../ui/useModalTransition";
-import { Text } from "../ui/AppText";
+import { styles } from "@/styles/globalStyles";
+import { type Palette } from "@/theme/colors";
+import { type Transaction } from "@/types";
+import { formatMoney } from "@/domain/bucksLogic";
+import { typeLabel } from "@/utils/formats";
+import { type UiCopy } from "@/i18n";
+import { type MaterialIconName } from "@/types";
+import { useModalTransition } from "@/components/ui/useModalTransition";
+import { Text } from "@/components/ui/AppText";
 
 type ConfirmKind = "delete" | "deleteSelected" | "disconnect" | "removeAccount";
 

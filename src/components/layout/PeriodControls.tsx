@@ -1,9 +1,9 @@
 import { memo } from "react";
 import { StyleSheet, TouchableOpacity, View } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import { Select } from "../ui/Select";
-import { type Palette } from "../../theme/colors";
-import { type UiCopy, UI_MONTH_NAMES } from "../../i18n";
+import { Select } from "@/components/ui/Select";
+import { type Palette } from "@/theme/colors";
+import { type UiCopy, UI_MONTH_NAMES } from "@/i18n";
 
 export const PeriodControls = memo(function PeriodControls({
   colors,

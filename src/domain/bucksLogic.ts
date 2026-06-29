@@ -1,5 +1,5 @@
-import type { SearchFilters, SummaryRow, Transaction, TransactionDraft, TransactionType } from "../types";
-import { MONTH_NAMES_ES } from "../i18n";
+import type { SearchFilters, SummaryRow, Transaction, TransactionDraft, TransactionType } from "@/types";
+import { MONTH_NAMES_ES } from "@/i18n";
 
 export const SHEET_NAMES = {
   transactions: "INGRESOS Y GASTOS",

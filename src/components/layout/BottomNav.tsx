@@ -1,12 +1,12 @@
 import { memo, useMemo, useCallback, useRef } from "react";
 import { Animated, Easing, Pressable, View } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import { styles } from "../../styles/globalStyles";
-import { useColors } from "../../theme/ThemeContext";
-import { dark } from "../../theme/colors";
-import { type Tab, type MaterialIconName } from "../../types";
-import { type UiCopy } from "../../i18n";
-import { Text } from "../ui/AppText";
+import { styles } from "@/styles/globalStyles";
+import { useColors } from "@/theme/ThemeContext";
+import { dark } from "@/theme/colors";
+import { type Tab, type MaterialIconName } from "@/types";
+import { type UiCopy } from "@/i18n";
+import { Text } from "@/components/ui/AppText";
 
 function usePressAnimation(durationIn = 70, durationOut = 110) {
   const pressed = useRef(new Animated.Value(0)).current;

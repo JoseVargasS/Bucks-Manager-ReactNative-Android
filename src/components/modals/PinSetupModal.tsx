@@ -1,13 +1,13 @@
 import { useRef, useState } from "react";
 import { Animated, Modal, TouchableOpacity, View } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import { styles } from "../../styles/globalStyles";
-import { type Palette } from "../../theme/colors";
-import { PIN_RESET_MS } from "../../theme/constants";
-import { type UiCopy } from "../../i18n";
-import { PinScreen } from "../screens/PinScreen";
-import { useModalTransition } from "../ui/useModalTransition";
-import { Text } from "../ui/AppText";
+import { styles } from "@/styles/globalStyles";
+import { type Palette } from "@/theme/colors";
+import { PIN_RESET_MS } from "@/theme/constants";
+import { type UiCopy } from "@/i18n";
+import { PinScreen } from "@/components/screens/PinScreen";
+import { useModalTransition } from "@/components/ui/useModalTransition";
+import { Text } from "@/components/ui/AppText";
 
 export function PinSetupModal({ visible, colors, copy, onClose, onSave }: {
   visible: boolean;

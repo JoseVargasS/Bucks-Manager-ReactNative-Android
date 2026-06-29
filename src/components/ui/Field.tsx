@@ -1,9 +1,9 @@
 import { memo } from "react";
 import { View } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import { styles } from "../../styles/globalStyles";
-import { type Palette } from "../../theme/colors";
-import { type MaterialIconName } from "../../types";
+import { styles } from "@/styles/globalStyles";
+import { type Palette } from "@/theme/colors";
+import { type MaterialIconName } from "@/types";
 import { Text, TextInput } from "./AppText";
 
 export const Field = memo(function Field({ label, value, onChangeText, onFocus, onBlur, colors, placeholder = "", rightIcon }: { label: string; value: string; onChangeText: (v: string) => void; onFocus?: () => void; onBlur?: () => void; colors: Palette; placeholder?: string; rightIcon?: MaterialIconName }) {

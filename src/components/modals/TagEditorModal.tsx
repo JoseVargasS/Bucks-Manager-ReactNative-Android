@@ -8,14 +8,14 @@ import {
   View,
 } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import { styles } from "../../styles/globalStyles";
-import { type Palette } from "../../theme/colors";
-import { type Tag } from "../../types";
-import { type UiCopy } from "../../i18n";
-import { loadTags, saveTags, slugifyTagLabel } from "../../utils/tags";
-import { useModalTransition } from "../ui/useModalTransition";
-import { useKeyboardOffset } from "../ui/useKeyboardOffset";
-import { Text, TextInput } from "../ui/AppText";
+import { styles } from "@/styles/globalStyles";
+import { type Palette } from "@/theme/colors";
+import { type Tag } from "@/types";
+import { type UiCopy } from "@/i18n";
+import { loadTags, saveTags, slugifyTagLabel } from "@/utils/tags";
+import { useModalTransition } from "@/components/ui/useModalTransition";
+import { useKeyboardOffset } from "@/components/ui/useKeyboardOffset";
+import { Text, TextInput } from "@/components/ui/AppText";
 
 export function TagEditorModal({
   visible,

@@ -1,6 +1,6 @@
 import * as SecureStore from "expo-secure-store";
-import { TRANSACTION_TYPES } from "../domain/bucksLogic";
-import type { HistoryEntry, Transaction } from "../types";
+import { TRANSACTION_TYPES } from "@/domain/bucksLogic";
+import type { HistoryEntry, Transaction } from "@/types";
 import { logError } from "./errorHandler";
 
 const HISTORY_KEY = "bucks_history";

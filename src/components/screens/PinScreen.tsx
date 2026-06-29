@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { Animated, TouchableOpacity, View } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import { type Palette } from "../../theme/colors";
-import { PIN_LENGTH } from "../../theme/constants";
-import { type UiCopy } from "../../i18n";
-import { Text } from "../ui/AppText";
+import { type Palette } from "@/theme/colors";
+import { PIN_LENGTH } from "@/theme/constants";
+import { type UiCopy } from "@/i18n";
+import { Text } from "@/components/ui/AppText";
 
 const KEY_W = 68;
 const KEY_H = 52;

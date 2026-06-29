@@ -1,8 +1,8 @@
 import { memo } from "react";
 import { TouchableOpacity, View } from "react-native";
 import { Text } from "./AppText";
-import { styles } from "../../styles/globalStyles";
-import { type Palette } from "../../theme/colors";
+import { styles } from "@/styles/globalStyles";
+import { type Palette } from "@/theme/colors";
 
 export const ActionRow = memo(function ActionRow({ colors, onCancel, onSubmit, submitLabel, cancelLabel }: { colors: Palette; onCancel: () => void; onSubmit: () => void; submitLabel: string; cancelLabel: string }) {
   return (

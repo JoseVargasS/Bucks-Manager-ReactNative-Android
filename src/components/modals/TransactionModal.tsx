@@ -1,21 +1,21 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 import { Alert, Animated, BackHandler, Keyboard, ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import { calculateExpression, isValidTransactionDraft, normalizeAmountExpression, TRANSACTION_TYPES } from "../../domain/bucksLogic";
-import { styles } from "../../styles/globalStyles";
-import { Z_INDEX_MODAL } from "../../theme/constants";
-import { Field } from "../ui/Field";
-import { Select } from "../ui/Select";
-import { CalendarPicker } from "../ui/CalendarPicker";
-import { type Palette } from "../../theme/colors";
-import { type Transaction, type TransactionDraft, type TransactionType, type Tag } from "../../types";
-import { typeColor, typeFill, typeLabelFull } from "../../utils/formats";
-import { type UiCopy } from "../../i18n";
-import { useModalTransition } from "../ui/useModalTransition";
-import { useKeyboardOffset } from "../ui/useKeyboardOffset";
-import { getBlankDraft } from "../../utils/transactions";
-import { labelForTagId } from "../../utils/tags";
-import { Text, TextInput } from "../ui/AppText";
+import { calculateExpression, isValidTransactionDraft, normalizeAmountExpression, TRANSACTION_TYPES } from "@/domain/bucksLogic";
+import { styles } from "@/styles/globalStyles";
+import { Z_INDEX_MODAL } from "@/theme/constants";
+import { Field } from "@/components/ui/Field";
+import { Select } from "@/components/ui/Select";
+import { CalendarPicker } from "@/components/ui/CalendarPicker";
+import { type Palette } from "@/theme/colors";
+import { type Transaction, type TransactionDraft, type TransactionType, type Tag } from "@/types";
+import { typeColor, typeFill, typeLabelFull } from "@/utils/formats";
+import { type UiCopy } from "@/i18n";
+import { useModalTransition } from "@/components/ui/useModalTransition";
+import { useKeyboardOffset } from "@/components/ui/useKeyboardOffset";
+import { getBlankDraft } from "@/utils/transactions";
+import { labelForTagId } from "@/utils/tags";
+import { Text, TextInput } from "@/components/ui/AppText";
 
 export type TransactionModalHandle = {
   open: (draft: TransactionDraft, editingTx?: Transaction | null) => void;

@@ -1,5 +1,5 @@
 import { GoogleSignin } from "@react-native-google-signin/google-signin";
-import { GOOGLE_WORKSPACE_SCOPES } from "../theme/constants";
+import { GOOGLE_WORKSPACE_SCOPES } from "@/theme/constants";
 
 export async function getWorkspaceAccessToken(interactive: boolean) {
   let current = GoogleSignin.getCurrentUser();

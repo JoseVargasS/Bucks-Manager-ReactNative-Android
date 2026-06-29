@@ -1,9 +1,9 @@
 import { memo } from "react";
 import { View } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import { styles } from "../../styles/globalStyles";
-import { type Palette } from "../../theme/colors";
-import { type MaterialIconName } from "../../types";
+import { styles } from "@/styles/globalStyles";
+import { type Palette } from "@/theme/colors";
+import { type MaterialIconName } from "@/types";
 import { Text } from "./AppText";
 
 export const Kpi = memo(function Kpi({ title, value, icon, color, colors }: { title: string; value: string; icon: MaterialIconName; color: string; colors: Palette }) {

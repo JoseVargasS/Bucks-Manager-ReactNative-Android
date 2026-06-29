@@ -8,12 +8,12 @@ import {
 import { printToFileAsync } from "expo-print";
 import { shareAsync } from "expo-sharing";
 import { Alert } from "react-native";
-import { formatDateToISO, formatMoney } from "../domain/bucksLogic";
-import { formatCreatedTime } from "../utils/formats";
-import { buildExportFileName } from "../utils/helpers";
-import { type Transaction } from "../types";
-import { type UiCopy } from "../i18n";
-import { type ExportConfig } from "../components/modals/ExportModal";
+import { formatDateToISO, formatMoney } from "@/domain/bucksLogic";
+import { formatCreatedTime } from "@/utils/formats";
+import { buildExportFileName } from "@/utils/helpers";
+import { type Transaction } from "@/types";
+import { type UiCopy } from "@/i18n";
+import { type ExportConfig } from "@/components/modals/ExportModal";
 
 type ExportState = {
   exportVisible: boolean;

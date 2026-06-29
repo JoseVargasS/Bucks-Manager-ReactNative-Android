@@ -1,8 +1,8 @@
 import * as FileSystem from "expo-file-system/legacy";
 
-import { TRANSACTION_TYPES } from "../domain/bucksLogic";
-import type { SummaryRow, Transaction } from "../types";
-import { logError } from "../utils/errorHandler";
+import { TRANSACTION_TYPES } from "@/domain/bucksLogic";
+import type { SummaryRow, Transaction } from "@/types";
+import { logError } from "@/utils/errorHandler";
 
 const CACHE_VERSION = 2;
 const CACHE_FILE = `${FileSystem.documentDirectory || FileSystem.cacheDirectory}bucks-finance-cache.json`;

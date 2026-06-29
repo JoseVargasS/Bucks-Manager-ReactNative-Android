@@ -2,15 +2,15 @@ import { memo, useMemo, useCallback } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 
-import { formatMoney, MONTH_NAMES, calculateMonthSummary } from "../../domain/bucksLogic";
-import { styles } from "../../styles/globalStyles";
-import { type Palette } from "../../theme/colors";
-import { type MaterialIconName, type SummaryRow, type Tag, type Transaction } from "../../types";
-import { type UiCopy } from "../../i18n";
-import { labelForTagId, tagTextColor } from "../../utils/tags";
-import { StatCard } from "../ui/StatCard";
-import { PieChart, type PieSlice } from "../ui/PieChart";
-import { Text } from "../ui/AppText";
+import { formatMoney, MONTH_NAMES, calculateMonthSummary } from "@/domain/bucksLogic";
+import { styles } from "@/styles/globalStyles";
+import { type Palette } from "@/theme/colors";
+import { type MaterialIconName, type SummaryRow, type Tag, type Transaction } from "@/types";
+import { type UiCopy } from "@/i18n";
+import { labelForTagId, tagTextColor } from "@/utils/tags";
+import { StatCard } from "@/components/ui/StatCard";
+import { PieChart, type PieSlice } from "@/components/ui/PieChart";
+import { Text } from "@/components/ui/AppText";
 
 function currentMonthKey(): string {
   const now = new Date();

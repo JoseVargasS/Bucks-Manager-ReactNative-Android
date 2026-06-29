@@ -1,6 +1,6 @@
-import type { Transaction } from "../types";
-import type { ExportConfig } from "../components/modals/ExportModal";
-import { MONTH_NAMES } from "../domain/bucksLogic";
+import type { Transaction } from "@/types";
+import type { ExportConfig } from "@/components/modals/ExportModal";
+import { MONTH_NAMES } from "@/domain/bucksLogic";
 
 export function buildExportFileName(cfg: ExportConfig) {
   const fmtDate = (value: string) => value;

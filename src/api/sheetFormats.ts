@@ -1,5 +1,5 @@
-import { TRANSACTION_TYPES, parseSpanishDate as parseSpanishDateBs } from "../domain/bucksLogic";
-import type { Transaction } from "../types";
+import { TRANSACTION_TYPES, parseSpanishDate as parseSpanishDateBs } from "@/domain/bucksLogic";
+import type { Transaction } from "@/types";
 
 function normalizeHeader(value: unknown) {
   return String(value || "")

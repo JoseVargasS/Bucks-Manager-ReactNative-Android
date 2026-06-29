@@ -1,6 +1,6 @@
 import * as SecureStore from "expo-secure-store";
-import type { LanguageMode, Tag, Transaction } from "../types";
-import { dark, type Palette } from "../theme/colors";
+import type { LanguageMode, Tag, Transaction } from "@/types";
+import { dark, type Palette } from "@/theme/colors";
 import { logError } from "./errorHandler";
 
 const TAGS_KEY = "bucks_tags";

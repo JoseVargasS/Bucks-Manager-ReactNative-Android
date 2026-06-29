@@ -1,4 +1,10 @@
 import { registerHooks } from "node:module";
+import { resolve as pathResolve } from "node:path";
+import { existsSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+
+const __dirname = fileURLToPath(new URL(".", import.meta.url));
+const projectRoot = pathResolve(__dirname, "..");
 
 export const secureStoreMock = {
   values: new Map(),
@@ -71,6 +77,16 @@ registerHooks({
   resolve(specifier, context, nextResolve) {
     if (specifier === "expo-secure-store") return { url: secureStoreUrl, shortCircuit: true };
     if (specifier === "expo-file-system/legacy") return { url: fileSystemUrl, shortCircuit: true };
+    if (specifier.startsWith("@/")) {
+      const rel = specifier.slice(2);
+      const candidates = [`${rel}.ts`, `${rel}.tsx`, `${rel}/index.ts`, `${rel}/index.tsx`];
+      for (const candidate of candidates) {
+        const resolved = pathResolve(projectRoot, "src", candidate);
+        if (existsSync(resolved)) {
+          return { url: new URL(`file://${resolved}`).href, shortCircuit: true };
+        }
+      }
+    }
     try {
       return nextResolve(specifier, context);
     } catch (error) {

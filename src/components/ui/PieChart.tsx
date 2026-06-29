@@ -2,7 +2,7 @@ import { memo } from "react";
 import { View } from "react-native";
 import Svg, { Path, Text as SvgText } from "react-native-svg";
 
-import { type Palette } from "../../theme/colors";
+import { type Palette } from "@/theme/colors";
 import { Text } from "./AppText";
 
 export type PieSlice = {

@@ -6,7 +6,7 @@ import {
   type TextInputProps,
   type TextProps,
 } from "react-native";
-import { type FontPreference } from "../../types";
+import { type FontPreference } from "@/types";
 
 let fontFamily = "DMSans";
 let fontPreference: FontPreference = "dmsans";

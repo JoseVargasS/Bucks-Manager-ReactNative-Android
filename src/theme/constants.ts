@@ -1,4 +1,4 @@
-import type { Tab } from "../types";
+import type { Tab } from "@/types";
 
 export const ANIM_SPLASH_DURATION = 220;
 export const ANIM_TAB_PAGER = 210;

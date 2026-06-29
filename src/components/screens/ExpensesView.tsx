@@ -17,23 +17,23 @@ import {
   View,
 } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import { formatMoney } from "../../domain/bucksLogic";
+import { formatMoney } from "@/domain/bucksLogic";
 import {
   formatCreatedTime,
   typeColor,
   typeFill,
   typeLabelFull,
-} from "../../utils/formats";
-import { abbreviateTag, tagTextColor } from "../../utils/tags";
-import { groupTransactionsByDate } from "../../utils/transactions";
-import { styles } from "../../styles/globalStyles";
-import { PeriodControls } from "../layout/PeriodControls";
-import { HighlightedText } from "../ui/HighlightedText";
-import { dark, type Palette } from "../../theme/colors";
-import { type Tag, type Transaction, type MaterialIconName } from "../../types";
-import { type UiCopy } from "../../i18n";
-import { useModalTransition } from "../ui/useModalTransition";
-import { Text } from "../ui/AppText";
+} from "@/utils/formats";
+import { abbreviateTag, tagTextColor } from "@/utils/tags";
+import { groupTransactionsByDate } from "@/utils/transactions";
+import { styles } from "@/styles/globalStyles";
+import { PeriodControls } from "@/components/layout/PeriodControls";
+import { HighlightedText } from "@/components/ui/HighlightedText";
+import { dark, type Palette } from "@/theme/colors";
+import { type Tag, type Transaction, type MaterialIconName } from "@/types";
+import { type UiCopy } from "@/i18n";
+import { useModalTransition } from "@/components/ui/useModalTransition";
+import { Text } from "@/components/ui/AppText";
 
 function withAlpha(hex: string, alpha: number): string {
   if (!hex.startsWith("#") || (hex.length !== 7 && hex.length !== 4)) return hex;

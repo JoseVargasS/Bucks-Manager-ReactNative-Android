@@ -7,7 +7,7 @@ import {
   type ReactNode,
 } from "react";
 import { getPalette, type Palette, type ColorSchemePreference } from "./colors";
-import { type ThemeMode } from "../types";
+import { type ThemeMode } from "@/types";
 
 const ThemeModeContext = createContext<{
   theme: ThemeMode;

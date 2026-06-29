@@ -1,16 +1,16 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { Animated, BackHandler, ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import { styles } from "../../styles/globalStyles";
-import { type Palette } from "../../theme/colors";
-import { Z_INDEX_DETAIL } from "../../theme/constants";
-import { type MaterialIconName, type Tag, type Transaction } from "../../types";
-import { formatMoney } from "../../domain/bucksLogic";
-import { formatCreatedTime, typeColor, typeFill, typeLabelFull } from "../../utils/formats";
-import { tagTextColor, findTagById } from "../../utils/tags";
-import { type UiCopy } from "../../i18n";
-import { useModalTransition } from "../ui/useModalTransition";
-import { Text } from "../ui/AppText";
+import { styles } from "@/styles/globalStyles";
+import { type Palette } from "@/theme/colors";
+import { Z_INDEX_DETAIL } from "@/theme/constants";
+import { type MaterialIconName, type Tag, type Transaction } from "@/types";
+import { formatMoney } from "@/domain/bucksLogic";
+import { formatCreatedTime, typeColor, typeFill, typeLabelFull } from "@/utils/formats";
+import { tagTextColor, findTagById } from "@/utils/tags";
+import { type UiCopy } from "@/i18n";
+import { useModalTransition } from "@/components/ui/useModalTransition";
+import { Text } from "@/components/ui/AppText";
 
 export type DetailModalHandle = { open: (tx: Transaction) => void; close: () => void };
 

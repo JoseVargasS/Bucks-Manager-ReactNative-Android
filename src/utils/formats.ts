@@ -1,6 +1,6 @@
-import { formatDateToISO } from "../domain/bucksLogic";
-import { UI_COPY, type UiCopy } from "../i18n";
-import type { Palette } from "../theme/colors";
+import { formatDateToISO } from "@/domain/bucksLogic";
+import { UI_COPY, type UiCopy } from "@/i18n";
+import type { Palette } from "@/theme/colors";
 
 const DEFAULT_LOCALE = "es-PE";
 

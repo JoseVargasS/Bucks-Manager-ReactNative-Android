@@ -1,8 +1,8 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
 import { View, Text } from "react-native";
-import { SPLASH_BG, SPLASH_SPINNER } from "../theme/constants";
-import { UI_COPY } from "../i18n";
-import { detectDeviceLanguage } from "../utils/helpers";
+import { SPLASH_BG, SPLASH_SPINNER } from "@/theme/constants";
+import { UI_COPY } from "@/i18n";
+import { detectDeviceLanguage } from "@/utils/helpers";
 
 type Props = { children: ReactNode };
 type State = { error: Error | null };

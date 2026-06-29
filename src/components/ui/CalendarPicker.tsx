@@ -1,9 +1,9 @@
 import { memo, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Animated, Modal, ScrollView, TouchableOpacity, View, StyleSheet, type ViewStyle } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import { formatDateToISO, MONTH_NAMES } from "../../domain/bucksLogic";
-import { type Palette } from "../../theme/colors";
-import { UI_COPY, type UiCopy } from "../../i18n";
+import { formatDateToISO, MONTH_NAMES } from "@/domain/bucksLogic";
+import { type Palette } from "@/theme/colors";
+import { UI_COPY, type UiCopy } from "@/i18n";
 import { useModalTransition } from "./useModalTransition";
 import { Text } from "./AppText";
 

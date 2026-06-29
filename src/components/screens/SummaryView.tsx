@@ -2,15 +2,15 @@ import { memo, useEffect, useMemo, useState } from "react";
 import { ScrollView, View } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 
-import { calculateSummaries, formatMoney, MONTH_NAMES } from "../../domain/bucksLogic";
-import { UI_MONTH_NAMES, type UiCopy } from "../../i18n";
-import { styles } from "../../styles/globalStyles";
-import { type Palette } from "../../theme/colors";
-import { type MaterialIconName, type SummaryRow, type Transaction } from "../../types";
-import { BarChart } from "../ui/BarChart";
-import { Kpi } from "../ui/Kpi";
-import { Select } from "../ui/Select";
-import { Text } from "../ui/AppText";
+import { calculateSummaries, formatMoney, MONTH_NAMES } from "@/domain/bucksLogic";
+import { UI_MONTH_NAMES, type UiCopy } from "@/i18n";
+import { styles } from "@/styles/globalStyles";
+import { type Palette } from "@/theme/colors";
+import { type MaterialIconName, type SummaryRow, type Transaction } from "@/types";
+import { BarChart } from "@/components/ui/BarChart";
+import { Kpi } from "@/components/ui/Kpi";
+import { Select } from "@/components/ui/Select";
+import { Text } from "@/components/ui/AppText";
 
 export const SummaryView = memo(function SummaryView({ colors, copy, summaries, transactions, freqIncome, availableYears, topInset, currencySymbol }: {
   colors: Palette; copy: UiCopy; summaries: SummaryRow[]; transactions: Transaction[]; freqIncome: Record<string, number>;
