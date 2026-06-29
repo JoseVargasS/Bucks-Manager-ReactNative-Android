@@ -56,26 +56,70 @@ export function detectDeviceLanguage(): "es" | "en" {
 }
 
 export function detectDeviceCurrencySymbol() {
-  const locale = Intl.DateTimeFormat().resolvedOptions().locale || "";
-  const region = locale.split("-").pop()?.toUpperCase();
-  const map: Record<string, string> = {
-    PE: "S/",
-    US: "$",
-    EC: "$",
-    PA: "$",
-    SV: "$",
-    ES: "€",
-    FR: "€",
-    DE: "€",
-    IT: "€",
-    PT: "€",
-    GB: "£",
-    JP: "¥",
-    BR: "R$",
-    MX: "MX$",
-    CO: "COP$",
-    CL: "CLP$",
-  };
-  return map[region || ""] || "S/";
+  const rawLocale = Intl.DateTimeFormat().resolvedOptions().locale || "";
+  const parts = rawLocale.split("-");
+  const region = parts.find((p) => /^[A-Z]{2}$/.test(p))?.toUpperCase();
+  const lang = parts[0]?.toLowerCase();
+  if (region) {
+    const regionMap: Record<string, string> = {
+      PE: "S/",
+      US: "$",
+      EC: "$",
+      PA: "$",
+      SV: "$",
+      ES: "\u20ac",
+      FR: "\u20ac",
+      DE: "\u20ac",
+      IT: "\u20ac",
+      PT: "\u20ac",
+      GB: "\u00a3",
+      JP: "\u00a5",
+      BR: "R$",
+      MX: "MX$",
+      CO: "COP$",
+      CL: "CLP$",
+      AR: "ARS$",
+      UY: "UYU$",
+      BO: "BOB",
+      PY: "Gs.",
+      CR: "\u20a1",
+      DO: "RD$",
+      GT: "GTQ",
+      HN: "HNL",
+      NI: "NIO",
+      CA: "CA$",
+      AU: "A$",
+      NZ: "NZ$",
+      CN: "\u00a5",
+      KR: "\u20a9",
+      IN: "\u20b9",
+      RU: "\u20bd",
+      ZA: "R",
+      TR: "\u20ba",
+      CH: "CHF",
+      VE: "VES",
+      CU: "CUP",
+    };
+    if (regionMap[region]) return regionMap[region];
+  }
+  if (lang) {
+    const langMap: Record<string, string> = {
+      es: "S/",
+      en: "$",
+      pt: "R$",
+      fr: "\u20ac",
+      de: "\u20ac",
+      it: "\u20ac",
+      nl: "\u20ac",
+      ja: "\u00a5",
+      ko: "\u20a9",
+      zh: "\u00a5",
+      ru: "\u20bd",
+      ar: "\ufdfc",
+      hi: "\u20b9",
+    };
+    if (langMap[lang]) return langMap[lang];
+  }
+  return "$";
 }
 

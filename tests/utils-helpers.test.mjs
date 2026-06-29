@@ -127,8 +127,24 @@ test("detectDeviceCurrencySymbol returns EUR for Spain locale", () => {
   Intl.DateTimeFormat = originalDateTimeFormat;
 });
 
-test("detectDeviceCurrencySymbol defaults to S/ for unknown locale", () => {
+test("detectDeviceCurrencySymbol defaults to $ for unknown locale", () => {
   const mockLocale = { resolvedOptions: () => ({ locale: "unknown" }) };
+  const originalDateTimeFormat = Intl.DateTimeFormat;
+  Intl.DateTimeFormat = function () { return mockLocale; };
+  assert.equal(detectDeviceCurrencySymbol(), "$");
+  Intl.DateTimeFormat = originalDateTimeFormat;
+});
+
+test("detectDeviceCurrencySymbol returns COP$ for Colombia locale", () => {
+  const mockLocale = { resolvedOptions: () => ({ locale: "es-CO" }) };
+  const originalDateTimeFormat = Intl.DateTimeFormat;
+  Intl.DateTimeFormat = function () { return mockLocale; };
+  assert.equal(detectDeviceCurrencySymbol(), "COP$");
+  Intl.DateTimeFormat = originalDateTimeFormat;
+});
+
+test("detectDeviceCurrencySymbol falls back to language-level map when locale has no region", () => {
+  const mockLocale = { resolvedOptions: () => ({ locale: "es" }) };
   const originalDateTimeFormat = Intl.DateTimeFormat;
   Intl.DateTimeFormat = function () { return mockLocale; };
   assert.equal(detectDeviceCurrencySymbol(), "S/");
