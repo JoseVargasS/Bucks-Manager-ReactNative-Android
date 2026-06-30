@@ -96,7 +96,6 @@ import {
   OptionSheet,
   type OptionSheetHandle,
 } from "@/components/modals/OptionSheet";
-import { getAppFontFamily } from "@/components/ui/AppText";
 import {
   type HistoryEntry,
   type SearchFilters,
@@ -116,7 +115,9 @@ import {
   TAB_ORDER,
 } from "@/theme/constants";
 import { useFinancialState } from "@/hooks/useFinancialState";
-import { usePreferences, CURRENCY_OPTIONS } from "@/hooks/usePreferences";
+import {
+  usePreferences, CURRENCY_OPTIONS, getFontPickerOptions,
+} from "@/hooks/usePreferences";
 import { useExport } from "@/hooks/useExport";
 import { getErrorMessage, isAuthError, shouldRescanForSheetError } from "@/utils/errorHandler";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -194,37 +195,6 @@ const COLOR_SCHEME_OPTIONS: Array<{
     icon: "weather-night",
   },
 ];
-
-function deriveSyncStatus(args: {
-  authError: string;
-  syncError: string;
-  pendingSync: boolean;
-  isSyncing: boolean;
-  hasLocalData: boolean;
-  showingSavedData: string;
-  pendingSyncLabel: string;
-  syncingLabel: string;
-}): string {
-  const {
-    authError,
-    syncError,
-    pendingSync,
-    isSyncing,
-    hasLocalData,
-    showingSavedData,
-    pendingSyncLabel,
-    syncingLabel,
-  } = args;
-  if (authError) return authError;
-  if (syncError)
-    return hasLocalData ? showingSavedData : syncError;
-  if (pendingSync) return pendingSyncLabel;
-  if (isSyncing)
-    return hasLocalData
-      ? `${showingSavedData} · ${syncingLabel.toLowerCase()}`
-      : syncingLabel;
-  return "";
-}
 
 function AppContent() {
   const { colors, theme, colorScheme, toggleTheme } = useTheme();
@@ -478,16 +448,16 @@ function AppContent() {
     language === "en"
       ? selectedColorScheme.labelEn
       : selectedColorScheme.labelEs;
-  const syncStatusText = deriveSyncStatus({
-    authError,
-    syncError,
-    pendingSync,
-    isSyncing,
-    hasLocalData,
-    showingSavedData: copy.showingSavedData,
-    pendingSyncLabel: copy.pendingSyncStatus,
-    syncingLabel: copy.syncing,
-  });
+  const syncStatusText = (() => {
+    if (authError) return authError;
+    if (syncError) return hasLocalData ? copy.showingSavedData : syncError;
+    if (pendingSync) return copy.pendingSyncStatus;
+    if (isSyncing)
+      return hasLocalData
+        ? `${copy.showingSavedData} · ${copy.syncing.toLowerCase()}`
+        : copy.syncing;
+    return "";
+  })();
   // --- Session management ---
   async function restoreSession() {
     const [token, sheetId] = await Promise.all([
@@ -543,7 +513,7 @@ function AppContent() {
       if (hadCache) {
         const trashed = await isSheetTrashed(activeToken, sheetId);
         if (trashed) {
-          await clearStaleSession();
+          teardownSession({ catchErrors: true });
           return;
         }
       }
@@ -552,7 +522,7 @@ function AppContent() {
       if (authErr(error)) {
         setAuthError(errMsg(error));
         if (hadCache) {
-          await clearStaleSession();
+          teardownSession({ catchErrors: true });
         } else {
           await disconnectGoogle();
         }
@@ -599,165 +569,19 @@ function AppContent() {
     });
   }, [copy.currencySymbol, currencySymbol, language, saveCurrencySymbol]);
 
+  const fontPickerOptions = useMemo(
+    () => getFontPickerOptions(copy),
+    [copy],
+  );
+
   const openFontPicker = useCallback(() => {
     optionSheetRef.current?.open({
       title: copy.fontStyle,
       selectedValue: fontPreference,
-      options: [
-        {
-          label: copy.system,
-          value: "dmsans",
-          icon: "format-font",
-          fontFamily: getAppFontFamily("dmsans"),
-        },
-        {
-          label: copy.serif,
-          value: "serif",
-          icon: "format-letter-case",
-          fontFamily: getAppFontFamily("serif"),
-        },
-        {
-          label: copy.mono,
-          value: "mono",
-          icon: "code-tags",
-          fontFamily: getAppFontFamily("mono"),
-        },
-        {
-          label: copy.condensed,
-          value: "condensed",
-          icon: "format-letter-spacing",
-          fontFamily: getAppFontFamily("condensed"),
-        },
-        {
-          label: copy.lightFont,
-          value: "light",
-          icon: "feather",
-          fontFamily: getAppFontFamily("light"),
-        },
-        {
-          label: copy.casual,
-          value: "casual",
-          icon: "draw",
-          fontFamily: getAppFontFamily("casual"),
-        },
-        {
-          label: copy.cursive,
-          value: "cursive",
-          icon: "fountain-pen-tip",
-          fontFamily: getAppFontFamily("cursive"),
-        },
-        {
-          label: copy.smallCaps,
-          value: "smallcaps",
-          icon: "format-letter-case-upper",
-          fontFamily: getAppFontFamily("smallcaps"),
-        },
-        {
-          label: copy.inter,
-          value: "inter",
-          icon: "format-font",
-          fontFamily: getAppFontFamily("inter"),
-        },
-        {
-          label: copy.interVariable,
-          value: "intervariable",
-          icon: "format-font",
-          fontFamily: getAppFontFamily("intervariable"),
-        },
-        {
-          label: copy.jetbrainsMono,
-          value: "jetbrainsmono",
-          icon: "code-tags",
-          fontFamily: getAppFontFamily("jetbrainsmono"),
-        },
-        {
-          label: copy.spaceMono,
-          value: "spacemono",
-          icon: "code-tags",
-          fontFamily: getAppFontFamily("spacemono"),
-        },
-        {
-          label: copy.orbitron,
-          value: "orbitron",
-          icon: "rocket-launch",
-          fontFamily: getAppFontFamily("orbitron"),
-        },
-        {
-          label: copy.playfair,
-          value: "playfair",
-          icon: "format-letter-case",
-          fontFamily: getAppFontFamily("playfair"),
-        },
-        {
-          label: copy.bebasNeue,
-          value: "bebasneue",
-          icon: "format-letter-spacing",
-          fontFamily: getAppFontFamily("bebasneue"),
-        },
-        {
-          label: copy.fredoka,
-          value: "fredoka",
-          icon: "balloon",
-          fontFamily: getAppFontFamily("fredoka"),
-        },
-        {
-          label: copy.comicNeue,
-          value: "comicneue",
-          icon: "emoticon-happy",
-          fontFamily: getAppFontFamily("comicneue"),
-        },
-        {
-          label: copy.patrickHand,
-          value: "patrickhand",
-          icon: "draw",
-          fontFamily: getAppFontFamily("patrickhand"),
-        },
-        {
-          label: copy.sora,
-          value: "sora",
-          icon: "format-font",
-          fontFamily: getAppFontFamily("sora"),
-        },
-        {
-          label: copy.plusJakartaSans,
-          value: "plusjakartasans",
-          icon: "format-font",
-          fontFamily: getAppFontFamily("plusjakartasans"),
-        },
-        {
-          label: copy.comicSansMS,
-          value: "comicsansms",
-          icon: "emoticon-happy",
-          fontFamily: getAppFontFamily("comicsansms"),
-        },
-        {
-          label: copy.proggySquare,
-          value: "proggysquare",
-          icon: "code-tags",
-          fontFamily: getAppFontFamily("proggysquare"),
-        },
-        {
-          label: copy.redstarBold,
-          value: "redstarbold",
-          icon: "star",
-          fontFamily: getAppFontFamily("redstarbold"),
-        },
-        {
-          label: copy.sansi,
-          value: "sansi",
-          icon: "format-font",
-          fontFamily: getAppFontFamily("sansi"),
-        },
-        {
-          label: copy.sfScribbledSans,
-          value: "sfscribbledsans",
-          icon: "draw",
-          fontFamily: getAppFontFamily("sfscribbledsans"),
-        },
-      ],
+      options: fontPickerOptions,
       onSelect: saveFontPreference,
     });
-  }, [copy, fontPreference, saveFontPreference]);
+  }, [copy.fontStyle, fontPreference, fontPickerOptions, saveFontPreference]);
 
   const openColorSchemePicker = useCallback(() => {
     optionSheetRef.current?.open({
@@ -894,24 +718,42 @@ function AppContent() {
     }
   }
 
-  async function signInWithGoogle() {
-    await runGoogleSignIn(false);
-  }
-
   function syncAccountInfo() {
     const info = syncAccountInfoBase();
     if (info) setAccountInfo(info);
   }
 
+  function teardownSession(options: { clearToken?: boolean; catchErrors?: boolean } = {}) {
+    const { clearToken = true, catchErrors = false } = options;
+    const cleanup = () => {
+      if (clearToken) setAccessToken("");
+      resetFinancial();
+      setSpreadsheetId("");
+      setAccountInfo(null);
+      setSyncError("");
+      setAuthError("");
+      setPendingSync(false);
+      setIsSyncing(false);
+      pendingSyncRef.current = false;
+      fin.didSetInitialPeriodRef.current = false;
+    };
+    if (catchErrors) {
+      Promise.all([
+        deleteItemAsync(TOKEN_KEY),
+        deleteItemAsync(SHEET_KEY),
+        deleteFinancialCache(),
+      ]).catch(() => undefined).finally(cleanup);
+    } else {
+      Promise.all([
+        deleteItemAsync(TOKEN_KEY),
+        deleteItemAsync(SHEET_KEY),
+        deleteFinancialCache(),
+      ]).finally(cleanup);
+    }
+  }
+
   function resetFinancialState() {
-    resetFinancial();
-    setSpreadsheetId("");
-    setAccountInfo(null);
-    setSyncError("");
-    setAuthError("");
-    setPendingSync(false);
-    setIsSyncing(false);
-    pendingSyncRef.current = false;
+    teardownSession({ clearToken: false });
   }
 
   async function clearGoogleSession() {
@@ -923,25 +765,15 @@ function AppContent() {
       ]);
     } finally {
       setAccessToken("");
-      resetFinancialState();
+      resetFinancial();
+      setSpreadsheetId("");
+      setAccountInfo(null);
+      setSyncError("");
+      setAuthError("");
+      setPendingSync(false);
+      setIsSyncing(false);
+      pendingSyncRef.current = false;
     }
-  }
-
-  async function clearStaleSession() {
-    await Promise.all([
-      deleteItemAsync(TOKEN_KEY),
-      deleteItemAsync(SHEET_KEY),
-      deleteFinancialCache(),
-    ]).catch(() => undefined);
-    setAccessToken("");
-    setSpreadsheetId("");
-    setAccountInfo(null);
-    setSyncError("");
-    setAuthError("");
-    setPendingSync(false);
-    setIsSyncing(false);
-    pendingSyncRef.current = false;
-    fin.didSetInitialPeriodRef.current = false;
   }
 
   async function disconnectGoogle() {
@@ -1383,10 +1215,7 @@ function AppContent() {
     setHistoryEntries((prev) => prev.filter((e) => e.id !== entryId));
     removeHistoryEntry(entryId).catch(() => undefined);
 
-    const next = [...transactions, entry.transaction].sort(
-      (a, b) => new Date(a.rawDate).getTime() - new Date(b.rawDate).getTime(),
-    );
-    const restored = next.map((item, idx) => ({ ...item, rowId: idx + 2 }));
+    const restored = insertChronologically(transactions, entry.transaction);
     const affectedMonths = uniqueMonthKeys([entry.transaction]);
     const nextSummaries = recalculateSummariesForMonths(
       restored,
@@ -1643,7 +1472,7 @@ function AppContent() {
           copy={copy}
           loading={loading}
           canConnect={Boolean(GOOGLE_ANDROID_CLIENT_ID || GOOGLE_WEB_CLIENT_ID)}
-          onSignIn={signInWithGoogle}
+          onSignIn={() => runGoogleSignIn(false)}
         />
       </View>
     );

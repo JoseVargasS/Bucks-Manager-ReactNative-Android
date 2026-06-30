@@ -42,30 +42,36 @@ export function formatDateGroupLabel(
     .toUpperCase();
 }
 
+const TYPE_CONFIG: Record<string, { colorKey: "green" | "red" | "yellow"; fillKey: "incomeSoft" | "expenseSoft" | "warnSoft" }> = {
+  "INGRESO FRECUENTE": { colorKey: "green", fillKey: "incomeSoft" },
+  "INGRESO NO FRECUENTE": { colorKey: "green", fillKey: "incomeSoft" },
+  "GASTO FRECUENTE": { colorKey: "red", fillKey: "expenseSoft" },
+  "GASTO NO FRECUENTE": { colorKey: "yellow", fillKey: "warnSoft" },
+};
+
+const TYPE_LABELS: Record<string, { short: keyof UiCopy; full: keyof UiCopy }> = {
+  "INGRESO FRECUENTE": { short: "freqIncome", full: "freqIncomeFull" },
+  "INGRESO NO FRECUENTE": { short: "nonFreqIncome", full: "nonFreqIncomeFull" },
+  "GASTO FRECUENTE": { short: "freqExpense", full: "freqExpenseFull" },
+  "GASTO NO FRECUENTE": { short: "nonFreqExpense", full: "nonFreqExpenseFull" },
+};
+
 export function typeColor(type: string, colors: Palette): string {
-  if (type === "INGRESO NO FRECUENTE" || type === "INGRESO FRECUENTE")
-    return colors.green;
-  if (type === "GASTO FRECUENTE") return colors.red;
-  return colors.yellow;
+  const cfg = TYPE_CONFIG[type];
+  return cfg ? colors[cfg.colorKey] : colors.yellow;
 }
 
 export function typeFill(type: string, colors: Palette): string {
-  if (type === "INGRESO NO FRECUENTE" || type === "INGRESO FRECUENTE")
-    return colors.incomeSoft;
-  if (type === "GASTO FRECUENTE") return colors.expenseSoft;
-  return colors.warnSoft;
+  const cfg = TYPE_CONFIG[type];
+  return cfg ? colors[cfg.fillKey] : colors.warnSoft;
 }
 
 export function typeLabel(type: string, copy: UiCopy) {
-  if (type === "INGRESO FRECUENTE") return copy.freqIncome;
-  if (type === "INGRESO NO FRECUENTE") return copy.nonFreqIncome;
-  if (type === "GASTO FRECUENTE") return copy.freqExpense;
-  return copy.nonFreqExpense;
+  const labels = TYPE_LABELS[type];
+  return labels ? copy[labels.short] : copy.nonFreqExpense;
 }
 
 export function typeLabelFull(type: string, copy: UiCopy) {
-  if (type === "INGRESO FRECUENTE") return copy.freqIncomeFull;
-  if (type === "INGRESO NO FRECUENTE") return copy.nonFreqIncomeFull;
-  if (type === "GASTO FRECUENTE") return copy.freqExpenseFull;
-  return copy.nonFreqExpenseFull;
+  const labels = TYPE_LABELS[type];
+  return labels ? copy[labels.full] : copy.nonFreqExpenseFull;
 }

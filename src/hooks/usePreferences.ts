@@ -11,22 +11,54 @@ import {
   detectDeviceLanguage,
 } from "@/utils/helpers";
 import { setAppFontPreference } from "@/components/ui/AppText";
+import { FONT_FAMILIES, FONT_ICONS } from "@/components/ui/fontConstants";
 import { type UiCopy, UI_COPY } from "@/i18n";
 
 const LANGUAGE_KEY = "bucks_language";
 const CURRENCY_SYMBOL_KEY = "bucks_currency_symbol";
 const FONT_KEY = "bucks_font";
 const COLOR_SCHEME_KEY = "bucks_color_scheme";
-const FONT_PREFERENCES: FontPreference[] = [
-  "dmsans", "serif", "mono", "condensed", "light", "casual", "cursive", "smallcaps",
-  "inter", "fredoka", "jetbrainsmono", "spacemono",
-  "orbitron", "playfair", "bebasneue",
-  "comicneue", "sora", "patrickhand", "plusjakartasans", "intervariable",
-  "comicsansms", "proggysquare", "redstarbold", "sansi", "sfscribbledsans",
-];
+const FONT_PREFERENCES = Object.keys(FONT_FAMILIES) as FontPreference[];
 const COLOR_SCHEME_PREFERENCES: ColorSchemePreference[] = [
   "lime", "ocean", "violet", "amber", "graphite", "pink", "sports", "techy", "sky",
 ];
+
+const FONT_COPY_KEYS: Record<FontPreference, keyof UiCopy> = {
+  dmsans: "system",
+  serif: "serif",
+  mono: "mono",
+  condensed: "condensed",
+  light: "lightFont",
+  casual: "casual",
+  cursive: "cursive",
+  smallcaps: "smallCaps",
+  inter: "inter",
+  intervariable: "interVariable",
+  jetbrainsmono: "jetbrainsMono",
+  spacemono: "spaceMono",
+  orbitron: "orbitron",
+  playfair: "playfair",
+  bebasneue: "bebasNeue",
+  fredoka: "fredoka",
+  comicneue: "comicNeue",
+  sora: "sora",
+  patrickhand: "patrickHand",
+  plusjakartasans: "plusJakartaSans",
+  comicsansms: "comicSansMS",
+  proggysquare: "proggySquare",
+  redstarbold: "redstarBold",
+  sansi: "sansi",
+  sfscribbledsans: "sfScribbledSans",
+};
+
+export function getFontPickerOptions(copy: UiCopy) {
+  return FONT_PREFERENCES.map((pref) => ({
+    label: copy[FONT_COPY_KEYS[pref]],
+    value: pref,
+    icon: FONT_ICONS[pref],
+    fontFamily: FONT_FAMILIES[pref],
+  }));
+}
 
 export const CURRENCY_OPTIONS: Array<{
   value: string;

@@ -14,14 +14,8 @@ function compactHeader(value: unknown) {
   return normalizeHeader(value).replace(/[^A-Z0-9]/g, "");
 }
 
-const HEADER_ALIASES: Record<string, string[]> = {
-  "CREATION TIME": ["CREATION TIME"],
-  "NET WITHOUT FREQUENT INCOME": ["NET WITHOUT FREQUENT INCOME"],
-};
-
 function headerAliases(expected: string) {
-  const base = normalizeHeader(expected);
-  return HEADER_ALIASES[base] || [base];
+  return [normalizeHeader(expected)];
 }
 
 function headerMatches(actual: string, expected: string) {
@@ -90,23 +84,24 @@ function parseNumericDate(value: string) {
     : null;
 }
 
+const MONTH_NAMES_PARSE: string[][] = [
+  ["JANUARY", "JAN", "ENERO", "ENE"],
+  ["FEBRUARY", "FEB", "FEBRERO"],
+  ["MARCH", "MAR", "MARZO"],
+  ["APRIL", "APR", "ABRIL", "ABR"],
+  ["MAY", "MAYO"],
+  ["JUNE", "JUN", "JUNIO"],
+  ["JULY", "JUL", "JULIO"],
+  ["AUGUST", "AUG", "AGOSTO", "AGO"],
+  ["SEPTEMBER", "SEP", "SEPTIEMBRE", "SET"],
+  ["OCTOBER", "OCT", "OCTUBRE"],
+  ["NOVEMBER", "NOV", "NOVIEMBRE"],
+  ["DECEMBER", "DEC", "DICIEMBRE", "DIC"],
+];
+
 function parseMonthYear(value: string) {
   const clean = normalizeHeader(value);
-  const months: string[][] = [
-    ["JANUARY", "JAN", "ENERO", "ENE"],
-    ["FEBRUARY", "FEB", "FEBRERO"],
-    ["MARCH", "MAR", "MARZO"],
-    ["APRIL", "APR", "ABRIL", "ABR"],
-    ["MAY", "MAYO"],
-    ["JUNE", "JUN", "JUNIO"],
-    ["JULY", "JUL", "JULIO"],
-    ["AUGUST", "AUG", "AGOSTO", "AGO"],
-    ["SEPTEMBER", "SEP", "SEPTIEMBRE", "SET"],
-    ["OCTOBER", "OCT", "OCTUBRE"],
-    ["NOVEMBER", "NOV", "NOVIEMBRE"],
-    ["DECEMBER", "DEC", "DICIEMBRE", "DIC"],
-  ];
-  const month = months.findIndex((names) =>
+  const month = MONTH_NAMES_PARSE.findIndex((names) =>
     names.some((name) => clean.startsWith(name)),
   );
   const yearMatch = clean.match(/\b(20\d{2}|19\d{2})\b/);
@@ -127,7 +122,8 @@ export function parseNumber(value: unknown): number {
   if (typeof value === "number") return Number.isFinite(value) ? value : 0;
   const raw = String(value || "")
     .replace(/\s/g, "")
-    .replace(/S\/|\$/gi, "")
+    .replace(/S\/|R\/|MX\$|COP\$|CLP\$|[\u20ac\u00a3\u00a5]/gi, "")
+    .replace(/\$/g, "")
     .trim();
   const clean = normalizeNumberString(raw);
   const number = Number(clean);

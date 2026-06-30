@@ -7,44 +7,11 @@ import {
   type TextProps,
 } from "react-native";
 import { type FontPreference } from "@/types";
+import { FONT_FAMILIES, FONT_SIZE_SCALE } from "./fontConstants";
 
-let fontFamily = "DMSans";
+let fontFamily = FONT_FAMILIES.dmsans;
 let fontPreference: FontPreference = "dmsans";
 const listeners = new Set<() => void>();
-
-const FONT_SIZE_SCALE: Partial<Record<FontPreference, number>> = {
-  sansi: 1.35,
-  sfscribbledsans: 1.3,
-  proggysquare: 1.4,
-  comicsansms: 1.2,
-};
-const FONT_FAMILIES: Record<FontPreference, string> = {
-  dmsans: "DMSans",
-  serif: "serif",
-  mono: "monospace",
-  condensed: "sans-serif-condensed",
-  light: "sans-serif-light",
-  casual: "casual",
-  cursive: "cursive",
-  smallcaps: "sans-serif-smallcaps",
-  inter: "Inter",
-  fredoka: "Fredoka",
-  jetbrainsmono: "JetBrainsMono",
-  spacemono: "SpaceMono",
-  orbitron: "Orbitron",
-  playfair: "PlayfairDisplay",
-  bebasneue: "BebasNeue",
-  comicneue: "ComicNeue",
-  sora: "Sora",
-  patrickhand: "PatrickHand",
-  plusjakartasans: "PlusJakartaSans",
-  intervariable: "InterVariable",
-  comicsansms: "ComicSansMS",
-  proggysquare: "ProggySquare",
-  redstarbold: "RedstarBold",
-  sansi: "SANSI",
-  sfscribbledsans: "SFScribbledSans",
-};
 
 export function setAppFontPreference(preference: FontPreference) {
   const next = getAppFontFamily(preference);
