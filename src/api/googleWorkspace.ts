@@ -1,6 +1,7 @@
 import type {
   SheetCandidate,
   SummaryRow,
+  Tag,
   Transaction,
   TransactionDraft,
 } from "@/types";
@@ -478,6 +479,21 @@ function formulaValuesUrl(spreadsheetId: string, range: string) {
   return `${valuesUrl(spreadsheetId, range)}?valueRenderOption=FORMULA&dateTimeRenderOption=FORMATTED_STRING`;
 }
 
+export async function isSheetTrashed(
+  token: string,
+  spreadsheetId: string,
+): Promise<boolean> {
+  try {
+    const data = await googleFetch<{ trashed?: boolean }>(
+      token,
+      `${DRIVE}/files/${spreadsheetId}?fields=trashed`,
+    );
+    return data.trashed === true;
+  } catch {
+    return false;
+  }
+}
+
 export async function findCompatibleSheets(token: string) {
   const query = encodeURIComponent(
     `mimeType='${GOOGLE_SHEET_MIME}' and trashed=false`,
@@ -582,6 +598,10 @@ async function initializeSpreadsheet(token: string, spreadsheetId: string) {
             SUMMARY_HEADERS,
             buildSummaryRowFormulas(2, firstDay, locale),
           ],
+        },
+        {
+          range: `${SHEET_NAMES.summary}!K1:K2`,
+          values: [["TAGS CATALOGUE"], [DEFAULT_TAGS_CATALOGUE]],
         },
       ],
     }),
@@ -1015,4 +1035,41 @@ export async function removeTagFromAllRows(
       }),
     },
   );
+}
+
+const DEFAULT_TAGS_CATALOGUE = JSON.stringify([
+  { id: "default-salud", label: "Salud", color: "#FF5252" },
+  { id: "default-comida", label: "Comida", color: "#FFB74D" },
+  { id: "default-viaje", label: "Viaje", color: "#4FC3F7" },
+  { id: "default-transporte", label: "Transporte", color: "#81C784" },
+  { id: "default-ocio", label: "Ocio", color: "#CE93D8" },
+  { id: "default-educacion", label: "Educación", color: "#FFD54F" },
+]);
+
+export async function readTagsCatalog(token: string, spreadsheetId: string): Promise<Tag[]> {
+  try {
+    const range = `${SHEET_NAMES.summary}!K2`;
+    const data = await googleFetch<{ values?: string[][] }>(
+      token,
+      readValuesUrl(spreadsheetId, range),
+    );
+    const raw = data.values?.[0]?.[0];
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((t: unknown): t is Tag =>
+      typeof t === "object" && t !== null && "id" in t && "label" in t && "color" in t,
+    );
+  } catch {
+    return [];
+  }
+}
+
+export async function writeTagsCatalog(token: string, spreadsheetId: string, tags: Tag[]): Promise<void> {
+  const range = `${SHEET_NAMES.summary}!K1:K2`;
+  const url = `${SHEETS}/${spreadsheetId}/values/${encodeURIComponent(range)}?valueInputOption=USER_ENTERED`;
+  await googleFetch(token, url, {
+    method: "PUT",
+    body: JSON.stringify({ values: [["TAGS CATALOGUE"], [JSON.stringify(tags)]] }),
+  });
 }

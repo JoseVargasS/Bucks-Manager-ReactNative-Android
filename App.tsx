@@ -30,14 +30,17 @@ import {
 import {
   createBucksSpreadsheet,
   findCompatibleSheets,
+  isSheetTrashed,
   moveTransaction as moveGoogleTransaction,
   readSummaries,
+  readTagsCatalog,
   readTransactions,
   saveTransaction,
   insertTransactionAtRow,
   updateTransaction as updateGoogleTransaction,
   deleteTransaction as deleteGoogleTransaction,
   removeTagFromAllRows,
+  writeTagsCatalog,
 } from "@/api/googleWorkspace";
 import {
   getWorkspaceAccessToken as getWorkspaceAccessTokenBase,
@@ -52,7 +55,7 @@ import {
   removeHistoryEntry,
 } from "@/utils/history";
 import { isPinEnabled, savePin, verifyPin, clearPin } from "@/utils/pin";
-import { loadTags, migrateTransactionTags } from "@/utils/tags";
+import { loadTags, migrateTransactionTags, saveTags, labelForTagId } from "@/utils/tags";
 import {
   deleteFinancialCache,
   loadFinancialCache,
@@ -309,6 +312,7 @@ function AppContent() {
   const [accessToken, setAccessToken] = useState("");
   const [spreadsheetId, setSpreadsheetId] = useState("");
   const [bootstrapping, setBootstrapping] = useState(true);
+  const [rehydratingCache, setRehydratingCache] = useState(false);
   const [loading, setLoading] = useState(false);
   const [accountTransition, setAccountTransition] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -448,6 +452,17 @@ function AppContent() {
     if (!bootstrapping) hideAsync().catch(() => undefined);
   }, [bootstrapping]);
 
+  const prevTagsRef = useRef(tagsList);
+  useEffect(() => {
+    if (!accessToken || !spreadsheetId) return;
+    if (prevTagsRef.current === tagsList) return;
+    prevTagsRef.current = tagsList;
+    const timer = setTimeout(() => {
+      writeTagsCatalog(accessToken, spreadsheetId, tagsList).catch(() => undefined);
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, [tagsList, accessToken, spreadsheetId]);
+
   const lastTabWidthRef = useRef(tabWidth);
   useEffect(() => {
     if (lastTabWidthRef.current === tabWidth) return;
@@ -485,6 +500,7 @@ function AppContent() {
       syncAccountInfo();
       const cached = await loadFinancialCache(sheetId);
       if (cached) {
+        setRehydratingCache(true);
         applyFinancialState(
           cached.transactions,
           cached.summaries,
@@ -524,6 +540,13 @@ function AppContent() {
       setAccessToken(activeToken);
       syncAccountInfo();
       await setItemAsync(TOKEN_KEY, activeToken);
+      if (hadCache) {
+        const trashed = await isSheetTrashed(activeToken, sheetId);
+        if (trashed) {
+          await clearStaleSession();
+          return;
+        }
+      }
       await reloadFromGoogle(activeToken, sheetId, false);
     } catch (error) {
       if (authErr(error)) {
@@ -534,12 +557,20 @@ function AppContent() {
           await disconnectGoogle();
         }
       } else if (shouldRescanForSheetError(error)) {
+        if (hadCache) {
+          await Promise.all([
+            deleteItemAsync(SHEET_KEY),
+            deleteFinancialCache(),
+          ]).catch(() => undefined);
+          resetFinancialState();
+        }
         await connectGoogleWorkspace(activeToken, "", true);
       } else if (!hadCache) {
         setSyncError(errMsg(error));
       }
     } finally {
       setIsFirstRemoteLoad(false);
+      setRehydratingCache(false);
     }
   }
 
@@ -948,7 +979,7 @@ function AppContent() {
     forceFresh = false,
   ) {
     if (!token || !sheetId) return;
-    if (pendingSyncRef.current && !forceFresh) return;
+    if (pendingSyncRef.current) return;
     if (reloadPromiseRef.current) {
       if (!forceFresh) return reloadPromiseRef.current;
       await reloadPromiseRef.current.catch(() => undefined);
@@ -959,11 +990,12 @@ function AppContent() {
       setSyncError("");
       if (!hasLocalDataRef.current && !transactions.length)
         setIsFirstRemoteLoad(true);
-      const [tx, summary] = await Promise.all([
+      const [tx, summary, sheetTags] = await Promise.all([
         readTransactions(token, sheetId),
         readSummaries(token, sheetId),
+        readTagsCatalog(token, sheetId),
       ]);
-      if (pendingSyncRef.current && !forceFresh) {
+      if (pendingSyncRef.current) {
         if (showLoader) setLoading(false);
         setIsSyncing(false);
         setIsFirstRemoteLoad(false);
@@ -980,6 +1012,46 @@ function AppContent() {
         : calculateSummaries(tx, nextFreqIncome);
       const syncedAt = new Date().toISOString();
       applyFinancialState(tx, nextSummaries, nextFreqIncome, syncedAt);
+      let currentTags = tagsList;
+      if (sheetTags.length) {
+        const byId = new Map(currentTags.map(t => [t.id, t]));
+        for (const st of sheetTags) {
+          const existing = byId.get(st.id);
+          if (!existing || !st.id.startsWith("default-")) {
+            byId.set(st.id, st);
+          } else if (existing) {
+            byId.set(st.id, { ...existing, color: st.color });
+          }
+        }
+        const merged = Array.from(byId.values());
+        if (merged.length !== currentTags.length || merged.some((t, i) => t.color !== currentTags[i]?.color)) {
+          currentTags = merged;
+          saveTags(merged).catch(() => undefined);
+          setTagsList(merged);
+        }
+      }
+      const existingTagIds = new Set(currentTags.map(t => t.id));
+      let colorIdx = 0;
+      const addedTags: Tag[] = [];
+      for (const t of tx) {
+        if (!t.tags) continue;
+        for (const tagId of t.tags) {
+          if (tagId && tagId.startsWith("custom-") && !existingTagIds.has(tagId)) {
+            existingTagIds.add(tagId);
+            addedTags.push({
+              id: tagId,
+              label: labelForTagId(tagId, currentTags),
+              color: colors.tagColors[colorIdx % colors.tagColors.length],
+            });
+            colorIdx++;
+          }
+        }
+      }
+      if (addedTags.length) {
+        const merged = [...currentTags, ...addedTags];
+        saveTags(merged).catch(() => undefined);
+        setTagsList(merged);
+      }
       persistFinancialState(
         tx,
         nextSummaries,
@@ -1025,8 +1097,6 @@ function AppContent() {
   }, [setSelectedRows]);
 
   function syncGoogleInBackground(task: (freshToken: string) => Promise<void>, title: string) {
-    pendingSyncRef.current = false;
-    setPendingSync(false);
     setIsSyncing(true);
     setSyncError("");
     syncQueueRef.current = syncQueueRef.current
@@ -1081,61 +1151,57 @@ function AppContent() {
     }
     const currentTransactions = transactions;
     const currentFreqIncome = freqIncome;
+
+    const optimistic = buildTransactionFromDraft(
+      currentDraft,
+      currentEdit?.rowId || currentTransactions.length + 2,
+    );
+    const next = currentEdit
+      ? renumberTransactions(
+          insertChronologically(
+            currentTransactions.filter(
+              (tx) => tx.rowId !== currentEdit.rowId,
+            ),
+            optimistic,
+          ),
+        )
+      : renumberTransactions(
+          insertChronologically(currentTransactions, optimistic),
+        );
+    const affectedMonths = currentEdit
+      ? uniqueMonthKeys([currentEdit, optimistic])
+      : uniqueMonthKeys([optimistic]);
+    const nextSummaries = recalculateSummariesForMonths(
+      next,
+      currentFreqIncome,
+      affectedMonths,
+      summaries,
+    );
+    setTransactions(next);
+    setSummaries(nextSummaries);
+    persistFinancialState(next, nextSummaries, currentFreqIncome, undefined, spreadsheetId);
+
     const token = accessToken;
     const sheetId = spreadsheetId;
     if (token && sheetId) {
       pendingSyncRef.current = true;
+      syncGoogleInBackground(
+        async (freshToken) => {
+          if (currentEdit) {
+            await updateGoogleTransaction(
+              freshToken,
+              sheetId,
+              currentEdit.rowId,
+              currentDraft,
+            );
+          } else {
+            await saveTransaction(freshToken, sheetId, currentDraft);
+          }
+          await reloadFromGoogle(freshToken, sheetId, false, true);
+        },
+        currentEdit ? copy.editRecord : copy.newRecord,
+      );
     }
-
-    requestAnimationFrame(() => {
-      const optimistic = buildTransactionFromDraft(
-        currentDraft,
-        currentEdit?.rowId || currentTransactions.length + 2,
-      );
-      const next = currentEdit
-        ? renumberTransactions(
-            insertChronologically(
-              currentTransactions.filter(
-                (tx) => tx.rowId !== currentEdit.rowId,
-              ),
-              optimistic,
-            ),
-          )
-        : renumberTransactions(
-            insertChronologically(currentTransactions, optimistic),
-          );
-      const affectedMonths = currentEdit
-        ? uniqueMonthKeys([currentEdit, optimistic])
-        : uniqueMonthKeys([optimistic]);
-      const nextSummaries = recalculateSummariesForMonths(
-        next,
-        currentFreqIncome,
-        affectedMonths,
-        summaries,
-      );
-      setTransactions(next);
-      setSummaries(nextSummaries);
-      persistFinancialState(next, nextSummaries, currentFreqIncome);
-
-      if (token && sheetId) {
-        syncGoogleInBackground(
-          async (freshToken) => {
-            if (currentEdit) {
-              await updateGoogleTransaction(
-                freshToken,
-                sheetId,
-                currentEdit.rowId,
-                currentDraft,
-              );
-            } else {
-              await saveTransaction(freshToken, sheetId, currentDraft);
-            }
-            await reloadFromGoogle(freshToken, sheetId, false, true);
-          },
-          currentEdit ? copy.editRecord : copy.newRecord,
-        );
-      }
-    });
     return true;
   }
 
@@ -1172,13 +1238,14 @@ function AppContent() {
     );
     setTransactions(next);
     setSummaries(nextSummaries);
-    persistFinancialState(next, nextSummaries, freqIncome);
+    persistFinancialState(next, nextSummaries, freqIncome, undefined, spreadsheetId);
     addHistoryEntry({ action: "delete", transaction: tx })
       .then((entry) => {
         setHistoryEntries((prev) => [entry, ...prev]);
       })
       .catch(() => undefined);
     if (accessToken && spreadsheetId) {
+      pendingSyncRef.current = true;
       syncGoogleInBackground(async (freshToken) => {
         await deleteGoogleTransaction(freshToken, spreadsheetId, tx.rowId);
         await reloadFromGoogle(freshToken, spreadsheetId, false, true);
@@ -1204,7 +1271,7 @@ function AppContent() {
     );
     setTransactions(next);
     setSummaries(nextSummaries);
-    persistFinancialState(next, nextSummaries, freqIncome);
+    persistFinancialState(next, nextSummaries, freqIncome, undefined, spreadsheetId);
     setSelectedRows([]);
     for (const tx of selected) {
       addHistoryEntry({ action: "delete", transaction: tx })
@@ -1214,6 +1281,7 @@ function AppContent() {
         .catch(() => undefined);
     }
     if (accessToken && spreadsheetId) {
+      pendingSyncRef.current = true;
       syncGoogleInBackground(async (freshToken) => {
         for (const tx of selected)
           await deleteGoogleTransaction(freshToken, spreadsheetId, tx.rowId);
@@ -1239,6 +1307,7 @@ function AppContent() {
     async (tx: Transaction, direction: "up" | "down") => {
       try {
         if (accessToken && spreadsheetId) {
+          pendingSyncRef.current = true;
           syncGoogleInBackground(async (freshToken) => {
             await moveGoogleTransaction(
               freshToken,
@@ -1265,7 +1334,7 @@ function AppContent() {
         );
         setTransactions(moved);
         setSummaries(nextSummaries);
-        persistFinancialState(moved, nextSummaries, freqIncome);
+        persistFinancialState(moved, nextSummaries, freqIncome, undefined, spreadsheetId);
       } catch (error) {
         Alert.alert(
           copy.moveRecord,
@@ -1327,8 +1396,9 @@ function AppContent() {
     );
     setTransactions(restored);
     setSummaries(nextSummaries);
-    persistFinancialState(restored, nextSummaries, freqIncome);
+    persistFinancialState(restored, nextSummaries, freqIncome, undefined, spreadsheetId);
     if (accessToken && spreadsheetId) {
+      pendingSyncRef.current = true;
       const draft: TransactionDraft = {
         date: formatDateToISO(entry.transaction.rawDate),
         amount: entry.transaction.formula
@@ -1560,14 +1630,6 @@ function AppContent() {
   );
 
   // --- Render ---
-  if (
-    bootstrapping ||
-    accountTransition ||
-    (accessToken && isFirstRemoteLoad && !hasLocalData)
-  ) {
-    return <StartupSplash />;
-  }
-
   if (!accessToken) {
     return (
       <View style={[styles.safe, { backgroundColor: colors.bg }]}>
@@ -1585,6 +1647,15 @@ function AppContent() {
         />
       </View>
     );
+  }
+
+  if (
+    bootstrapping ||
+    accountTransition ||
+    rehydratingCache ||
+    (accessToken && isFirstRemoteLoad && !hasLocalData)
+  ) {
+    return <StartupSplash />;
   }
 
   if (pinLoading) {
