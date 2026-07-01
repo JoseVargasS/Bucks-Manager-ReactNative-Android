@@ -166,21 +166,55 @@ The debug/release SHA-1 in Google Cloud must match the keystore used to build th
 
 ```text
 App.tsx                         Main app composition and runtime state
+src/api/googleAuth.ts           Google Sign-In and token management
 src/api/googleWorkspace.ts      Google Drive and Sheets integration
+src/api/sheetFormats.ts         Sheet date/number/header parsing
 src/domain/bucksLogic.ts        Sheet contract, summaries, dates, and transaction rules
 src/data/localCache.ts          Local-first financial cache
 src/utils/transactions.ts       Transaction filtering, sorting, and date grouping
-src/components/                 Screens, layout, modals, and reusable UI
-src/styles/globalStyles.ts      Shared React Native style definitions
-src/theme/colors.ts             Light/dark palette tokens
-tests/performance.test.mjs      Focused order, range, and request-count checks
-tests/google-workspace.test.mjs Google API parsing, errors, creation, and write flows
-tests/native-storage.test.mjs   SecureStore and FileSystem persistence flows
+src/utils/tags.ts               Tag catalogue, migration, and resolution
+src/utils/history.ts            Transaction history tracking
+src/utils/pin.ts                PIN storage and verification
+src/utils/errorHandler.ts       Logging and error normalization
+src/components/screens/         Dashboard, Expenses, Settings, Login, PIN, Search, Summary
+src/components/modals/          Detail, Export, History, Search, TagEditor, Transaction
+src/components/layout/          BottomNav, Header, PeriodControls
+src/components/ui/              StatCard, Kpi, BarChart, PieChart, Select, CalendarPicker
+src/theme/                      ThemeContext, colors, constants
+src/styles/baseStyles.ts        Shared React Native style definitions
+tests/                          Unit tests (bucksLogic, error-handler, google-workspace, etc.)
 .github/workflows/ci.yml        Push and pull-request validation
 scripts/run-android.ps1         Physical-device Android run helper
 scripts/check-format.mjs        Dependency-free source whitespace check
 CONTEXT.md                      Runtime map and performance invariants
+.codebase-memory/               Optional shared knowledge-graph artifact
+.codegraph/                     Local codegraph index (regenerable)
 ```
+
+## Codebase Knowledge Graph
+
+The project has two optional MCP-powered knowledge graphs that AI agents use for fast code navigation — they are not required to build or run the app.
+
+### codebase-memory-mcp
+
+14 MCP tools including `search_graph`, `trace_path`, `query_graph`, `get_architecture`, `get_code_snippet`, and dead-code detection. Indexes 158 languages with hybrid LSP type resolution.
+
+The shared artifact at `.codebase-memory/graph.db.zst` lets teammates skip the full reindex:
+
+```bash
+# Index this project (first time)
+codebase-memory-mcp index --path .
+```
+
+On a fresh clone the binary detects the artifact, decompresses it, and runs an incremental diff — ready in seconds.
+
+### codegraph
+
+Single MCP tool `codegraph_explore` — answers structural questions in natural language. Local index lives in `.codegraph/` (gitignored, regenerable via `codegraph serve`).
+
+### Auto-configuration
+
+Both servers are configured as MCP entries in Claude Code, Codex CLI, Gemini CLI, VS Code, Cursor, KiloCode, and OpenCode. Restart the agent after cloning and the tools are available immediately.
 
 ## Performance Invariants
 
