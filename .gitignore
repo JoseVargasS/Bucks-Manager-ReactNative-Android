@@ -41,9 +41,6 @@ DESIGN.md
 .env
 .env*.local
 
-# graphify knowledge graph (regenerable)
-graphify-out/
-
 # codegraph knowledge graph (regenerable)
 .codegraph/
 
