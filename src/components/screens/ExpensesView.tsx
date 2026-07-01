@@ -16,6 +16,10 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import type {
+  NativeScrollEvent,
+  NativeSyntheticEvent,
+} from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { formatMoney } from "@/domain/bucksLogic";
 import {
@@ -573,7 +577,7 @@ export const ExpensesView = memo(function ExpensesView({
         onMomentumScrollBegin={closeTagBubble}
         onScroll={Animated.event(
           [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-          { useNativeDriver: false, listener: (e) => setScrolled(e.nativeEvent.contentOffset.y > 2) },
+          { useNativeDriver: false, listener: (e: NativeSyntheticEvent<NativeScrollEvent>) => setScrolled(e.nativeEvent.contentOffset.y > 2) },
         )}
       />
 
