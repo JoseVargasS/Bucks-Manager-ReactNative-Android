@@ -1,0 +1,2 @@
+# Binary artifact — teammates don't re-index
+.codebase-memory/** merge=ours
