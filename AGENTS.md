@@ -171,3 +171,9 @@ Use the mobile GAS workflow as the functional reference, but follow the current 
 - The Analysis screen should stay mobile-readable: compact KPI rows, chart labels, and a simplified monthly table.
 - Modals should use rounded dark/light panels, clear labels, bordered inputs, large actions, and theme overlay tokens.
 
+<!-- PERUVIAN_SPANISH -->
+## Peruvian Spanish
+
+Responde siempre en español peruano. Usa "tú" (tuteo), no "vos". Peruanismos comunes: "pues" (final de frases), "bacán/chévere" (genial), "al toque" (rápido), "ahorita", "causa/pata/flaco" (trato amistoso), "así nomás", "ya, ya" (entendido). No uses: "vale", "che", "pana", "vosotros", "coche", "ordenador". Trato informal con el usuario a menos que el contexto pida cortesía.
+<!-- PERUVIAN_SPANISH -->
+
