@@ -80,15 +80,21 @@ export const DashboardView = memo(function DashboardView({
     let untaggedTotal = 0;
     let totalExpense = 0;
     expenseTransactions.forEach((tx) => {
-      const absVal = Math.abs(tx.amount);
-      totalExpense += absVal;
-      if (tx.tags && tx.tags.length > 0) {
-        tx.tags.forEach((tagId) => {
-          tagTotals[tagId] = (tagTotals[tagId] || 0) + absVal / (tx.tags!.length);
-        });
-      } else {
-        untaggedTotal += absVal;
-      }
+      const lineItems = (tx.lineItems && tx.lineItems.length > 0)
+        ? tx.lineItems
+        : [{ amount: String(tx.amount), description: tx.detail ?? "", tags: tx.tags ?? [] }];
+      lineItems.forEach((li) => {
+        const liAmount = Math.abs(parseFloat(String(li.amount)));
+        if (!Number.isFinite(liAmount) || liAmount === 0) return;
+        totalExpense += liAmount;
+        if (li.tags && li.tags.length > 0) {
+          li.tags.forEach((tagId) => {
+            tagTotals[tagId] = (tagTotals[tagId] || 0) + liAmount;
+          });
+        } else {
+          untaggedTotal += liAmount;
+        }
+      });
     });
     if (totalExpense === 0) return [];
 
