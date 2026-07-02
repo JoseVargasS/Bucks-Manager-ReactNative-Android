@@ -51,7 +51,7 @@ import {
   removeHistoryEntry,
 } from "@/utils/history";
 
-import { loadTags, migrateTransactionTags, saveTags, labelForTagId } from "@/utils/tags";
+import { loadTags, mergeTagsFromSheet, migrateTransactionTags, saveTags } from "@/utils/tags";
 import {
   deleteFinancialCache,
   loadFinancialCache,
@@ -702,45 +702,10 @@ function AppContent() {
         : calculateSummaries(tx, nextFreqIncome);
       const syncedAt = new Date().toISOString();
       applyFinancialState(tx, nextSummaries, nextFreqIncome, syncedAt);
-      let currentTags = tagsList;
-      if (sheetTags.length) {
-        const byId = new Map(currentTags.map(t => [t.id, t]));
-        for (const st of sheetTags) {
-          const existing = byId.get(st.id);
-          if (!existing || !st.id.startsWith("default-")) {
-            byId.set(st.id, st);
-          } else if (existing) {
-            byId.set(st.id, { ...existing, color: st.color });
-          }
-        }
-        const merged = Array.from(byId.values());
-        if (merged.length !== currentTags.length || merged.some((t, i) => t.color !== currentTags[i]?.color)) {
-          currentTags = merged;
-          saveTags(merged).catch(() => undefined);
-          setTagsList(merged);
-        }
-      }
-      const existingTagIds = new Set(currentTags.map(t => t.id));
-      let colorIdx = 0;
-      const addedTags: Tag[] = [];
-      for (const t of tx) {
-        if (!t.tags) continue;
-        for (const tagId of t.tags) {
-          if (tagId && tagId.startsWith("custom-") && !existingTagIds.has(tagId)) {
-            existingTagIds.add(tagId);
-            addedTags.push({
-              id: tagId,
-              label: labelForTagId(tagId, currentTags),
-              color: colors.tagColors[colorIdx % colors.tagColors.length],
-            });
-            colorIdx++;
-          }
-        }
-      }
-      if (addedTags.length) {
-        const merged = [...currentTags, ...addedTags];
-        saveTags(merged).catch(() => undefined);
-        setTagsList(merged);
+      const mergedTags = mergeTagsFromSheet(tagsList, sheetTags, tx, colors.tagColors);
+      if (mergedTags !== tagsList) {
+        saveTags(mergedTags).catch(() => undefined);
+        setTagsList(mergedTags);
       }
       persistFinancialState(
         tx,

@@ -138,6 +138,44 @@ export function migrateTagReferences(
   return migrated;
 }
 
+export function mergeTagsFromSheet(
+  currentTags: Tag[],
+  sheetTags: Tag[],
+  transactions: Transaction[],
+  tagColors: string[],
+): Tag[] {
+  const byId = new Map(currentTags.map((t) => [t.id, t]));
+  for (const st of sheetTags) {
+    const existing = byId.get(st.id);
+    if (existing && st.id.startsWith("default-")) {
+      byId.set(st.id, { ...existing, color: st.color });
+    } else {
+      byId.set(st.id, st);
+    }
+  }
+  const existingIds = new Set(currentTags.map((t) => t.id));
+  let colorIdx = 0;
+  const added: Tag[] = [];
+  for (const t of transactions) {
+    if (!t.tags) continue;
+    for (const tagId of t.tags) {
+      if (tagId && tagId.startsWith("custom-") && !existingIds.has(tagId)) {
+        existingIds.add(tagId);
+        added.push({
+          id: tagId,
+          label: labelForTagId(tagId, currentTags),
+          color: tagColors[colorIdx % tagColors.length],
+        });
+        colorIdx++;
+      }
+    }
+  }
+  const result = added.length ? [...Array.from(byId.values()), ...added] : Array.from(byId.values());
+  return result.length === currentTags.length && result.every((t, i) => t === currentTags[i])
+    ? currentTags
+    : result;
+}
+
 export function migrateTransactionTags(transactions: Transaction[], tagsList: Tag[]): Transaction[] {
   if (!transactions.length || !tagsList.length) return transactions;
   let changed = false;
