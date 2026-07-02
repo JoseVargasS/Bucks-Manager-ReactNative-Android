@@ -1,12 +1,13 @@
 import type { SearchFilters, SummaryRow, Transaction, TransactionDraft, TransactionType } from "@/types";
 import { MONTH_NAMES_EN } from "@/i18n";
+import { getDraftAmountValue, isMathFormula, normalizeAmountExpression } from "@/utils/expressionParser";
+import { formatDateForSheet, getMonthYear, isValidDraftDate, parseCreatedAtMs, parseLocalDate, monthYearToDate } from "@/utils/dateUtils";
 
 export const SHEET_NAMES = {
   transactions: "INCOME AND EXPENSES",
   summary: "MONTHLY SUMMARY",
 };
 
-// Sheets locale controls formula names/separators; app language and currency are device-detected separately.
 export const DEFAULT_SPREADSHEET_LOCALE = "en_US";
 
 export const TRANSACTION_TYPES: TransactionType[] = [
@@ -18,144 +19,12 @@ export const TRANSACTION_TYPES: TransactionType[] = [
 
 export const MONTH_NAMES = MONTH_NAMES_EN;
 
-const SHORT_MONTHS = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
-
-/** Formatea un valor numérico como moneda con signo explícito: "+ S/ 100.00" o "- S/ 50.00" */
 export function formatMoney(value: number, symbol = "S/", decimals = 2): string {
   const n = Number(value) || 0;
   const sign = n >= 0 ? "+ " : "- ";
   return `${sign}${symbol} ${Math.abs(n).toFixed(decimals)}`;
 }
 
-/** Convierte un Date o string ISO a formato YYYY-MM-DD */
-export function formatDateToISO(date: Date | string): string {
-  const d = date instanceof Date ? date : new Date(date);
-  if (Number.isNaN(d.getTime())) return "";
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
-
-/** Convierte Date al formato usado en Sheets: DD-mmm-YY (ej: 15-jan-26) */
-export function formatDateForSheet(date: Date): string {
-  return `${String(date.getDate()).padStart(2, "0")}-${SHORT_MONTHS[date.getMonth()]}-${String(date.getFullYear()).slice(-2)}`;
-}
-
-// Accept both English and legacy Spanish short month abbreviations when parsing
-const MONTH_ABBR: Record<string, number> = {
-  jan: 0, ene: 0,
-  feb: 1,
-  mar: 2,
-  apr: 3, abr: 3,
-  may: 4,
-  jun: 5,
-  jul: 6,
-  aug: 7, ago: 7,
-  sep: 8,
-  oct: 9,
-  nov: 10,
-  dec: 11, dic: 11,
-};
-
-/** Parsea fecha "15-jan-26" o "15-ene-26" → Date | null */
-export function parseSpanishDate(value: string): Date | null {
-  const parts = value.split("-");
-  if (parts.length !== 3) return null;
-  const month = MONTH_ABBR[parts[1].toLowerCase()];
-  if (month === undefined) return null;
-  const day = Number(parts[0]);
-  let year = Number(parts[2]);
-  if (!Number.isInteger(day) || !Number.isInteger(year) || day < 1) return null;
-  if (year >= 0 && year < 100) year += 2000;
-  const date = new Date(year, month, day);
-  return date.getFullYear() === year && date.getMonth() === month && date.getDate() === day
-    ? date
-    : null;
-}
-
-/** Devuelve "Mes Año" para un Date dado (ej: "Enero 2026") */
-export function getMonthYear(date: Date): string {
-  return `${MONTH_NAMES[date.getMonth()]} ${date.getFullYear()}`;
-}
-
-/** Evalúa una expresión matemática (+, -, *, /, paréntesis) con sanitización previa */
-export function calculateExpression(expression: string): number {
-  const clean = expression.replace(/[^0-9+\-*/().\s]/g, "");
-  if (!clean.trim()) return 0;
-  try {
-    return parseAddSub(clean, { pos: 0 });
-  } catch {
-    return 0;
-  }
-}
-
-function parseAddSub(expr: string, ctx: { pos: number }): number {
-  let result = parseMulDiv(expr, ctx);
-  while (ctx.pos < expr.length) {
-    const ch = expr[ctx.pos];
-    if (ch === "+" || ch === "-") {
-      ctx.pos++;
-      const right = parseMulDiv(expr, ctx);
-      result = ch === "+" ? result + right : result - right;
-    } else break;
-  }
-  return result;
-}
-
-function parseMulDiv(expr: string, ctx: { pos: number }): number {
-  let result = parsePrimary(expr, ctx);
-  while (ctx.pos < expr.length) {
-    const ch = expr[ctx.pos];
-    if (ch === "*" || ch === "/") {
-      ctx.pos++;
-      const right = parsePrimary(expr, ctx);
-      const div = ch === "/" ? result / right : result * right;
-      result = Number.isFinite(div) ? div : 0;
-    } else break;
-  }
-  return result;
-}
-
-function parsePrimary(expr: string, ctx: { pos: number }): number {
-  skipSpaces(expr, ctx);
-  if (ctx.pos < expr.length && expr[ctx.pos] === "(") {
-    ctx.pos++;
-    const result = parseAddSub(expr, ctx);
-    skipSpaces(expr, ctx);
-    if (ctx.pos < expr.length && expr[ctx.pos] === ")") ctx.pos++;
-    return result;
-  }
-  let sign = 1;
-  if (ctx.pos < expr.length && expr[ctx.pos] === "+") { ctx.pos++; }
-  else if (ctx.pos < expr.length && expr[ctx.pos] === "-") { sign = -1; ctx.pos++; }
-  skipSpaces(expr, ctx);
-  if (ctx.pos < expr.length && expr[ctx.pos] === "(") {
-    ctx.pos++;
-    const result = parseAddSub(expr, ctx);
-    skipSpaces(expr, ctx);
-    if (ctx.pos < expr.length && expr[ctx.pos] === ")") ctx.pos++;
-    return sign * result;
-  }
-  const start = ctx.pos;
-  while (ctx.pos < expr.length && /[\d.]/.test(expr[ctx.pos])) ctx.pos++;
-  const num = Number(expr.slice(start, ctx.pos));
-  return Number.isFinite(num) ? sign * num : 0;
-}
-
-function skipSpaces(expr: string, ctx: { pos: number }) {
-  while (ctx.pos < expr.length && expr[ctx.pos] === " ") ctx.pos++;
-}
-
-/** Elimina el prefijo "=" de una expresión de monto */
-export function normalizeAmountExpression(value: string): string {
-  return value.trim().replace(/^=/, "").trim();
-}
-
-/** Detecta si el valor es una fórmula que debe ser evaluada */
-function isMathExpression(value: string): boolean {
-  const expression = normalizeAmountExpression(value);
-  return value.trim().startsWith("=") || /[+*/()]/.test(expression) || /.\s*-/.test(expression);
-}
-
-/** Aplica signo al monto según tipo: gastos → negativo, ingresos → positivo */
 export function normalizeDraftAmount(draft: TransactionDraft): number {
   const calculated = getDraftAmountValue(draft);
   if (draft.type.startsWith("GASTO")) return -Math.abs(calculated);
@@ -173,34 +42,6 @@ export function isValidTransactionDraft(draft: TransactionDraft): boolean {
   );
 }
 
-function getDraftAmountValue(draft: TransactionDraft): number {
-  return Number(calculateExpression(normalizeAmountExpression(draft.amount)));
-}
-
-function isValidDraftDate(value: string): boolean {
-  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  if (!match) return false;
-  const year = Number(match[1]);
-  const month = Number(match[2]);
-  const day = Number(match[3]);
-  const date = new Date(`${value}T00:00:00`);
-  return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day;
-}
-
-/** Convierte createdAt en ms desde medianoche (para formato HH:MM:SS) o desde epoch (para ISO) */
-export function parseCreatedAtMs(createdAt?: string): number {
-  if (!createdAt) return 0;
-  const timeMatch = createdAt.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
-  if (timeMatch) {
-    const h = parseInt(timeMatch[1], 10);
-    const m = parseInt(timeMatch[2], 10);
-    const s = timeMatch[3] ? parseInt(timeMatch[3], 10) : 0;
-    return h * 3600000 + m * 60000 + s * 1000;
-  }
-  return Date.parse(createdAt) || 0;
-}
-
-/** Construye un Transaction completo a partir de un borrador y un rowId */
 export function buildTransactionFromDraft(draft: TransactionDraft, rowId: number): Transaction {
   if (!isValidTransactionDraft(draft)) throw new Error("Invalid transaction draft");
   const date = new Date(`${draft.date}T00:00:00`);
@@ -213,7 +54,7 @@ export function buildTransactionFromDraft(draft: TransactionDraft, rowId: number
     rawDateMs: date.getTime(),
     createdAtMs: parseCreatedAtMs(createdAt),
     amount,
-    formula: isMathExpression(draft.amount) ? normalizeAmountExpression(draft.amount) : "",
+    formula: isMathFormula(draft.amount) ? normalizeAmountExpression(draft.amount) : "",
     detail: draft.detail.trim(),
     type: draft.type,
     createdAt,
@@ -221,7 +62,6 @@ export function buildTransactionFromDraft(draft: TransactionDraft, rowId: number
   };
 }
 
-/** Inserta una transacci�n en orden cronol�gico y renumera todos los rowId */
 export function insertChronologically(transactions: Transaction[], tx: Transaction): Transaction[] {
   const next = [...transactions];
   const targetMs = tx.rawDateMs ?? Date.parse(tx.rawDate);
@@ -242,6 +82,7 @@ export function insertChronologically(transactions: Transaction[], tx: Transacti
   else next.splice(index, 0, tx);
   return next.map((item, idx) => ({ ...item, rowId: idx + 2 }));
 }
+
 export function applySearch(
   transactions: Transaction[],
   filters: SearchFilters,
@@ -274,7 +115,6 @@ export function applySearch(
     .slice(0, 150);
 }
 
-/** Calcula el resumen de UN mes a partir de las transacciones de ese mes y el freqIncome persistido. */
 export function calculateMonthSummary(
   transactions: Transaction[],
   freqIncomeByMonth: Record<string, number>,
@@ -307,26 +147,11 @@ export function calculateMonthSummary(
   return row;
 }
 
-/** Devuelve el monthKey ("Marzo 2026") para una transacción */
 export function getTransactionMonthKey(tx: Transaction): string {
   const date = tx.rawDateMs != null ? new Date(tx.rawDateMs) : parseLocalDate(tx.rawDate);
   return getMonthYear(date);
 }
 
-/** Parsea una fecha ISO o YYYY-MM-DD como local midnight (evita corrimientos por zona UTC) */
-function parseLocalDate(rawDate: string): Date {
-  if (!rawDate) return new Date(NaN);
-  const isoMatch = rawDate.match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if (isoMatch) {
-    const year = Number(isoMatch[1]);
-    const month = Number(isoMatch[2]) - 1;
-    const day = Number(isoMatch[3]);
-    return new Date(year, month, day);
-  }
-  return new Date(rawDate);
-}
-
-/** Recalcula solo los summaries de los meses indicados, preservando el resto de un array previo */
 export function recalculateSummariesForMonths(
   transactions: Transaction[],
   freqIncomeByMonth: Record<string, number>,
@@ -357,14 +182,12 @@ export function recalculateSummariesForMonths(
   return updated;
 }
 
-/** Devuelve el conjunto único de monthKeys para un grupo de transacciones */
 export function uniqueMonthKeys(transactions: Transaction[]): string[] {
   const set = new Set<string>();
   transactions.forEach((tx) => set.add(getTransactionMonthKey(tx)));
   return Array.from(set);
 }
 
-/** Agrupa transacciones por mes y calcula totales para la vista RESUMEN POR MES */
 export function calculateSummaries(transactions: Transaction[], freqIncomeByMonth: Record<string, number>): SummaryRow[] {
   const byMonth = new Map<string, Transaction[]>();
   transactions.forEach((tx) => {
@@ -384,9 +207,6 @@ export function calculateSummaries(transactions: Transaction[], freqIncomeByMont
   return rows;
 }
 
-/** Convierte "Enero 2026" → Date del primer día de ese mes */
-function monthYearToDate(monthYear: string): Date {
-  const [monthName, year] = monthYear.split(" ");
-  const month = MONTH_NAMES.findIndex((name) => name.toLowerCase() === monthName.toLowerCase());
-  return new Date(Number(year), Math.max(0, month), 1);
-}
+// re-exports for backward compat
+export { calculateExpression, normalizeAmountExpression } from "@/utils/expressionParser";
+export { formatDateToISO, formatDateForSheet, parseSpanishDate, getMonthYear, parseCreatedAtMs } from "@/utils/dateUtils";
