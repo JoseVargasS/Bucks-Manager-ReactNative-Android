@@ -1,6 +1,6 @@
 import { registerHooks } from "node:module";
 import { resolve as pathResolve } from "node:path";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
@@ -72,11 +72,13 @@ const fileSystemUrl = moduleUrl(`
   export const writeAsStringAsync = (...args) => mock().writeAsStringAsync(...args);
   export const deleteAsync = (...args) => mock().deleteAsync(...args);
 `);
+const vectorIconsUrl = moduleUrl(`export default {};`);
 
 registerHooks({
   resolve(specifier, context, nextResolve) {
     if (specifier === "expo-secure-store") return { url: secureStoreUrl, shortCircuit: true };
     if (specifier === "expo-file-system/legacy") return { url: fileSystemUrl, shortCircuit: true };
+    if (specifier === "@expo/vector-icons/MaterialCommunityIcons") return { url: vectorIconsUrl, shortCircuit: true };
     if (specifier.startsWith("@/")) {
       const rel = specifier.slice(2);
       const candidates = [`${rel}.ts`, `${rel}.tsx`, `${rel}/index.ts`, `${rel}/index.tsx`];

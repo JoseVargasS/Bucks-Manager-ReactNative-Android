@@ -8,9 +8,7 @@ import {
 } from "react";
 import {
   Animated,
-  Modal,
   SectionList,
-  StyleSheet,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -18,23 +16,22 @@ import type {
   NativeScrollEvent,
   NativeSyntheticEvent,
 } from "react-native";
-import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { groupTransactionsByDate } from "@/utils/transactions";
-import { withAlpha } from "@/utils/helpers";
-import { tagTextColor } from "@/utils/tags";
 import { base } from "@/styles/baseStyles";
 import { expensesStyles } from "@/components/screens/ExpensesView.styles";
 import { txStyles } from "@/styles/transactionRow";
 
 const styles = { ...base, ...expensesStyles, ...txStyles };
 import { PeriodControls } from "@/components/layout/PeriodControls";
-import { dark, type Palette } from "@/theme/colors";
+import { type Palette } from "@/theme/colors";
 import { type Tag, type Transaction } from "@/types";
 import { type UiCopy } from "@/i18n";
 import { useModalTransition } from "@/components/ui/useModalTransition";
 import { Text } from "@/components/ui/AppText";
 import { useTagMaps } from "@/hooks/useTagMaps";
-import { TransactionRow, type TagBubble, type TagButtonRef } from "@/components/screens/TransactionRow";
+import { TransactionRow, type TagButtonRef } from "@/components/screens/TransactionRow";
+import { SelectionBar } from "@/components/screens/SelectionBar";
+import { TagBubblePopup, type TagBubble } from "@/components/screens/TagBubble";
 
 type TransactionSection = {
   key: string;
@@ -370,147 +367,27 @@ export const ExpensesView = memo(function ExpensesView({
       )}
 
       {selectedCount > 0 && (
-        <View
-          style={[
-            styles.selectionBar,
-            {
-              position: "absolute",
-              left: 14,
-              right: 14,
-              bottom: 92,
-              overflow: "hidden",
-              borderWidth: 0.5,
-              borderColor: withAlpha(colors.borderStrong, colors.bg === dark.bg ? 0.26 : 0.54),
-              shadowColor: colors.shadow,
-              shadowOpacity: 0.25,
-              shadowRadius: 8,
-              shadowOffset: { width: 0, height: -3 },
-              elevation: 10,
-            },
-          ]}
-        >
-          <View
-            style={[
-              StyleSheet.absoluteFill,
-              {
-                backgroundColor: withAlpha(colors.card, colors.bg === dark.bg ? 0.85 : 0.82),
-              },
-            ]}
-          />
-          <Text style={[styles.selectionText, { color: colors.text, zIndex: 1 }]}>
-            {selectedCount === 1
-              ? copy.selectedOne
-              : `${selectedCount} ${copy.selectedMany}`}
-          </Text>
-          <View style={[styles.selectionActions, { zIndex: 1 }]}>
-            {selectedCount === 1 && selectedTx && (
-              <TouchableOpacity
-                style={[
-                  styles.selectionBtn,
-                  {
-                    backgroundColor: withAlpha(colors.editBg, 0.85),
-                    borderColor: colors.editBorder,
-                  },
-                ]}
-                onPress={() => onEdit(selectedTx)}
-              >
-                <MaterialCommunityIcons
-                  name="pencil"
-                  size={18}
-                  color={colors.blue}
-                />
-              </TouchableOpacity>
-            )}
-            <TouchableOpacity
-              style={[
-                styles.selectionBtn,
-                {
-                  backgroundColor: withAlpha(colors.expenseSoft, 0.85),
-                  borderColor: colors.red,
-                },
-              ]}
-              onPress={onDeleteSelected}
-            >
-              <MaterialCommunityIcons
-                name="trash-can"
-                size={18}
-                color={colors.red}
-              />
-            </TouchableOpacity>
-          </View>
-        </View>
+        <SelectionBar
+          selectedCount={selectedCount}
+          selectedTx={selectedTx}
+          copy={copy}
+          colors={colors}
+          onEdit={onEdit}
+          onDeleteSelected={onDeleteSelected}
+        />
       )}
 
-      {currentTagBubble && tagBubbleTransition.modalVisible && (
-        <Modal
-          visible
-          transparent
-          animationType="none"
-          onRequestClose={closeTagBubble}
-        >
-          <Animated.View
-            style={[{ flex: 1 }, tagBubbleTransition.containerStyle]}
-          >
-            <TouchableOpacity
-              activeOpacity={1}
-              onPress={closeTagBubble}
-              style={{ flex: 1 }}
-            >
-              <Animated.View
-                onStartShouldSetResponder={() => true}
-                style={[
-                  {
-                    position: "absolute",
-                    left: currentTagBubble.x,
-                    top: currentTagBubble.y,
-                    maxWidth: 170,
-                    borderRadius: 12,
-                    padding: 8,
-                    backgroundColor: colors.card,
-                    shadowColor: colors.shadow,
-                    shadowOpacity: 0.22,
-                    shadowRadius: 12,
-                    elevation: 8,
-                  },
-                  tagBubbleTransition.panelStyle,
-                ]}
-              >
-                <View
-                  style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}
-                >
-                  {currentTagBubble.tags.map((tag) => {
-                    const tc = tagColorMap[tag] || colors.muted;
-                    const textColor = tagTextColor(tc, colors);
-                    const tagLabel = tagLabelMap[tag] || tag;
-                    return (
-                      <View
-                        key={tag}
-                        style={{
-                          maxWidth: "100%",
-                          paddingHorizontal: 8,
-                          paddingVertical: 5,
-                          borderRadius: 7,
-                          backgroundColor: tc,
-                        }}
-                      >
-                        <Text
-                          numberOfLines={1}
-                          style={{
-                            fontSize: 11,
-                            fontWeight: "700",
-                            color: textColor,
-                          }}
-                        >
-                          {tagLabel}
-                        </Text>
-                      </View>
-                    );
-                  })}
-                </View>
-              </Animated.View>
-            </TouchableOpacity>
-          </Animated.View>
-        </Modal>
+      {currentTagBubble && (
+        <TagBubblePopup
+          data={currentTagBubble}
+          visible={tagBubbleTransition.modalVisible}
+          containerStyle={tagBubbleTransition.containerStyle}
+          panelStyle={tagBubbleTransition.panelStyle}
+          tagColorMap={tagColorMap}
+          tagLabelMap={tagLabelMap}
+          colors={colors}
+          onClose={closeTagBubble}
+        />
       )}
     </View>
   );

@@ -11,7 +11,7 @@ import { type Transaction, type MaterialIconName } from "@/types";
 import { type UiCopy } from "@/i18n";
 import { Text } from "@/components/ui/AppText";
 
-export type TagBubble = { x: number; y: number; tags: string[] };
+import { type TagBubble } from "@/components/screens/TagBubble";
 
 export type TagButtonRef = {
   measureInWindow?: (
