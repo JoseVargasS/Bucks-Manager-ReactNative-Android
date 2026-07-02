@@ -1,0 +1,213 @@
+import { useRef, useState } from "react";
+import { Alert } from "react-native";
+import Constants from "expo-constants";
+import { GoogleSignin } from "@react-native-google-signin/google-signin";
+import { deleteItemAsync, setItemAsync } from "expo-secure-store";
+import { getWorkspaceAccessToken as getWorkspaceAccessTokenBase, syncAccountInfo as syncAccountInfoBase } from "@/api/googleAuth";
+import { deleteFinancialCache } from "@/data/localCache";
+import { type UiCopy } from "@/i18n";
+import { TOKEN_KEY, SHEET_KEY } from "@/theme/constants";
+
+const GOOGLE_ANDROID_CLIENT_ID = Constants.expoConfig?.extra?.googleAndroidClientId || "";
+const GOOGLE_WEB_CLIENT_ID = Constants.expoConfig?.extra?.googleWebClientId || "";
+
+export interface SessionApi {
+  accessToken: string;
+  setAccessToken: (token: string) => void;
+  spreadsheetId: string;
+  setSpreadsheetId: (id: string) => void;
+  loading: boolean;
+  setLoading: (loading: boolean) => void;
+  accountTransition: boolean;
+  setAccountTransition: (v: boolean) => void;
+  isSyncing: boolean;
+  setIsSyncing: (v: boolean) => void;
+  isFirstRemoteLoad: boolean;
+  setIsFirstRemoteLoad: (v: boolean) => void;
+  syncError: string;
+  setSyncError: (e: string) => void;
+  authError: string;
+  setAuthError: (e: string) => void;
+  pendingSync: boolean;
+  setPendingSync: (v: boolean) => void;
+  accountInfo: { name?: string; email?: string } | null;
+  setAccountInfo: (info: { name?: string; email?: string } | null) => void;
+  rehydratingCache: boolean;
+  setRehydratingCache: (v: boolean) => void;
+  canConnect: boolean;
+  pendingSyncRef: React.MutableRefObject<boolean>;
+  runGoogleSignIn: (switchingAccount: boolean) => Promise<void>;
+  getWorkspaceAccessToken: (useCached: boolean) => Promise<{ accessToken: string | null }>;
+  syncAccountInfo: () => void;
+  teardownSession: (options?: { clearToken?: boolean; catchErrors?: boolean }) => void;
+  clearGoogleSession: () => Promise<void>;
+  disconnectGoogle: () => Promise<void>;
+  removeGoogleAccount: () => Promise<void>;
+  resetFinancialState: () => void;
+}
+
+export function useSession(
+  copy: UiCopy,
+  errMsg: (error: unknown) => string,
+  onResetFinancial: () => void,
+  onConnectGoogleWorkspace: (token: string, sheetId?: string, forceScan?: boolean) => Promise<void>,
+): SessionApi {
+  const [accessToken, setAccessToken] = useState("");
+  const [spreadsheetId, setSpreadsheetId] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [accountTransition, setAccountTransition] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [isFirstRemoteLoad, setIsFirstRemoteLoad] = useState(false);
+  const [syncError, setSyncError] = useState("");
+  const [authError, setAuthError] = useState("");
+  const [pendingSync, setPendingSync] = useState(false);
+  const [accountInfo, setAccountInfo] = useState<{ name?: string; email?: string } | null>(null);
+  const [rehydratingCache, setRehydratingCache] = useState(false);
+  const pendingSyncRef = useRef(false);
+
+  const canConnect = Boolean(GOOGLE_ANDROID_CLIENT_ID || GOOGLE_WEB_CLIENT_ID);
+
+  function getWorkspaceAccessToken(useCached: boolean) {
+    return getWorkspaceAccessTokenBase(useCached);
+  }
+
+  function syncAccountInfo() {
+    const info = syncAccountInfoBase();
+    if (info) setAccountInfo(info);
+  }
+
+  function teardownSession(options: { clearToken?: boolean; catchErrors?: boolean } = {}) {
+    const { clearToken = true, catchErrors = false } = options;
+    const cleanup = () => {
+      if (clearToken) setAccessToken("");
+      onResetFinancial();
+      setSpreadsheetId("");
+      setAccountInfo(null);
+      setSyncError("");
+      setAuthError("");
+      setPendingSync(false);
+      setIsSyncing(false);
+      pendingSyncRef.current = false;
+    };
+    const ops = catchErrors
+      ? Promise.all([
+          deleteItemAsync(TOKEN_KEY),
+          deleteItemAsync(SHEET_KEY),
+          deleteFinancialCache(),
+        ]).catch(() => undefined)
+      : Promise.all([
+          deleteItemAsync(TOKEN_KEY),
+          deleteItemAsync(SHEET_KEY),
+          deleteFinancialCache(),
+        ]);
+    void ops.then(cleanup);
+  }
+
+  function resetFinancialState() {
+    teardownSession({ clearToken: false });
+  }
+
+  async function clearGoogleSession() {
+    try {
+      await Promise.all([
+        deleteItemAsync(TOKEN_KEY),
+        deleteItemAsync(SHEET_KEY),
+        deleteFinancialCache(),
+      ]);
+    } finally {
+      setAccessToken("");
+      onResetFinancial();
+      setSpreadsheetId("");
+      setAccountInfo(null);
+      setSyncError("");
+      setAuthError("");
+      setPendingSync(false);
+      setIsSyncing(false);
+      pendingSyncRef.current = false;
+    }
+  }
+
+  async function disconnectGoogle() {
+    try {
+      await GoogleSignin.signOut();
+    } catch {
+      /* ok */
+    }
+    await clearGoogleSession();
+  }
+
+  async function removeGoogleAccount() {
+    setLoading(true);
+    setAccountTransition(true);
+    try {
+      await GoogleSignin.revokeAccess();
+      await clearGoogleSession();
+    } catch (error) {
+      Alert.alert("Google", errMsg(error));
+    } finally {
+      setLoading(false);
+      setAccountTransition(false);
+    }
+  }
+
+  async function runGoogleSignIn(switchingAccount: boolean) {
+    if (!GOOGLE_ANDROID_CLIENT_ID && !GOOGLE_WEB_CLIENT_ID) {
+      Alert.alert(copy.googleOAuth, copy.missingEnvCredentials);
+      return;
+    }
+    setLoading(true);
+    try {
+      await GoogleSignin.hasPlayServices({
+        showPlayServicesUpdateDialog: true,
+      });
+      if (switchingAccount) await GoogleSignin.signOut();
+      const response = await GoogleSignin.signIn();
+      if (response.type !== "success") return;
+      const tokens = await getWorkspaceAccessToken(true);
+      if (!tokens.accessToken) throw new Error(copy.googleSignInError);
+      if (switchingAccount) {
+        setAccountTransition(true);
+        await Promise.all([deleteItemAsync(SHEET_KEY), deleteFinancialCache()]);
+        teardownSession({ clearToken: false });
+      }
+      await setItemAsync(TOKEN_KEY, tokens.accessToken);
+      setAccessToken(tokens.accessToken);
+      setIsFirstRemoteLoad(true);
+      setSyncError("");
+      syncAccountInfo();
+      await onConnectGoogleWorkspace(tokens.accessToken, "", true);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : copy.googleSignInError;
+      const isDeveloperError = message.includes("DEVELOPER_ERROR") || message.includes("code: 10");
+      Alert.alert("Google", isDeveloperError ? copy.oauthConfigRejected : message);
+    } finally {
+      setLoading(false);
+      setIsFirstRemoteLoad(false);
+      setAccountTransition(false);
+    }
+  }
+
+  return {
+    accessToken, setAccessToken,
+    spreadsheetId, setSpreadsheetId,
+    loading, setLoading,
+    accountTransition, setAccountTransition,
+    isSyncing, setIsSyncing,
+    isFirstRemoteLoad, setIsFirstRemoteLoad,
+    syncError, setSyncError,
+    authError, setAuthError,
+    pendingSync, setPendingSync,
+    accountInfo, setAccountInfo,
+    rehydratingCache, setRehydratingCache,
+    canConnect,
+    pendingSyncRef,
+    runGoogleSignIn,
+    getWorkspaceAccessToken,
+    syncAccountInfo,
+    teardownSession,
+    clearGoogleSession,
+    disconnectGoogle,
+    removeGoogleAccount,
+    resetFinancialState,
+  };
+}

@@ -1,4 +1,4 @@
-import Constants from "expo-constants";
+
 import { BlurView } from "expo-blur";
 import { getItemAsync, setItemAsync, deleteItemAsync } from "expo-secure-store";
 import {
@@ -10,7 +10,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   Animated,
-  AppState,
   Easing,
   useWindowDimensions,
   View,
@@ -42,10 +41,7 @@ import {
   removeTagFromAllRows,
   writeTagsCatalog,
 } from "@/api/googleWorkspace";
-import {
-  getWorkspaceAccessToken as getWorkspaceAccessTokenBase,
-  syncAccountInfo as syncAccountInfoBase,
-} from "@/api/googleAuth";
+
 import { type ColorSchemePreference, getPalette } from "@/theme/colors";
 import { ThemeProvider, useTheme } from "@/theme/ThemeContext";
 import { getBlankDraft } from "@/utils/transactions";
@@ -54,7 +50,7 @@ import {
   addHistoryEntry,
   removeHistoryEntry,
 } from "@/utils/history";
-import { isPinEnabled, savePin, verifyPin, clearPin } from "@/utils/pin";
+
 import { loadTags, migrateTransactionTags, saveTags, labelForTagId } from "@/utils/tags";
 import {
   deleteFinancialCache,
@@ -109,7 +105,6 @@ import {
 import {
   ANIM_SPLASH_DURATION,
   ANIM_TAB_PAGER,
-  PIN_DELAY_MS,
   TOKEN_KEY,
   SHEET_KEY,
   TAB_ORDER,
@@ -119,6 +114,8 @@ import {
   usePreferences, CURRENCY_OPTIONS, getFontPickerOptions,
 } from "@/hooks/usePreferences";
 import { useExport } from "@/hooks/useExport";
+import { usePin } from "@/hooks/usePin";
+import { useSession } from "@/hooks/useSession";
 import { getErrorMessage, isAuthError, shouldRescanForSheetError } from "@/utils/errorHandler";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import {
@@ -131,10 +128,6 @@ import {
 preventAutoHideAsync().catch(() => undefined);
 setSplashOptions({ duration: ANIM_SPLASH_DURATION, fade: true });
 
-const GOOGLE_ANDROID_CLIENT_ID =
-  Constants.expoConfig?.extra?.googleAndroidClientId || "";
-const GOOGLE_WEB_CLIENT_ID =
-  Constants.expoConfig?.extra?.googleWebClientId || "";
 // ponytail: module-level promise chain serializes every Sheets mutation so a
 // fast edit cannot race with the reconcile read of an earlier edit. The chain
 // holds the in-flight task only; UI state lives in pendingSyncRef/setPendingSync.
@@ -279,21 +272,28 @@ function AppContent() {
     toggleSelection,
   } = fin;
   const [tab, setTab] = useState<Tab>("dashboard");
-  const [accessToken, setAccessToken] = useState("");
-  const [spreadsheetId, setSpreadsheetId] = useState("");
+  const session = useSession(copy, errMsg, resetFinancial, connectGoogleWorkspace);
+  const {
+    accessToken, setAccessToken,
+    spreadsheetId, setSpreadsheetId,
+    loading, setLoading,
+    accountTransition,
+    isSyncing, setIsSyncing,
+    isFirstRemoteLoad, setIsFirstRemoteLoad,
+    syncError, setSyncError,
+    authError, setAuthError,
+    pendingSync, setPendingSync,
+    accountInfo,
+    rehydratingCache, setRehydratingCache,
+    pendingSyncRef,
+    canConnect,
+    runGoogleSignIn, getWorkspaceAccessToken,
+    syncAccountInfo,
+    teardownSession,
+    disconnectGoogle, removeGoogleAccount,
+    resetFinancialState,
+  } = session;
   const [bootstrapping, setBootstrapping] = useState(true);
-  const [rehydratingCache, setRehydratingCache] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [accountTransition, setAccountTransition] = useState(false);
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [isFirstRemoteLoad, setIsFirstRemoteLoad] = useState(false);
-  const [syncError, setSyncError] = useState("");
-  const [authError, setAuthError] = useState("");
-  const [pendingSync, setPendingSync] = useState(false);
-  const [accountInfo, setAccountInfo] = useState<{
-    name?: string;
-    email?: string;
-  } | null>(null);
   const [historyEntries, setHistoryEntries] = useState<HistoryEntry[]>([]);
   const [historyVisible, setHistoryVisible] = useState(false);
   const {
@@ -308,18 +308,25 @@ function AppContent() {
   const [confirmConfig, setConfirmConfig] = useState<ConfirmConfig | null>(
     null,
   );
-  const [pinEnabled, setPinEnabledState] = useState(false);
-  const [pinVerified, setPinVerified] = useState(false);
-  const [pinLoading, setPinLoading] = useState(true);
-  const [pinSetupVisible, setPinSetupVisible] = useState(false);
-  const [pinWrong, setPinWrong] = useState(false);
-  const pinLockedRef = useRef(false);
+  const {
+    pinEnabled,
+    pinVerified,
+    pinLoading,
+    pinSetupVisible,
+    setPinSetupVisible,
+    pinWrong,
+    pinLockedRef,
+    restorePinState,
+    handlePinOpen,
+    handlePinSave,
+    handlePinVerify,
+  } = usePin(copy, errMsg);
+  const closePinSetup = useCallback(() => setPinSetupVisible(false), [setPinSetupVisible]);
   const transactionModalRef = useRef<TransactionModalHandle>(null);
   const detailModalRef = useRef<DetailModalHandle>(null);
   const searchModalRef = useRef<SearchModalHandle>(null);
   const optionSheetRef = useRef<OptionSheetHandle>(null);
   const reloadPromiseRef = useRef<Promise<void> | null>(null);
-  const pendingSyncRef = useRef(false);
   const tabRef = useRef<Tab>(tab);
   const pagerTranslateX = useRef(new Animated.Value(0)).current;
   const { width: tabWidth } = useWindowDimensions();
@@ -347,9 +354,7 @@ function AppContent() {
   const openHistory = useCallback(() => setHistoryVisible(true), []);
 
   useEffect(() => {
-    GoogleSignin.configure({
-      webClientId: GOOGLE_WEB_CLIENT_ID || undefined,
-    });
+    GoogleSignin.configure();
     void Promise.all([
       restorePreferences(),
       restoreSession(),
@@ -360,14 +365,6 @@ function AppContent() {
     loadHistory()
       .then(setHistoryEntries)
       .catch(() => undefined);
-
-    const sub = AppState.addEventListener("change", (nextState) => {
-      if (nextState === "background") {
-        pinLockedRef.current = true;
-        setPinVerified(false);
-      }
-    });
-    return () => sub.remove();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -483,17 +480,6 @@ function AppContent() {
         setIsFirstRemoteLoad(true);
         await refreshStoredSession(token, sheetId, false);
       }
-    }
-  }
-
-  async function restorePinState() {
-    try {
-      const enabled = await isPinEnabled();
-      setPinEnabledState(enabled);
-      setPinVerified(!enabled);
-      pinLockedRef.current = false;
-    } finally {
-      setPinLoading(false);
     }
   }
 
@@ -618,10 +604,6 @@ function AppContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [colors.red, copy]);
 
-  async function getWorkspaceAccessToken(interactive: boolean) {
-    return getWorkspaceAccessTokenBase(interactive);
-  }
-
   async function connectGoogleWorkspace(
     token: string,
     preferredSheetId = "",
@@ -675,133 +657,9 @@ function AppContent() {
     }
   }
 
-  async function runGoogleSignIn(switchingAccount: boolean) {
-    if (!GOOGLE_ANDROID_CLIENT_ID && !GOOGLE_WEB_CLIENT_ID) {
-      Alert.alert(copy.googleOAuth, copy.missingEnvCredentials);
-      return;
-    }
-    setLoading(true);
-    try {
-      await GoogleSignin.hasPlayServices({
-        showPlayServicesUpdateDialog: true,
-      });
-      if (switchingAccount) await GoogleSignin.signOut();
-      const response = await GoogleSignin.signIn();
-      if (response.type !== "success") return;
-      const tokens = await getWorkspaceAccessToken(true);
-      if (!tokens.accessToken)
-        throw new Error(copy.googleSignInError);
-      if (switchingAccount) {
-        setAccountTransition(true);
-        await Promise.all([deleteItemAsync(SHEET_KEY), deleteFinancialCache()]);
-        resetFinancialState();
-      }
-      await setItemAsync(TOKEN_KEY, tokens.accessToken);
-      setAccessToken(tokens.accessToken);
-      setIsFirstRemoteLoad(true);
-      setSyncError("");
-      syncAccountInfo();
-      await connectGoogleWorkspace(tokens.accessToken, "", true);
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : copy.googleSignInError;
-      const isDeveloperError =
-        message.includes("DEVELOPER_ERROR") || message.includes("code: 10");
-      Alert.alert(
-        "Google",
-        isDeveloperError ? copy.oauthConfigRejected : message,
-      );
-    } finally {
-      setLoading(false);
-      setIsFirstRemoteLoad(false);
-      setAccountTransition(false);
-    }
-  }
-
-  function syncAccountInfo() {
-    const info = syncAccountInfoBase();
-    if (info) setAccountInfo(info);
-  }
-
-  function teardownSession(options: { clearToken?: boolean; catchErrors?: boolean } = {}) {
-    const { clearToken = true, catchErrors = false } = options;
-    const cleanup = () => {
-      if (clearToken) setAccessToken("");
-      resetFinancial();
-      setSpreadsheetId("");
-      setAccountInfo(null);
-      setSyncError("");
-      setAuthError("");
-      setPendingSync(false);
-      setIsSyncing(false);
-      pendingSyncRef.current = false;
-      fin.didSetInitialPeriodRef.current = false;
-    };
-    if (catchErrors) {
-      Promise.all([
-        deleteItemAsync(TOKEN_KEY),
-        deleteItemAsync(SHEET_KEY),
-        deleteFinancialCache(),
-      ]).catch(() => undefined).finally(cleanup);
-    } else {
-      Promise.all([
-        deleteItemAsync(TOKEN_KEY),
-        deleteItemAsync(SHEET_KEY),
-        deleteFinancialCache(),
-      ]).finally(cleanup);
-    }
-  }
-
-  function resetFinancialState() {
-    teardownSession({ clearToken: false });
-  }
-
-  async function clearGoogleSession() {
-    try {
-      await Promise.all([
-        deleteItemAsync(TOKEN_KEY),
-        deleteItemAsync(SHEET_KEY),
-        deleteFinancialCache(),
-      ]);
-    } finally {
-      setAccessToken("");
-      resetFinancial();
-      setSpreadsheetId("");
-      setAccountInfo(null);
-      setSyncError("");
-      setAuthError("");
-      setPendingSync(false);
-      setIsSyncing(false);
-      pendingSyncRef.current = false;
-    }
-  }
-
-  async function disconnectGoogle() {
-    try {
-      await GoogleSignin.signOut();
-    } catch {
-      /* ok */
-    }
-    await clearGoogleSession();
-  }
-
   const requestDisconnectGoogle = useCallback(() => {
     setConfirmConfig({ kind: "disconnect" });
   }, []);
-
-  async function removeGoogleAccount() {
-    setLoading(true);
-    setAccountTransition(true);
-    try {
-      await GoogleSignin.revokeAccess();
-      await clearGoogleSession();
-    } catch (error) {
-      Alert.alert("Google", errMsg(error));
-    } finally {
-      setLoading(false);
-      setAccountTransition(false);
-    }
-  }
 
   // --- Data operations ---
   async function reloadFromGoogle(
@@ -1250,43 +1108,6 @@ function AppContent() {
     }
   }
 
-  const handlePinOpen = useCallback(() => {
-    if (pinEnabled) {
-      pinLockedRef.current = false;
-      setPinEnabledState(false);
-      setPinVerified(true);
-      void clearPin().catch((error) => {
-        setPinEnabledState(true);
-        Alert.alert(copy.pinApp, errMsg(error));
-      });
-    } else {
-      setPinSetupVisible(true);
-    }
-  }, [copy.pinApp, errMsg, pinEnabled]);
-
-  function handlePinSave(value: string) {
-    pinLockedRef.current = false;
-    setPinEnabledState(true);
-    setPinVerified(true);
-    void savePin(value).catch((error) => {
-      setPinEnabledState(false);
-      Alert.alert(copy.pinApp, errMsg(error));
-    });
-  }
-
-  function handlePinVerify(pin: string) {
-    verifyPin(pin).then((ok) => {
-      if (ok) {
-        pinLockedRef.current = false;
-        setPinVerified(true);
-        setPinWrong(false);
-      } else {
-        setPinWrong(true);
-        setTimeout(() => setPinWrong(false), PIN_DELAY_MS);
-      }
-    });
-  }
-
   const exitSearch = useCallback(
     () => setSearchActive(false),
     [setSearchActive],
@@ -1298,7 +1119,6 @@ function AppContent() {
   );
   const closeConfirm = useCallback(() => setConfirmConfig(null), []);
   const closeHistory = useCallback(() => setHistoryVisible(false), []);
-  const closePinSetup = useCallback(() => setPinSetupVisible(false), []);
   const closeTagEditor = useCallback(() => setTagEditorVisible(false), []);
 
   const tabPageProps = useMemo(
@@ -1471,7 +1291,7 @@ function AppContent() {
           colors={colors}
           copy={copy}
           loading={loading}
-          canConnect={Boolean(GOOGLE_ANDROID_CLIENT_ID || GOOGLE_WEB_CLIENT_ID)}
+          canConnect={canConnect}
           onSignIn={() => runGoogleSignIn(false)}
         />
       </View>
