@@ -1,4 +1,4 @@
-import { memo, useMemo, useCallback, useRef } from "react";
+import { Fragment, memo, useMemo, useCallback, useRef } from "react";
 import { ScrollView, View } from "react-native";
 
 import { formatMoney, calculateMonthSummary } from "@/domain/bucksLogic";
@@ -259,27 +259,51 @@ export const DashboardView = memo(function DashboardView({
               borderRadius: 14,
             }}
           >
-            {recentTransactions.map((tx, index) => (
-              <TransactionRow
-                key={`${tx.rowId}-${tx.rawDate}-${tx.createdAtMs ?? tx.createdAt ?? ""}`}
-                tx={tx}
-                index={index}
-                sectionLength={recentTransactions.length}
-                selected={false}
-                colors={colors}
-                currencySymbol={currencySymbol}
-                copy={copy}
-                searchActive={false}
-                searchText=""
-                tagColorMap={tagColorMap}
-                tagLabelMap={tagLabelMap}
-                onOpenDetail={handleDetail}
-                onMove={() => {}}
-                onToggleSelection={() => {}}
-                setTagBubble={() => {}}
-                tagButtonRefs={tagButtonRefs}
-              />
-            ))}
+            {recentTransactions.map((tx, index) => {
+              const txDate = new Date(tx.rawDate);
+              const dateKey = Number.isNaN(txDate.getTime()) ? "" : txDate.toISOString().slice(0, 10);
+              const prevKey = index > 0
+                ? new Date(recentTransactions[index - 1].rawDate).toISOString().slice(0, 10)
+                : "";
+              const showDate = index === 0 || (!!dateKey && dateKey !== prevKey);
+              return (
+                <Fragment key={`${tx.rowId}-${tx.rawDate}-${tx.createdAtMs ?? tx.createdAt ?? ""}`}>
+                  {showDate && dateKey && (
+                    <Text
+                      style={{
+                        fontSize: 11,
+                        fontWeight: "600",
+                        color: colors.textSubtle,
+                        paddingHorizontal: 16,
+                        paddingTop: index === 0 ? 8 : 4,
+                        paddingBottom: 2,
+                        lineHeight: 14,
+                      }}
+                    >
+                      {txDate.getDate()} {UI_MONTH_NAMES[copy.languageCode === "en" ? "en" : "es"][txDate.getMonth()].slice(0, 3)}
+                    </Text>
+                  )}
+                  <TransactionRow
+                    tx={tx}
+                    index={index}
+                    sectionLength={recentTransactions.length}
+                    selected={false}
+                    colors={colors}
+                    currencySymbol={currencySymbol}
+                    copy={copy}
+                    searchActive={false}
+                    searchText=""
+                    tagColorMap={tagColorMap}
+                    tagLabelMap={tagLabelMap}
+                    onOpenDetail={handleDetail}
+                    onMove={() => {}}
+                    onToggleSelection={() => {}}
+                    setTagBubble={() => {}}
+                    tagButtonRefs={tagButtonRefs}
+                  />
+                </Fragment>
+              );
+            })}
           </View>
         ) : (
           <View
