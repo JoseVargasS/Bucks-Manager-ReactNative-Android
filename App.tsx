@@ -42,7 +42,7 @@ import {
   writeTagsCatalog,
 } from "@/api/googleWorkspace";
 
-import { type ColorSchemePreference, getPalette } from "@/theme/colors";
+import { getPalette } from "@/theme/colors";
 import { ThemeProvider, useTheme } from "@/theme/ThemeContext";
 import { getBlankDraft } from "@/utils/transactions";
 import {
@@ -96,7 +96,7 @@ import {
   type HistoryEntry,
   type SearchFilters,
   type Tab,
-  type MaterialIconName,
+
   type Tag,
   type Transaction,
   type TransactionDraft,
@@ -108,6 +108,7 @@ import {
   TOKEN_KEY,
   SHEET_KEY,
   TAB_ORDER,
+  COLOR_SCHEME_OPTIONS,
 } from "@/theme/constants";
 import { useFinancialState } from "@/hooks/useFinancialState";
 import {
@@ -132,62 +133,6 @@ setSplashOptions({ duration: ANIM_SPLASH_DURATION, fade: true });
 // fast edit cannot race with the reconcile read of an earlier edit. The chain
 // holds the in-flight task only; UI state lives in pendingSyncRef/setPendingSync.
 const syncQueueRef = { current: Promise.resolve() };
-const COLOR_SCHEME_OPTIONS: Array<{
-  value: ColorSchemePreference;
-  labelEs: string;
-  labelEn: string;
-  icon: MaterialIconName;
-}> = [
-  {
-    value: "lime",
-    labelEs: "Lima Bucks",
-    labelEn: "Bucks Lime",
-    icon: "sprout",
-  },
-  { value: "ocean", labelEs: "Océano", labelEn: "Ocean", icon: "waves" },
-  {
-    value: "violet",
-    labelEs: "Violeta",
-    labelEn: "Violet",
-    icon: "circle-multiple-outline",
-  },
-  {
-    value: "amber",
-    labelEs: "Ámbar",
-    labelEn: "Amber",
-    icon: "white-balance-sunny",
-  },
-  {
-    value: "graphite",
-    labelEs: "Grafito",
-    labelEn: "Graphite",
-    icon: "circle-half-full",
-  },
-  {
-    value: "pink",
-    labelEs: "Rosa",
-    labelEn: "Pink",
-    icon: "heart",
-  },
-  {
-    value: "sports",
-    labelEs: "Deportes",
-    labelEn: "Sports",
-    icon: "trophy",
-  },
-  {
-    value: "techy",
-    labelEs: "Techy",
-    labelEn: "Techy",
-    icon: "chip",
-  },
-  {
-    value: "sky",
-    labelEs: "Cielo",
-    labelEn: "Sky",
-    icon: "weather-night",
-  },
-];
 
 function AppContent() {
   const { colors, theme, colorScheme, toggleTheme } = useTheme();

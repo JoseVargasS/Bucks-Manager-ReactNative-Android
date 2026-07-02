@@ -8,10 +8,6 @@ function isTransientError(status: number): boolean {
   return status === 429 || status >= 500;
 }
 
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
 async function googleFetch<T>(
   token: string,
   url: string,
@@ -24,7 +20,7 @@ async function googleFetch<T>(
   let lastError: Error | undefined;
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     if (attempt > 0) {
-      await sleep(RETRY_BASE_MS * Math.pow(2, attempt - 1));
+      await new Promise((resolve) => setTimeout(resolve, RETRY_BASE_MS * Math.pow(2, attempt - 1)));
     }
     try {
       const res = await fetch(url, {
@@ -76,7 +72,6 @@ export {
   MAX_RETRIES,
   RETRY_BASE_MS,
   isTransientError,
-  sleep,
   googleFetch,
   valuesUrl,
   readValuesUrl,

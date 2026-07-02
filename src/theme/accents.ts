@@ -15,6 +15,7 @@ export const accents: Record<
   ColorSchemePreference,
   { dark: Partial<Palette>; light: Partial<Palette> }
 > = {
+  // lime = base palette in colors.ts, no overrides needed
   lime: { dark: {}, light: {} },
 
   ocean: {
