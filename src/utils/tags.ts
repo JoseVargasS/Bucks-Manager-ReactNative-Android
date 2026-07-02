@@ -153,7 +153,7 @@ export function mergeTagsFromSheet(
       byId.set(st.id, st);
     }
   }
-  const existingIds = new Set(currentTags.map((t) => t.id));
+  const existingIds = new Set(Array.from(byId.keys()));
   let colorIdx = 0;
   const added: Tag[] = [];
   for (const t of transactions) {

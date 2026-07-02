@@ -348,19 +348,14 @@ export async function readSummaries(token: string, spreadsheetId: string) {
     .filter(Boolean) as SummaryRow[];
 }
 
-export async function saveTransaction(
+async function writeTransactionRow(
   token: string,
   spreadsheetId: string,
-  draft: TransactionDraft,
+  targetRow: number,
+  tx: Transaction,
 ) {
-  const tx = buildTransactionFromDraft(draft, 0);
   const dateObj = new Date(tx.rawDate);
   const sheetId = await getTransactionSheetId(token, spreadsheetId);
-  const targetRow = await findChronologicalInsertionRow(
-    token,
-    spreadsheetId,
-    dateObj,
-  );
   await insertBlankRow(token, spreadsheetId, sheetId, targetRow);
   await writeRow(token, spreadsheetId, targetRow, buildTransactionRow(tx));
   await ensureMonthlySummaryRowByDate(
@@ -372,6 +367,21 @@ export async function saveTransaction(
   return { ...tx, rowId: targetRow };
 }
 
+export async function saveTransaction(
+  token: string,
+  spreadsheetId: string,
+  draft: TransactionDraft,
+) {
+  const tx = buildTransactionFromDraft(draft, 0);
+  const dateObj = new Date(tx.rawDate);
+  const targetRow = await findChronologicalInsertionRow(
+    token,
+    spreadsheetId,
+    dateObj,
+  );
+  return writeTransactionRow(token, spreadsheetId, targetRow, tx);
+}
+
 export async function insertTransactionAtRow(
   token: string,
   spreadsheetId: string,
@@ -379,18 +389,8 @@ export async function insertTransactionAtRow(
   targetRow: number,
 ) {
   const tx = buildTransactionFromDraft(draft, targetRow);
-  const dateObj = new Date(tx.rawDate);
-  const sheetId = await getTransactionSheetId(token, spreadsheetId);
   const safeRow = Math.max(2, targetRow);
-  await insertBlankRow(token, spreadsheetId, sheetId, safeRow);
-  await writeRow(token, spreadsheetId, safeRow, buildTransactionRow(tx));
-  await ensureMonthlySummaryRowByDate(
-    token,
-    spreadsheetId,
-    dateObj,
-    tx.type === "INGRESO FRECUENTE",
-  );
-  return { ...tx, rowId: safeRow };
+  return writeTransactionRow(token, spreadsheetId, safeRow, tx);
 }
 
 export async function updateTransaction(
