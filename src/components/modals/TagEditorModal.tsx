@@ -314,7 +314,7 @@ const TagRow = memo(function TagRow({
             <MaterialCommunityIcons
               name="trash-can"
               size={18}
-              color={colors.red}
+              color={colors.expense}
             />
           </TouchableOpacity>
         </>

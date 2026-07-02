@@ -13,9 +13,9 @@ const {
 const { UI_COPY } = await import("../src/i18n.ts");
 
 const mockColors = {
-  green: "#22c55e",
-  red: "#ef4444",
-  yellow: "#eab308",
+  income: "#22c55e",
+  expense: "#ef4444",
+  warn: "#eab308",
   incomeSoft: "#dcfce7",
   expenseSoft: "#fee2e2",
   warnSoft: "#fef9c3",
@@ -94,16 +94,16 @@ test("formatDateGroupLabel uses English labels when configured", () => {
 
 // --- typeColor ---
 test("typeColor returns green for income types", () => {
-  assert.equal(typeColor("INGRESO FRECUENTE", mockColors), mockColors.green);
-  assert.equal(typeColor("INGRESO NO FRECUENTE", mockColors), mockColors.green);
+  assert.equal(typeColor("INGRESO FRECUENTE", mockColors), mockColors.income);
+  assert.equal(typeColor("INGRESO NO FRECUENTE", mockColors), mockColors.income);
 });
 
 test("typeColor returns red for GASTO FRECUENTE", () => {
-  assert.equal(typeColor("GASTO FRECUENTE", mockColors), mockColors.red);
+  assert.equal(typeColor("GASTO FRECUENTE", mockColors), mockColors.expense);
 });
 
 test("typeColor returns yellow for GASTO NO FRECUENTE", () => {
-  assert.equal(typeColor("GASTO NO FRECUENTE", mockColors), mockColors.yellow);
+  assert.equal(typeColor("GASTO NO FRECUENTE", mockColors), mockColors.warn);
 });
 
 // --- typeFill ---

@@ -10,7 +10,7 @@ export const ModalHeader = memo(function ModalHeader({ title, icon, colors, onCl
   return (
     <View style={styles.modalHeader}>
       <Text style={[styles.modalTitle, { color: colors.text }]}>
-        <MaterialCommunityIcons name={icon} size={20} color={colors.blue} /> {title}
+        <MaterialCommunityIcons name={icon} size={20} color={colors.info} /> {title}
       </Text>
       <TouchableOpacity onPress={onClose}>
         <MaterialCommunityIcons name="close" size={24} color={colors.muted} />

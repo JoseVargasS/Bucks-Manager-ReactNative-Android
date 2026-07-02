@@ -56,7 +56,7 @@ export function PinScreen({ colors, copy, title, subtitle, wrong, bgColor, onFil
         <Text style={[s.title, { color: colors.text }]}>{title}</Text>
       ) : null}
       {subtitle ? (
-        <Text style={[s.subtitle, { color: colors.textSub }]}>{subtitle}</Text>
+        <Text style={[s.subtitle, { color: colors.textSubtle }]}>{subtitle}</Text>
       ) : (
         <View style={{ marginBottom: 28 }} />
       )}
@@ -68,7 +68,7 @@ export function PinScreen({ colors, copy, title, subtitle, wrong, bgColor, onFil
             <View
               key={i}
               style={[s.dot, {
-                backgroundColor: dot ? (showingError ? colors.red : colors.primary) : "transparent",
+                backgroundColor: dot ? (showingError ? colors.expense : colors.primary) : "transparent",
                 borderWidth: dot ? 0 : 2,
                 borderColor: colors.borderStrong,
               }]}
@@ -78,7 +78,7 @@ export function PinScreen({ colors, copy, title, subtitle, wrong, bgColor, onFil
       </Animated.View>
 
       {showingError && (
-        <Text style={[s.errorText, { color: colors.red }]}>{copy.pinIncorrect}</Text>
+        <Text style={[s.errorText, { color: colors.expense }]}>{copy.pinIncorrect}</Text>
       )}
 
       <View style={s.keypad}>

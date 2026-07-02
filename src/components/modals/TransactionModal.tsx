@@ -149,7 +149,7 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
         <Animated.View ref={modalRef} collapsable={false} style={[styles.recordModal, { backgroundColor: colors.card }, transition.panelStyle]}>
           <View style={[styles.recordHeader, { borderColor: colors.border }]}>
             <Text style={[styles.recordTitle, { color: colors.text }]}>
-              <MaterialCommunityIcons name="calculator-variant" size={19} color={colors.blue} /> {editingTx ? copy.editRecord : copy.newRecord}
+              <MaterialCommunityIcons name="calculator-variant" size={19} color={colors.info} /> {editingTx ? copy.editRecord : copy.newRecord}
             </Text>
             <TouchableOpacity style={[styles.closeBtn, { backgroundColor: colors.input }]} onPress={close}>
               <MaterialCommunityIcons name="close" size={22} color={colors.text} />
@@ -162,7 +162,7 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
               onPress={() => { Keyboard.dismiss(); setTagsOpen(false); setCalVisible(true); }}
             >
               <Text style={[{ color: colors.text, fontWeight: "600", flex: 1 }]}>{formDraft.date || copy.selectDate}</Text>
-              <MaterialCommunityIcons name="calendar" size={20} color={colors.blue} />
+              <MaterialCommunityIcons name="calendar" size={20} color={colors.info} />
             </TouchableOpacity>
             <CalendarPicker visible={calVisible} value={formDraft.date} onSelect={(date: string) => setFormDraft((current) => ({ ...current, date }))} onClose={() => setCalVisible(false)} colors={colors} copy={copy} />
             <Text style={[styles.label, { color: colors.text }]}>{copy.type}</Text>
@@ -219,22 +219,22 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
                 style={[styles.moneyInput, { color: colors.text }]}
               />
               {amountState.visible && (
-                <Text numberOfLines={1} style={[styles.moneyPreview, { color: amountState.preview < 0 ? colors.red : colors.green, fontSize: 16 }]}>{amountState.text}</Text>
+                <Text numberOfLines={1} style={[styles.moneyPreview, { color: amountState.preview < 0 ? colors.expense : colors.income, fontSize: 16 }]}>{amountState.text}</Text>
               )}
             </View>
             {!!validationError && (
-              <Text style={{ color: colors.red, fontSize: 12, fontWeight: "600", marginTop: -12, marginBottom: 12 }}>
+              <Text style={{ color: colors.expense, fontSize: 12, fontWeight: "600", marginTop: -12, marginBottom: 12 }}>
                 {validationError}
               </Text>
             )}
             <View style={styles.calcToolbar}>
               {["+", "-", "*", "/", "(", ")"].map((token) => (
                 <TouchableOpacity key={token} style={[styles.calcChip, { backgroundColor: colors.infoSoft }]} onPress={() => { setValidationError(""); setFormDraft((current) => ({ ...current, amount: `${current.amount}${token}` })); }}>
-                  <Text style={[styles.calcChipText, { color: colors.blue }]}>{token === "*" ? "×" : token}</Text>
+                  <Text style={[styles.calcChipText, { color: colors.info }]}>{token === "*" ? "×" : token}</Text>
                 </TouchableOpacity>
               ))}
               <TouchableOpacity style={[styles.calcChip, { backgroundColor: colors.expenseSoft }]} onPress={() => { setValidationError(""); setFormDraft((current) => ({ ...current, amount: current.amount.slice(0, -1) })); }}>
-                <MaterialCommunityIcons name="backspace-outline" size={17} color={colors.red} />
+                <MaterialCommunityIcons name="backspace-outline" size={17} color={colors.expense} />
               </TouchableOpacity>
             </View>
             <Field

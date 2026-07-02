@@ -7,7 +7,7 @@ import { type MaterialIconName } from "@/types";
 import { Text } from "./AppText";
 
 export const StatCard = memo(function StatCard({ title, value, icon, tone, colors, action }: { title: string; value: string; icon: MaterialIconName; tone: "income" | "expense" | "warn" | "balance"; colors: Palette; action?: () => void }) {
-  const color = tone === "income" ? colors.green : tone === "warn" ? colors.yellow : tone === "balance" ? colors.blue : colors.red;
+  const color = tone === "income" ? colors.income : tone === "warn" ? colors.warn : tone === "balance" ? colors.info : colors.expense;
   const softBg = tone === "income" ? colors.incomeSoft : tone === "warn" ? colors.warnSoft : tone === "balance" ? colors.infoSoft : colors.expenseSoft;
   return (
     <View style={[styles.statCard, { backgroundColor: colors.card }]}>

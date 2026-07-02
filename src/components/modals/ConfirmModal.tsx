@@ -69,7 +69,7 @@ export function ConfirmModal({
         : current.kind === "removeAccount"
           ? copy.removeAccountMessage
           : copy.signOutMessage;
-  const accent = colors.red;
+  const accent = colors.expense;
   const accentSoft = colors.expenseSoft;
   const icon: MaterialIconName = isAccountAction ? "account-off" : "trash-can";
   const actionLabel =
@@ -132,7 +132,7 @@ export function ConfirmModal({
                         : "receipt-text-outline"
                     }
                     size={22}
-                    color={current.tx.amount >= 0 ? colors.green : colors.red}
+                    color={current.tx.amount >= 0 ? colors.income : colors.expense}
                   />
                 </View>
                 <View style={{ flex: 1, minWidth: 0 }}>
@@ -144,7 +144,7 @@ export function ConfirmModal({
                   </Text>
                   <Text
                     numberOfLines={1}
-                    style={[s.previewAmount, { color: current.tx.amount >= 0 ? colors.green : colors.red }]}
+                    style={[s.previewAmount, { color: current.tx.amount >= 0 ? colors.income : colors.expense }]}
                   >
                     {formatMoney(current.tx.amount, currencySymbol)}
                   </Text>

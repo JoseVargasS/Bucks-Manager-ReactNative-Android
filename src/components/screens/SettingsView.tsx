@@ -116,7 +116,7 @@ export const SettingsView = memo(function SettingsView({
       </View>
 
       <TouchableOpacity style={styles.signOutBtn} onPress={onDisconnect}>
-        <Text style={[styles.signOutText, { color: colors.red }]}>{copy.signOut}</Text>
+        <Text style={[styles.signOutText, { color: colors.expense }]}>{copy.signOut}</Text>
       </TouchableOpacity>
     </ScrollView>
   );
@@ -128,7 +128,7 @@ function SettingsRow({ colors, icon, label, value, tone, onPress, last = false }
 }) {
   return (
     <TouchableOpacity style={[styles.settingsRow, !last && { borderBottomWidth: 0.5, borderColor: colors.border }]} onPress={onPress}>
-      <MaterialCommunityIcons name={icon} size={22} color={tone || colors.blue} />
+      <MaterialCommunityIcons name={icon} size={22} color={tone || colors.info} />
       <Text style={[styles.settingsRowLabel, { color: colors.text }]}>{label}</Text>
       {value !== undefined && <Text numberOfLines={1} style={[styles.settingsRowValue, { color: colors.muted }]}>{value}</Text>}
       <MaterialCommunityIcons name="chevron-right" size={22} color={colors.muted} />

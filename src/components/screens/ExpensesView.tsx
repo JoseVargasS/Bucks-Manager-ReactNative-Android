@@ -159,14 +159,14 @@ export const ExpensesView = memo(function ExpensesView({
             style={[
               styles.searchBanner,
               styles.searchBannerMobile,
-              { backgroundColor: colors.infoSoft, borderColor: colors.blue },
+              { backgroundColor: colors.infoSoft, borderColor: colors.info },
             ]}
           >
-            <Text style={{ color: colors.blue, fontWeight: "600" }}>
+            <Text style={{ color: colors.info, fontWeight: "600" }}>
               {copy.searchResults}
             </Text>
             <TouchableOpacity onPress={onExitSearch}>
-              <Text style={{ color: colors.blue, fontWeight: "700" }}>
+              <Text style={{ color: colors.info, fontWeight: "700" }}>
                 {copy.exit}
               </Text>
             </TouchableOpacity>

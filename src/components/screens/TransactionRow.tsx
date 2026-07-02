@@ -122,7 +122,7 @@ export const TransactionRow = memo(function TransactionRow({
         <MaterialCommunityIcons
           name={selected ? "check" : (icon as MaterialIconName)}
           size={18}
-          color={selected ? colors.blue : typeColor(tx.type, colors)}
+          color={selected ? colors.info : typeColor(tx.type, colors)}
         />
       </View>
       <View style={txStyles.groupedTxMain}>
@@ -220,7 +220,7 @@ export const TransactionRow = memo(function TransactionRow({
         numberOfLines={1}
         style={[
           txStyles.groupedTxAmount,
-          { color: tx.amount >= 0 ? colors.green : colors.red },
+          { color: tx.amount >= 0 ? colors.income : colors.expense },
         ]}
       >
         {formatMoney(tx.amount, currencySymbol)}

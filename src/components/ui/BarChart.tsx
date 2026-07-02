@@ -43,8 +43,8 @@ export const BarChart = memo(function BarChart({ rows, colors, language }: { row
         const month = Math.max(0, MONTH_NAMES.findIndex((name) => name.toLowerCase() === sourceMonth.toLowerCase()));
         return (
           <G key={row.monthYear}>
-            <Rect x={x} y={baseY - incomeHeight} width={barWidth} height={incomeHeight} rx={3} fill={colors.green} opacity={0.92} />
-            <Rect x={x + barWidth + gap} y={baseY - expenseHeight} width={barWidth} height={expenseHeight} rx={3} fill={colors.red} opacity={0.88} />
+            <Rect x={x} y={baseY - incomeHeight} width={barWidth} height={incomeHeight} rx={3} fill={colors.income} opacity={0.92} />
+            <Rect x={x + barWidth + gap} y={baseY - expenseHeight} width={barWidth} height={expenseHeight} rx={3} fill={colors.expense} opacity={0.88} />
             <SvgText x={x + groupWidth / 2} y={baseY + 17} fontSize={10.5} fill={colors.muted} fontFamily={fontFamily} textAnchor="middle" fontWeight="600">
               {UI_MONTH_NAMES[language][month].slice(0, 3).toUpperCase()}
             </SvgText>

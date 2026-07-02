@@ -593,7 +593,7 @@ function AppContent() {
           label: copy.removeCurrentAccount,
           value: "remove",
           icon: "account-remove",
-          tone: colors.red,
+          tone: colors.expense,
         },
       ],
       onSelect: (value) => {
@@ -602,7 +602,7 @@ function AppContent() {
       },
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [colors.red, copy]);
+  }, [colors.expense, copy]);
 
   async function connectGoogleWorkspace(
     token: string,
@@ -1046,21 +1046,21 @@ function AppContent() {
             label: copy.moveUpOnePosition,
             value: "up",
             icon: "arrow-up",
-            tone: colors.blue,
+            tone: colors.info,
           },
           {
             label: copy.moveDownOnePosition,
             value: "down",
             icon: "arrow-down",
-            tone: colors.yellow,
+            tone: colors.warn,
           },
         ],
         onSelect: (direction: string) => moveTx(tx, direction as "up" | "down"),
       });
     },
     [
-      colors.blue,
-      colors.yellow,
+      colors.info,
+      colors.warn,
       copy.moveDownOnePosition,
       copy.moveRecord,
       copy.moveUpOnePosition,

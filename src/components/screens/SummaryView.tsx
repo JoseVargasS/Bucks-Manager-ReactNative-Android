@@ -52,12 +52,12 @@ export const SummaryView = memo(function SummaryView({ colors, copy, summaries, 
   const positiveMonths = filtered.filter((row) => row.netMonthly >= 0).length;
   const bestMonth = filtered.reduce<SummaryRow | null>((best, row) => !best || row.netMonthly > best.netMonthly ? row : best, null);
   const incomeBreakdown = [
-    { label: copy.freqIncomeFull, value: filtered.reduce((sum, row) => sum + row.freqIncome, 0), color: colors.green },
-    { label: copy.nonFreqIncomeFull, value: filtered.reduce((sum, row) => sum + row.nonFreqIncome, 0), color: colors.blue },
+    { label: copy.freqIncomeFull, value: filtered.reduce((sum, row) => sum + row.freqIncome, 0), color: colors.income },
+    { label: copy.nonFreqIncomeFull, value: filtered.reduce((sum, row) => sum + row.nonFreqIncome, 0), color: colors.info },
   ];
   const expenseBreakdown = [
-    { label: copy.freqExpenseFull, value: filtered.reduce((sum, row) => sum + Math.abs(row.freqExpense), 0), color: colors.red },
-    { label: copy.nonFreqExpenseFull, value: filtered.reduce((sum, row) => sum + Math.abs(row.nonFreqExpense), 0), color: colors.yellow },
+    { label: copy.freqExpenseFull, value: filtered.reduce((sum, row) => sum + Math.abs(row.freqExpense), 0), color: colors.expense },
+    { label: copy.nonFreqExpenseFull, value: filtered.reduce((sum, row) => sum + Math.abs(row.nonFreqExpense), 0), color: colors.warn },
   ];
   const fm = (value: number) => formatMoney(value, currencySymbol, 0).replace("+ ", "");
 
@@ -93,23 +93,23 @@ export const SummaryView = memo(function SummaryView({ colors, copy, summaries, 
             <Text style={{ color: colors.primary, fontSize: 13, fontWeight: "700", fontVariant: ["tabular-nums"] }}>{filterYear}</Text>
           </View>
         </View>
-        <Text numberOfLines={1} style={{ color: totals.net >= 0 ? colors.primary : colors.red, fontSize: 34, fontWeight: "700", marginTop: 10, fontVariant: ["tabular-nums"] }}>
+        <Text numberOfLines={1} style={{ color: totals.net >= 0 ? colors.primary : colors.expense, fontSize: 34, fontWeight: "700", marginTop: 10, fontVariant: ["tabular-nums"] }}>
           {formatMoney(totals.net, currencySymbol, 0)}
         </Text>
         <View style={{ flexDirection: "row", gap: 10, marginTop: 18 }}>
-          <Insight label={copy.bestMonth} value={bestMonth ? monthLabel(bestMonth, copy.languageCode) : "—"} icon="trophy-outline" color={colors.yellow} colors={colors} />
-          <Insight label={copy.monthlyAverage} value={fm(averageExpense)} icon="calendar-month-outline" color={colors.blue} colors={colors} />
+          <Insight label={copy.bestMonth} value={bestMonth ? monthLabel(bestMonth, copy.languageCode) : "—"} icon="trophy-outline" color={colors.warn} colors={colors} />
+          <Insight label={copy.monthlyAverage} value={fm(averageExpense)} icon="calendar-month-outline" color={colors.info} colors={colors} />
         </View>
       </View>
 
       <View style={{ gap: 8 }}>
         <View style={{ flexDirection: "row", gap: 8 }}>
-          <Kpi title={copy.income} value={fm(totals.income)} icon="trending-up" color={colors.green} colors={colors} />
-          <Kpi title={copy.expensesLabel} value={fm(totals.expense)} icon="trending-down" color={colors.red} colors={colors} />
+          <Kpi title={copy.income} value={fm(totals.income)} icon="trending-up" color={colors.income} colors={colors} />
+          <Kpi title={copy.expensesLabel} value={fm(totals.expense)} icon="trending-down" color={colors.expense} colors={colors} />
         </View>
         <View style={{ flexDirection: "row", gap: 8 }}>
-          <Kpi title={copy.savingsRate} value={`${savings}%`} icon="piggy-bank" color={savings >= 0 ? colors.blue : colors.red} colors={colors} />
-          <Kpi title={copy.positiveMonths} value={filtered.length ? `${positiveMonths}/${filtered.length}` : "—"} icon="check-circle-outline" color={colors.yellow} colors={colors} />
+          <Kpi title={copy.savingsRate} value={`${savings}%`} icon="piggy-bank" color={savings >= 0 ? colors.info : colors.expense} colors={colors} />
+          <Kpi title={copy.positiveMonths} value={filtered.length ? `${positiveMonths}/${filtered.length}` : "—"} icon="check-circle-outline" color={colors.warn} colors={colors} />
         </View>
       </View>
 
@@ -120,8 +120,8 @@ export const SummaryView = memo(function SummaryView({ colors, copy, summaries, 
             <Text style={{ color: colors.muted, fontSize: 13, fontWeight: "500" }}>{copy.incomeVsExpenses}</Text>
           </View>
           <View style={{ gap: 5 }}>
-            <Legend color={colors.green} label={copy.income} colors={colors} />
-            <Legend color={colors.red} label={copy.expensesLabel} colors={colors} />
+            <Legend color={colors.income} label={copy.income} colors={colors} />
+            <Legend color={colors.expense} label={copy.expensesLabel} colors={colors} />
           </View>
         </View>
         <BarChart rows={chartRows} colors={colors} language={copy.languageCode === "en" ? "en" : "es"} />
@@ -142,13 +142,13 @@ export const SummaryView = memo(function SummaryView({ colors, copy, summaries, 
             <View style={{ flex: 1, minWidth: 0 }}>
               <Text numberOfLines={1} style={{ color: colors.text, fontSize: 16, fontWeight: "600" }}>{monthLabel(row, copy.languageCode)}</Text>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 4 }}>
-                <Text numberOfLines={1} style={{ color: colors.green, fontSize: 13, fontWeight: "600", fontVariant: ["tabular-nums"], flexShrink: 1 }}>{fm(row.totalIncome)}</Text>
+                <Text numberOfLines={1} style={{ color: colors.income, fontSize: 13, fontWeight: "600", fontVariant: ["tabular-nums"], flexShrink: 1 }}>{fm(row.totalIncome)}</Text>
                 <Text style={{ color: colors.muted, fontSize: 11 }}>•</Text>
-                <Text numberOfLines={1} style={{ color: colors.red, fontSize: 13, fontWeight: "600", fontVariant: ["tabular-nums"], flexShrink: 1 }}>{fm(Math.abs(row.totalExpense))}</Text>
+                <Text numberOfLines={1} style={{ color: colors.expense, fontSize: 13, fontWeight: "600", fontVariant: ["tabular-nums"], flexShrink: 1 }}>{fm(Math.abs(row.totalExpense))}</Text>
               </View>
             </View>
             <View style={{ alignItems: "flex-end" }}>
-              <Text numberOfLines={1} style={{ color: row.netMonthly >= 0 ? colors.green : colors.red, fontSize: 16, fontWeight: "700", fontVariant: ["tabular-nums"] }}>{formatMoney(row.netMonthly, currencySymbol, 0)}</Text>
+              <Text numberOfLines={1} style={{ color: row.netMonthly >= 0 ? colors.income : colors.expense, fontSize: 16, fontWeight: "700", fontVariant: ["tabular-nums"] }}>{formatMoney(row.netMonthly, currencySymbol, 0)}</Text>
               <Text style={{ color: colors.muted, fontSize: 13, fontWeight: "500", marginTop: 3 }}>{row.totalIncome > 0 ? Math.round((row.netMonthly / row.totalIncome) * 100) : 0}%</Text>
             </View>
           </View>

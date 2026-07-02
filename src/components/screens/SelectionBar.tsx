@@ -75,7 +75,7 @@ export const SelectionBar = memo(function SelectionBar({
             <MaterialCommunityIcons
               name="pencil"
               size={18}
-              color={colors.blue}
+              color={colors.info}
             />
           </TouchableOpacity>
         )}
@@ -84,7 +84,7 @@ export const SelectionBar = memo(function SelectionBar({
             s.selectionBtn,
             {
               backgroundColor: withAlpha(colors.expenseSoft, 0.85),
-              borderColor: colors.red,
+              borderColor: colors.expense,
             },
           ]}
           onPress={onDeleteSelected}
@@ -92,7 +92,7 @@ export const SelectionBar = memo(function SelectionBar({
           <MaterialCommunityIcons
             name="trash-can"
             size={18}
-            color={colors.red}
+            color={colors.expense}
           />
         </TouchableOpacity>
       </View>

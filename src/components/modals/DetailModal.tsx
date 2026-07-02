@@ -62,7 +62,7 @@ export const DetailModal = forwardRef<DetailModalHandle, { colors: Palette; curr
         <Animated.View style={[styles.detailModal, { backgroundColor: colors.card }, transition.panelStyle]}>
           <View style={[styles.recordHeader, { borderBottomWidth: 0 }]}>
             <Text style={[styles.recordTitle, { color: colors.text }]}>
-              <MaterialCommunityIcons name="receipt-text" size={20} color={colors.yellow} /> {copy.detailTitle}
+              <MaterialCommunityIcons name="receipt-text" size={20} color={colors.warn} /> {copy.detailTitle}
             </Text>
             <TouchableOpacity style={[styles.closeBtn, { backgroundColor: colors.input }]} onPress={close}>
               <MaterialCommunityIcons name="close" size={22} color={colors.text} />
@@ -71,13 +71,13 @@ export const DetailModal = forwardRef<DetailModalHandle, { colors: Palette; curr
           <ScrollView style={styles.detailScroll} contentContainerStyle={styles.detailBody} showsVerticalScrollIndicator={false}>
               <View style={[styles.detailHero, { backgroundColor: colors.input }]}>
                 <View style={[styles.detailHeroIcon, { backgroundColor: isIncome ? colors.incomeSoft : colors.expenseSoft }]}>
-                  <MaterialCommunityIcons name={isIncome ? "bank-transfer-in" : "receipt-text-outline"} size={24} color={isIncome ? colors.green : colors.red} />
+                  <MaterialCommunityIcons name={isIncome ? "bank-transfer-in" : "receipt-text-outline"} size={24} color={isIncome ? colors.income : colors.expense} />
                 </View>
                 <View style={styles.detailHeroText}>
                   <View style={{ alignSelf: "flex-start", borderRadius: 999, paddingHorizontal: 9, paddingVertical: 4, backgroundColor: typeBackground }}>
                     <Text style={[styles.detailHeroLabel, { color: typeTone, fontWeight: "700" }]}>{current ? typeLabelFull(current.type, copy) : ""}</Text>
                   </View>
-                  <Text numberOfLines={1} style={[styles.detailHeroAmount, { color: isIncome ? colors.green : colors.red, fontVariant: ["tabular-nums"] }]}>{current ? formatMoney(amount, currencySymbol) : ""}</Text>
+                  <Text numberOfLines={1} style={[styles.detailHeroAmount, { color: isIncome ? colors.income : colors.expense, fontVariant: ["tabular-nums"] }]}>{current ? formatMoney(amount, currencySymbol) : ""}</Text>
                 </View>
               </View>
               <View style={[styles.detailDescription, { backgroundColor: colors.input }]}>
@@ -102,17 +102,17 @@ export const DetailModal = forwardRef<DetailModalHandle, { colors: Palette; curr
                 </View>
               )}
               <View style={styles.detailMetaGrid}>
-                <DetailMetaRow icon="calendar" label={copy.date} value={current?.date || ""} tone={colors.blue} colors={colors} />
+                <DetailMetaRow icon="calendar" label={copy.date} value={current?.date || ""} tone={colors.info} colors={colors} />
                 <DetailMetaRow icon="clock-outline" label={copy.time} value={current ? formatCreatedTime(current.createdAt) : ""} tone={colors.muted} colors={colors} />
               </View>
               <View style={styles.detailActions}>
                 <TouchableOpacity disabled={!current} style={[styles.detailActionBtn, { backgroundColor: colors.input }]} onPress={() => { if (!current) return; pendingAction.current = () => onEdit(current); close(); }}>
-                  <MaterialCommunityIcons name="pencil" size={18} color={colors.blue} />
-                  <Text style={[styles.detailActionText, { color: colors.blue }]}>{copy.edit}</Text>
+                  <MaterialCommunityIcons name="pencil" size={18} color={colors.info} />
+                  <Text style={[styles.detailActionText, { color: colors.info }]}>{copy.edit}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity disabled={!current} style={[styles.detailActionBtn, { backgroundColor: colors.input }]} onPress={() => { if (!current) return; pendingAction.current = () => onDelete(current); close(); }}>
-                  <MaterialCommunityIcons name="trash-can" size={18} color={colors.red} />
-                  <Text style={[styles.detailActionText, { color: colors.red }]}>{copy.delete}</Text>
+                  <MaterialCommunityIcons name="trash-can" size={18} color={colors.expense} />
+                  <Text style={[styles.detailActionText, { color: colors.expense }]}>{copy.delete}</Text>
                 </TouchableOpacity>
               </View>
           </ScrollView>

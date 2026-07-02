@@ -141,7 +141,7 @@ function RangeField({ label, value, onChange, pickerMode, pickerMin, colors, cop
     <>
       <Text style={[styles.label, { color: colors.text, marginTop: 12 }]}>{label}</Text>
       <TouchableOpacity style={[{ borderRadius: 10, paddingHorizontal: 12, minHeight: 42, flexDirection: "row", alignItems: "center", gap: 10, borderWidth: 1, backgroundColor: colors.input, borderColor: colors.border }]} onPress={onOpen}>
-        <MaterialCommunityIcons name="calendar" size={20} color={colors.blue} />
+        <MaterialCommunityIcons name="calendar" size={20} color={colors.info} />
         <Text style={{ color: value ? colors.text : colors.muted, fontWeight: "600", flex: 1 }}>{displayValue}</Text>
       </TouchableOpacity>
       <CalendarPicker visible={isOpen} value={value} mode={pickerMode} minDate={pickerMin} onSelect={onChange} onClose={onClose} colors={colors} copy={copy} />

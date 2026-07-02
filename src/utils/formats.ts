@@ -42,11 +42,11 @@ export function formatDateGroupLabel(
     .toUpperCase();
 }
 
-const TYPE_CONFIG: Record<string, { colorKey: "green" | "red" | "yellow"; fillKey: "incomeSoft" | "expenseSoft" | "warnSoft" }> = {
-  "INGRESO FRECUENTE": { colorKey: "green", fillKey: "incomeSoft" },
-  "INGRESO NO FRECUENTE": { colorKey: "green", fillKey: "incomeSoft" },
-  "GASTO FRECUENTE": { colorKey: "red", fillKey: "expenseSoft" },
-  "GASTO NO FRECUENTE": { colorKey: "yellow", fillKey: "warnSoft" },
+const TYPE_CONFIG: Record<string, { colorKey: "income" | "expense" | "warn"; fillKey: "incomeSoft" | "expenseSoft" | "warnSoft" }> = {
+  "INGRESO FRECUENTE": { colorKey: "income", fillKey: "incomeSoft" },
+  "INGRESO NO FRECUENTE": { colorKey: "income", fillKey: "incomeSoft" },
+  "GASTO FRECUENTE": { colorKey: "expense", fillKey: "expenseSoft" },
+  "GASTO NO FRECUENTE": { colorKey: "warn", fillKey: "warnSoft" },
 };
 
 const TYPE_LABELS: Record<string, { short: keyof UiCopy; full: keyof UiCopy }> = {
@@ -58,7 +58,7 @@ const TYPE_LABELS: Record<string, { short: keyof UiCopy; full: keyof UiCopy }> =
 
 export function typeColor(type: string, colors: Palette): string {
   const cfg = TYPE_CONFIG[type];
-  return cfg ? colors[cfg.colorKey] : colors.yellow;
+  return cfg ? colors[cfg.colorKey] : colors.warn;
 }
 
 export function typeFill(type: string, colors: Palette): string {

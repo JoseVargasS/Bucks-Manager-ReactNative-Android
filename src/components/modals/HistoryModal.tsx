@@ -33,7 +33,7 @@ export function HistoryModal({ visible, entries, colors, currencySymbol, copy, o
         <Animated.View style={[styles.recordModal, { backgroundColor: colors.card }, transition.panelStyle]}>
           <View style={[styles.recordHeader, { borderColor: colors.border }]}>
             <Text style={[styles.recordTitle, { color: colors.text }]}>
-              <MaterialCommunityIcons name="delete-restore" size={19} color={colors.red} /> {copy.history}
+              <MaterialCommunityIcons name="delete-restore" size={19} color={colors.expense} /> {copy.history}
             </Text>
             <TouchableOpacity style={[styles.closeBtn, { backgroundColor: colors.input }]} onPress={onClose}>
               <MaterialCommunityIcons name="close" size={22} color={colors.text} />
@@ -57,11 +57,11 @@ export function HistoryModal({ visible, entries, colors, currencySymbol, copy, o
                 renderItem={({ item }) => (
                   <View style={[s.listItem, { borderColor: colors.border }]}>
                     <View style={[s.historyIcon, { backgroundColor: colors.expenseSoft }]}>
-                      <MaterialCommunityIcons name="trash-can" size={18} color={colors.red} />
+                      <MaterialCommunityIcons name="trash-can" size={18} color={colors.expense} />
                     </View>
                     <View style={{ flex: 1, minWidth: 0 }}>
                       <View style={s.labelRow}>
-                        <Text style={[s.deleteLabel, { color: colors.red }]}>
+                        <Text style={[s.deleteLabel, { color: colors.expense }]}>
                           {copy.delete}
                         </Text>
                         <Text style={[s.timestamp, { color: colors.muted }]}>
@@ -71,7 +71,7 @@ export function HistoryModal({ visible, entries, colors, currencySymbol, copy, o
                       <Text numberOfLines={1} style={[s.detail, { color: colors.text }]}>
                         {item.transaction.detail || copy.detailPlaceholder}
                       </Text>
-                      <Text style={[s.amount, { color: item.transaction.amount >= 0 ? colors.green : colors.red }]}>
+                      <Text style={[s.amount, { color: item.transaction.amount >= 0 ? colors.income : colors.expense }]}>
                         {formatMoney(item.transaction.amount, currencySymbol)}
                       </Text>
                     </View>

@@ -123,7 +123,7 @@ function HeaderShellImpl(
             <HeaderActionButton
               colors={colors}
               icon={isDark ? "weather-night" : "white-balance-sunny"}
-              iconColor={colors.yellow}
+              iconColor={colors.warn}
               onPress={onToggleTheme}
             />
             <HeaderActionButton
