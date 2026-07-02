@@ -191,10 +191,19 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
 
   function addLineItem() {
     setValidationError("");
+    const newId = makeLineItemId((formDraft.lineItems || []).length);
     setFormDraft((current) => ({
       ...current,
-      lineItems: [...(current.lineItems || []), { id: makeLineItemId((current.lineItems || []).length), amount: "", description: "", tags: [] }],
+      lineItems: [...(current.lineItems || []), { id: newId, amount: "", description: "", tags: [] }],
     }));
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const target = inputRefs.current[`amount-${newId}`];
+        if (target && typeof (target as unknown as { focus?: () => void }).focus === "function") {
+          (target as unknown as { focus: () => void }).focus();
+        }
+      });
+    });
   }
 
   function removeLineItem(id: string) {

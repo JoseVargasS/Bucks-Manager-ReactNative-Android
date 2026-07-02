@@ -64,6 +64,16 @@ function formatCreatedAtForSheet(value?: string) {
 }
 
 function formatAmountForSheet(tx: Transaction) {
+  if (tx.lineItems && tx.lineItems.length > 0) {
+    const parts: string[] = [];
+    tx.lineItems.forEach((li) => {
+      const expr = sanitizeAmountExpression(li.formula || "");
+      if (expr) parts.push(expr);
+      else if (Number.isFinite(li.amount) && li.amount !== 0) parts.push(String(li.amount));
+    });
+    if (parts.length === 0) return tx.amount;
+    return `=${parts.join("+")}`;
+  }
   const expression = sanitizeAmountExpression(tx.formula || "");
   if (!expression) return tx.amount;
   return `=${expression}`;
