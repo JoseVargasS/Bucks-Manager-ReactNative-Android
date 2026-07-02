@@ -24,7 +24,7 @@ export function SearchPage({ colors, copy, currencySymbol, tags, filters, setFil
   return (
     <View style={styles.searchBody}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.searchScrollContent} keyboardShouldPersistTaps="always" keyboardDismissMode="none">
-        <View style={[styles.searchSection, { backgroundColor: colors.input }]}>
+        <View style={[styles.searchSection, { backgroundColor: colors.card }]}>
           <View style={styles.searchSectionHeader}>
             <MaterialCommunityIcons name="text-search" size={18} color={colors.primary} />
             <Text style={[styles.searchSectionTitle, { color: colors.text }]}>{copy.detail}</Text>
@@ -40,7 +40,7 @@ export function SearchPage({ colors, copy, currencySymbol, tags, filters, setFil
         </View>
 
         {tags.length > 0 && (
-          <View style={[styles.searchSection, { backgroundColor: colors.input }]}>
+          <View style={[styles.searchSection, { backgroundColor: colors.card }]}>
             <View style={styles.searchSectionHeader}>
               <MaterialCommunityIcons name="tag-multiple" size={18} color={colors.primary} />
               <Text style={[styles.searchSectionTitle, { color: colors.text }]}>{copy.tagsTitle}</Text>
@@ -56,7 +56,7 @@ export function SearchPage({ colors, copy, currencySymbol, tags, filters, setFil
           </View>
         )}
 
-        <View style={[styles.searchSection, { backgroundColor: colors.input }]}>
+        <View style={[styles.searchSection, { backgroundColor: colors.card }]}>
           <View style={styles.searchSectionHeader}>
             <MaterialCommunityIcons name="cash-multiple" size={18} color={colors.primary} />
             <Text style={[styles.searchSectionTitle, { color: colors.text }]}>{copy.amount}</Text>
@@ -81,7 +81,7 @@ export function SearchPage({ colors, copy, currencySymbol, tags, filters, setFil
           </View>
         </View>
 
-        <View style={[styles.searchSection, { backgroundColor: colors.input }]}>
+        <View style={[styles.searchSection, { backgroundColor: colors.card }]}>
           <View style={styles.searchSectionHeader}>
             <MaterialCommunityIcons name="calendar-range" size={18} color={colors.primary} />
             <Text style={[styles.searchSectionTitle, { color: colors.text }]}>{copy.dates}</Text>
