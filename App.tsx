@@ -254,6 +254,8 @@ function AppContent() {
     selectedRows,
     setTransactions,
     setSummaries,
+    setMonth,
+    setYear,
     setSearchFilters,
     setSearchActive,
     setSelectedRows,
@@ -834,6 +836,15 @@ function AppContent() {
     );
     setTransactions(next);
     setSummaries(nextSummaries);
+    if (!currentEdit) {
+      const txDate = new Date(optimistic.rawDate);
+      if (!Number.isNaN(txDate.getTime())) {
+        setMonth(txDate.getMonth());
+        setYear(txDate.getFullYear());
+        setSearchActive(false);
+        setSelectedRows([]);
+      }
+    }
     persistFinancialState(next, nextSummaries, currentFreqIncome, undefined, spreadsheetId);
 
     const token = accessToken;
@@ -879,6 +890,29 @@ function AppContent() {
     });
   }, [setSearchFilters, setSearchActive]);
 
+  function reconcilePeriod(nextTransactions: Transaction[], currentMonth: number, currentYear: number) {
+    const stillHasData = nextTransactions.some((tx) => {
+      const d = tx.rawDateMs != null ? new Date(tx.rawDateMs) : new Date(tx.rawDate);
+      return !Number.isNaN(d.getTime()) && d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+    });
+    if (stillHasData) return;
+    let bestTs = 0;
+    for (const tx of nextTransactions) {
+      const ts = tx.rawDateMs ?? Date.parse(tx.rawDate);
+      if (ts > bestTs && !Number.isNaN(ts)) bestTs = ts;
+    }
+    if (bestTs > 0) {
+      const d = new Date(bestTs);
+      setMonth(d.getMonth());
+      setYear(d.getFullYear());
+    } else {
+      setMonth(new Date().getMonth());
+      setYear(new Date().getFullYear());
+    }
+    setSearchActive(false);
+    setSelectedRows([]);
+  }
+
   async function deleteTx(tx: Transaction) {
     setSelectedRows((current) => current.filter((rowId) => rowId !== tx.rowId));
     const next = renumberTransactions(
@@ -893,6 +927,7 @@ function AppContent() {
     );
     setTransactions(next);
     setSummaries(nextSummaries);
+    reconcilePeriod(next, month, year);
     persistFinancialState(next, nextSummaries, freqIncome, undefined, spreadsheetId);
     addHistoryEntry({ action: "delete", transaction: tx })
       .then((entry) => {
@@ -926,6 +961,7 @@ function AppContent() {
     );
     setTransactions(next);
     setSummaries(nextSummaries);
+    reconcilePeriod(next, month, year);
     persistFinancialState(next, nextSummaries, freqIncome, undefined, spreadsheetId);
     setSelectedRows([]);
     for (const tx of selected) {
@@ -1096,6 +1132,14 @@ function AppContent() {
         allTransactions: transactions,
         tagsList,
         currencySymbol,
+        month,
+        year,
+        availableYears,
+        availableMonths,
+        onSelectPeriod: selectPeriod,
+        goToday,
+        goPrevMonth,
+        goNextMonth,
         onOpenDetail: handleTransactionPress,
       },
       expenses: {

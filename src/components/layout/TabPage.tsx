@@ -56,6 +56,14 @@ type DashboardTabProps = {
   allTransactions: Transaction[];
   tagsList: Tag[];
   currencySymbol: string;
+  month: number;
+  year: number;
+  availableYears: number[];
+  availableMonths: number[];
+  onSelectPeriod: (month: number, year: number) => void;
+  goToday: () => void;
+  goPrevMonth: () => void;
+  goNextMonth: () => void;
   onOpenDetail: (tx: Transaction) => void;
 };
 
@@ -157,6 +165,14 @@ function TabPageImpl(props: TabPageProps) {
               allTransactions={tabProps.allTransactions}
               tagsList={tabProps.tagsList}
               currencySymbol={tabProps.currencySymbol}
+              month={tabProps.month}
+              year={tabProps.year}
+              availableYears={tabProps.availableYears}
+              availableMonths={tabProps.availableMonths}
+              onSelectPeriod={tabProps.onSelectPeriod}
+              goToday={tabProps.goToday}
+              goPrevMonth={tabProps.goPrevMonth}
+              goNextMonth={tabProps.goNextMonth}
               onOpenDetail={tabProps.onOpenDetail}
               topInset={tabProps.contentTopInset}
             />

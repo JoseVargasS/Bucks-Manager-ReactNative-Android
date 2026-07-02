@@ -1,7 +1,7 @@
 import { memo, useMemo, useCallback, useRef } from "react";
 import { ScrollView, View } from "react-native";
 
-import { formatMoney, MONTH_NAMES, calculateMonthSummary } from "@/domain/bucksLogic";
+import { formatMoney, calculateMonthSummary } from "@/domain/bucksLogic";
 import { base } from "@/styles/baseStyles";
 import { dashboardStyles } from "@/components/screens/DashboardView.styles";
 import { txStyles } from "@/styles/transactionRow";
@@ -9,7 +9,7 @@ import { txStyles } from "@/styles/transactionRow";
 const styles = { ...base, ...dashboardStyles, ...txStyles };
 import { type Palette } from "@/theme/colors";
 import { type SummaryRow, type Tag, type Transaction } from "@/types";
-import { type UiCopy } from "@/i18n";
+import { UI_MONTH_NAMES, type UiCopy } from "@/i18n";
 import { labelForTagId } from "@/utils/tags";
 import { shiftColor } from "@/utils/color";
 import { StatCard } from "@/components/ui/StatCard";
@@ -17,16 +17,7 @@ import { PieChart, type PieSlice } from "@/components/ui/PieChart";
 import { Text } from "@/components/ui/AppText";
 import { useTagMaps } from "@/hooks/useTagMaps";
 import { TransactionRow, type TagButtonRef } from "@/components/screens/TransactionRow";
-
-function currentMonthKey(): string {
-  const now = new Date();
-  return `${MONTH_NAMES[now.getMonth()]} ${now.getFullYear()}`;
-}
-
-function isCurrentMonth(tx: Transaction): boolean {
-  const d = tx.rawDateMs != null ? new Date(tx.rawDateMs) : new Date(tx.rawDate);
-  return `${MONTH_NAMES[d.getMonth()]} ${d.getFullYear()}` === currentMonthKey();
-}
+import { PeriodControls } from "@/components/layout/PeriodControls";
 
 export const DashboardView = memo(function DashboardView({
   colors,
@@ -34,6 +25,14 @@ export const DashboardView = memo(function DashboardView({
   currencySymbol,
   allTransactions,
   tagsList,
+  month,
+  year,
+  availableYears,
+  availableMonths,
+  onSelectPeriod,
+  goToday,
+  goPrevMonth,
+  goNextMonth,
   onOpenDetail,
   topInset,
 }: {
@@ -42,15 +41,27 @@ export const DashboardView = memo(function DashboardView({
   currencySymbol: string;
   allTransactions: Transaction[];
   tagsList: Tag[];
+  month: number;
+  year: number;
+  availableYears: number[];
+  availableMonths: number[];
+  onSelectPeriod: (month: number, year: number) => void;
+  goToday: () => void;
+  goPrevMonth: () => void;
+  goNextMonth: () => void;
   onOpenDetail: (tx: Transaction) => void;
   topInset?: number;
 }) {
   const { tagColorMap, tagLabelMap } = useTagMaps(tagsList);
   const tagButtonRefs = useRef<Record<number, TagButtonRef | null>>({});
-  const monthKey = currentMonthKey();
+  const localizedMonthNames = copy.languageCode === "en" ? UI_MONTH_NAMES.en : UI_MONTH_NAMES.es;
+  const monthKey = `${localizedMonthNames[month]} ${year}`;
   const monthTransactions = useMemo(
-    () => allTransactions.filter(isCurrentMonth),
-    [allTransactions],
+    () => allTransactions.filter((tx) => {
+      const d = tx.rawDateMs != null ? new Date(tx.rawDateMs) : new Date(tx.rawDate);
+      return d.getMonth() === month && d.getFullYear() === year;
+    }),
+    [allTransactions, month, year],
   );
 
   const summary = useMemo<SummaryRow>(
@@ -133,6 +144,18 @@ export const DashboardView = memo(function DashboardView({
         topInset !== undefined && { paddingTop: topInset },
       ]}
     >
+      <PeriodControls
+        colors={colors}
+        copy={copy}
+        month={month}
+        year={year}
+        availableYears={availableYears}
+        availableMonths={availableMonths}
+        onSelectPeriod={onSelectPeriod}
+        goToday={goToday}
+        goPrevMonth={goPrevMonth}
+        goNextMonth={goNextMonth}
+      />
       <View>
         <Text
           style={{
@@ -142,7 +165,7 @@ export const DashboardView = memo(function DashboardView({
             marginBottom: 10,
           }}
         >
-          {copy.dashboardSubtitle}
+          {`${copy.dashboardSubtitle} · ${monthKey}`}
         </Text>
         <View style={[styles.statsGrid, styles.statsGridMobile, { paddingHorizontal: 0 }]}>
           <StatCard
