@@ -39,7 +39,7 @@ export interface SessionApi {
   runGoogleSignIn: (switchingAccount: boolean) => Promise<void>;
   getWorkspaceAccessToken: (useCached: boolean) => Promise<{ accessToken: string | null }>;
   syncAccountInfo: () => void;
-  teardownSession: (options?: { clearToken?: boolean; catchErrors?: boolean }) => void;
+  teardownSession: (options?: { clearToken?: boolean; catchErrors?: boolean }) => Promise<void>;
   clearGoogleSession: () => Promise<void>;
   disconnectGoogle: () => Promise<void>;
   removeGoogleAccount: () => Promise<void>;
@@ -76,9 +76,17 @@ export function useSession(
     if (info) setAccountInfo(info);
   }
 
-  function teardownSession(options: { clearToken?: boolean; catchErrors?: boolean } = {}) {
+  async function teardownSession(options: { clearToken?: boolean; catchErrors?: boolean } = {}) {
     const { clearToken = true, catchErrors = false } = options;
-    const cleanup = () => {
+    try {
+      await Promise.all([
+        deleteItemAsync(TOKEN_KEY),
+        deleteItemAsync(SHEET_KEY),
+        deleteFinancialCache(),
+      ]);
+    } catch (e) {
+      if (!catchErrors) throw e;
+    } finally {
       if (clearToken) setAccessToken("");
       onResetFinancial();
       setSpreadsheetId("");
@@ -88,43 +96,15 @@ export function useSession(
       setPendingSync(false);
       setIsSyncing(false);
       pendingSyncRef.current = false;
-    };
-    const ops = catchErrors
-      ? Promise.all([
-          deleteItemAsync(TOKEN_KEY),
-          deleteItemAsync(SHEET_KEY),
-          deleteFinancialCache(),
-        ]).catch(() => undefined)
-      : Promise.all([
-          deleteItemAsync(TOKEN_KEY),
-          deleteItemAsync(SHEET_KEY),
-          deleteFinancialCache(),
-        ]);
-    void ops.then(cleanup);
+    }
   }
 
   function resetFinancialState() {
-    teardownSession({ clearToken: false });
+    void teardownSession({ clearToken: false });
   }
 
   async function clearGoogleSession() {
-    try {
-      await Promise.all([
-        deleteItemAsync(TOKEN_KEY),
-        deleteItemAsync(SHEET_KEY),
-        deleteFinancialCache(),
-      ]);
-    } finally {
-      setAccessToken("");
-      onResetFinancial();
-      setSpreadsheetId("");
-      setAccountInfo(null);
-      setSyncError("");
-      setAuthError("");
-      setPendingSync(false);
-      setIsSyncing(false);
-      pendingSyncRef.current = false;
-    }
+    await teardownSession();
   }
 
   async function disconnectGoogle() {
@@ -150,6 +130,21 @@ export function useSession(
     }
   }
 
+  async function runSwitchCleanup() {
+    setAccountTransition(true);
+    await Promise.all([deleteItemAsync(SHEET_KEY), deleteFinancialCache()]);
+    void teardownSession({ clearToken: false });
+  }
+
+  async function finalizeSignIn(token: string) {
+    await setItemAsync(TOKEN_KEY, token);
+    setAccessToken(token);
+    setIsFirstRemoteLoad(true);
+    setSyncError("");
+    syncAccountInfo();
+    await onConnectGoogleWorkspace(token, "", true);
+  }
+
   async function runGoogleSignIn(switchingAccount: boolean) {
     if (!GOOGLE_ANDROID_CLIENT_ID && !GOOGLE_WEB_CLIENT_ID) {
       Alert.alert(copy.googleOAuth, copy.missingEnvCredentials);
@@ -157,25 +152,14 @@ export function useSession(
     }
     setLoading(true);
     try {
-      await GoogleSignin.hasPlayServices({
-        showPlayServicesUpdateDialog: true,
-      });
+      await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
       if (switchingAccount) await GoogleSignin.signOut();
       const response = await GoogleSignin.signIn();
       if (response.type !== "success") return;
       const tokens = await getWorkspaceAccessToken(true);
       if (!tokens.accessToken) throw new Error(copy.googleSignInError);
-      if (switchingAccount) {
-        setAccountTransition(true);
-        await Promise.all([deleteItemAsync(SHEET_KEY), deleteFinancialCache()]);
-        teardownSession({ clearToken: false });
-      }
-      await setItemAsync(TOKEN_KEY, tokens.accessToken);
-      setAccessToken(tokens.accessToken);
-      setIsFirstRemoteLoad(true);
-      setSyncError("");
-      syncAccountInfo();
-      await onConnectGoogleWorkspace(tokens.accessToken, "", true);
+      if (switchingAccount) await runSwitchCleanup();
+      await finalizeSignIn(tokens.accessToken);
     } catch (error) {
       const message = error instanceof Error ? error.message : copy.googleSignInError;
       const isDeveloperError = message.includes("DEVELOPER_ERROR") || message.includes("code: 10");

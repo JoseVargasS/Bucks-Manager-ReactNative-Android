@@ -92,6 +92,20 @@ export const ExpensesView = memo(function ExpensesView({
 }) {
   const scrollY = useRef(new Animated.Value(0)).current;
   const [scrolled, setScrolled] = useState(false);
+  const periodBar = useMemo(() => (
+    <PeriodControls
+      colors={colors}
+      copy={copy}
+      year={year}
+      month={month}
+      availableYears={availableYears}
+      availableMonths={availableMonths}
+      onSelectPeriod={onSelectPeriod}
+      goToday={goToday}
+      goPrevMonth={goPrevMonth}
+      goNextMonth={goNextMonth}
+    />
+  ), [colors, copy, year, month, availableYears, availableMonths, onSelectPeriod, goToday, goPrevMonth, goNextMonth]);
   const groups = useMemo(
     () => groupTransactionsByDate(transactions, copy),
     [transactions, copy],
@@ -139,18 +153,7 @@ export const ExpensesView = memo(function ExpensesView({
       <>
         <Animated.View style={{ opacity: scrollY.interpolate({ inputRange: [0, 5], outputRange: [1, 0], extrapolate: "clamp" }) }}>
           <View style={{ paddingHorizontal: 14, paddingBottom: 4 }}>
-            <PeriodControls
-              colors={colors}
-              copy={copy}
-              year={year}
-              month={month}
-              availableYears={availableYears}
-              availableMonths={availableMonths}
-              onSelectPeriod={onSelectPeriod}
-              goToday={goToday}
-              goPrevMonth={goPrevMonth}
-              goNextMonth={goNextMonth}
-            />
+            {periodBar}
           </View>
         </Animated.View>
 
@@ -186,21 +189,7 @@ export const ExpensesView = memo(function ExpensesView({
         </Text>
       </>
     ),
-    [
-      colors,
-      copy,
-      searchActive,
-      onExitSearch,
-      scrollY,
-      year,
-      month,
-      availableYears,
-      availableMonths,
-      onSelectPeriod,
-      goToday,
-      goPrevMonth,
-      goNextMonth,
-    ],
+    [colors, copy, searchActive, onExitSearch, scrollY, periodBar],
   );
 
   const renderSectionHeader = useCallback(
@@ -350,18 +339,7 @@ export const ExpensesView = memo(function ExpensesView({
           }}
         >
           <View style={{ paddingHorizontal: 14, paddingBottom: 4 }}>
-            <PeriodControls
-              colors={colors}
-              copy={copy}
-              year={year}
-              month={month}
-              availableYears={availableYears}
-              availableMonths={availableMonths}
-              onSelectPeriod={onSelectPeriod}
-              goToday={goToday}
-              goPrevMonth={goPrevMonth}
-              goNextMonth={goNextMonth}
-            />
+            {periodBar}
           </View>
         </Animated.View>
       )}

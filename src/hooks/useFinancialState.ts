@@ -90,19 +90,6 @@ export function useFinancialState(tagsList: Tag[]): FinancialState {
   const hasLocalDataRef = useRef(false);
   const didSetInitialPeriodRef = useRef(false);
 
-  // Keep refs in sync with state
-  const prevFreqIncome = useRef(freqIncome);
-  if (prevFreqIncome.current !== freqIncome) {
-    prevFreqIncome.current = freqIncome;
-    freqIncomeRef.current = freqIncome;
-  }
-
-  const prevHasLocalData = useRef(hasLocalData);
-  if (prevHasLocalData.current !== hasLocalData) {
-    prevHasLocalData.current = hasLocalData;
-    hasLocalDataRef.current = hasLocalData;
-  }
-
   // --- Derived data ---
 
   const tagLabelsById = useMemo(() => {
