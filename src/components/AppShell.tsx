@@ -282,7 +282,7 @@ function TabPageImpl(props: TabPageProps) {
 
 export const TabPage = memo(TabPageImpl);
 
-export type HeaderShellProps = {
+type HeaderShellProps = {
   tab: Tab;
   bg: string;
   isDark: boolean;

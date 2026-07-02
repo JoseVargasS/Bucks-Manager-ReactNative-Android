@@ -1,20 +1,22 @@
-import { memo, useMemo, useCallback } from "react";
-import { Pressable, ScrollView, View } from "react-native";
-import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
+import { memo, useMemo, useCallback, useRef } from "react";
+import { ScrollView, View } from "react-native";
 
 import { formatMoney, MONTH_NAMES, calculateMonthSummary } from "@/domain/bucksLogic";
 import { base } from "@/styles/baseStyles";
 import { dashboardStyles } from "@/components/screens/DashboardView.styles";
-import { expensesStyles } from "@/components/screens/ExpensesView.styles";
+import { txStyles } from "@/styles/transactionRow";
 
-const styles = { ...base, ...dashboardStyles, ...expensesStyles };
+const styles = { ...base, ...dashboardStyles, ...txStyles };
 import { type Palette } from "@/theme/colors";
-import { type MaterialIconName, type SummaryRow, type Tag, type Transaction } from "@/types";
+import { type SummaryRow, type Tag, type Transaction } from "@/types";
 import { type UiCopy } from "@/i18n";
-import { labelForTagId, tagTextColor } from "@/utils/tags";
+import { labelForTagId } from "@/utils/tags";
+import { shiftColor } from "@/utils/color";
 import { StatCard } from "@/components/ui/StatCard";
 import { PieChart, type PieSlice } from "@/components/ui/PieChart";
 import { Text } from "@/components/ui/AppText";
+import { useTagMaps } from "@/hooks/useTagMaps";
+import { TransactionRow, type TagButtonRef } from "@/components/screens/TransactionRow";
 
 function currentMonthKey(): string {
   const now = new Date();
@@ -24,19 +26,6 @@ function currentMonthKey(): string {
 function isCurrentMonth(tx: Transaction): boolean {
   const d = tx.rawDateMs != null ? new Date(tx.rawDateMs) : new Date(tx.rawDate);
   return `${MONTH_NAMES[d.getMonth()]} ${d.getFullYear()}` === currentMonthKey();
-}
-
-function typeIcon(tx: Transaction): MaterialIconName {
-  if (tx.amount >= 0) return "bank-transfer-in";
-  return tx.type === "GASTO FRECUENTE" ? "credit-card-outline" : "basket-outline";
-}
-
-function typeIconColor(tx: Transaction, colors: Palette): string {
-  return tx.amount >= 0 ? colors.green : colors.red;
-}
-
-function typeIconBg(tx: Transaction, colors: Palette): string {
-  return tx.amount >= 0 ? colors.incomeSoft : colors.expenseSoft;
 }
 
 export const DashboardView = memo(function DashboardView({
@@ -56,12 +45,8 @@ export const DashboardView = memo(function DashboardView({
   onOpenDetail: (tx: Transaction) => void;
   topInset?: number;
 }) {
-  const tagColorMap = useMemo(() => {
-    const map: Record<string, string> = {};
-    tagsList.forEach((t) => { map[t.id] = t.color; });
-    return map;
-  }, [tagsList]);
-
+  const { tagColorMap, tagLabelMap } = useTagMaps(tagsList);
+  const tagButtonRefs = useRef<Record<number, TagButtonRef | null>>({});
   const monthKey = currentMonthKey();
   const monthTransactions = useMemo(
     () => allTransactions.filter(isCurrentMonth),
@@ -252,81 +237,25 @@ export const DashboardView = memo(function DashboardView({
             }}
           >
             {recentTransactions.map((tx, index) => (
-              <Pressable
+              <TransactionRow
                 key={`${tx.rowId}-${tx.rawDate}-${tx.createdAtMs ?? tx.createdAt ?? ""}`}
-                onPress={() => handleDetail(tx)}
-                style={[
-                  styles.groupedTxRow,
-                  {
-                    backgroundColor: colors.card,
-                  },
-                  index > 0 && {
-                    borderTopWidth: 0.5,
-                    borderColor: colors.border,
-                  },
-                  index === 0 && styles.sectionCardFirstRow,
-                  index === recentTransactions.length - 1 &&
-                    styles.sectionCardLastRow,
-                  tx.type === "GASTO FRECUENTE" && {
-                    backgroundColor: colors.freqExpenseRow,
-                  },
-                ]}
-              >
-                <View
-                  style={[
-                    styles.txIcon,
-                    { backgroundColor: typeIconBg(tx, colors) },
-                  ]}
-                >
-                  <MaterialCommunityIcons
-                    name={typeIcon(tx)}
-                    size={18}
-                    color={typeIconColor(tx, colors)}
-                  />
-                </View>
-                <View style={styles.groupedTxMain}>
-                  <Text
-                    numberOfLines={1}
-                    style={[styles.groupedTxTitle, { color: colors.text }]}
-                  >
-                    {tx.detail}
-                  </Text>
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 2 }}>
-                    <Text style={{ fontSize: 11, color: colors.muted }}>
-                      {parseInt(tx.rawDate.slice(8, 10), 10)}-{MONTH_NAMES[parseInt(tx.rawDate.slice(5, 7), 10) - 1].slice(0, 3).toLowerCase()}
-                    </Text>
-                    {tx.tags?.map((tagId) => {
-                      const tc = tagColorMap[tagId] || colors.muted;
-                      return (
-                        <View
-                          key={tagId}
-                          style={{
-                            backgroundColor: tc,
-                            borderRadius: 4,
-                            paddingHorizontal: 5,
-                            paddingVertical: 1,
-                          }}
-                        >
-                          <Text style={{ fontSize: 9, fontWeight: "600", color: tagTextColor(tc, colors) }}>
-                            {labelForTagId(tagId, tagsList)}
-                          </Text>
-                        </View>
-                      );
-                    })}
-                  </View>
-                </View>
-                <Text
-                  numberOfLines={1}
-                  style={[
-                    styles.groupedTxAmount,
-                    {
-                      color: tx.amount >= 0 ? colors.green : colors.red,
-                    },
-                  ]}
-                >
-                  {formatMoney(tx.amount, currencySymbol)}
-                </Text>
-              </Pressable>
+                tx={tx}
+                index={index}
+                sectionLength={recentTransactions.length}
+                selected={false}
+                colors={colors}
+                currencySymbol={currencySymbol}
+                copy={copy}
+                searchActive={false}
+                searchText=""
+                tagColorMap={tagColorMap}
+                tagLabelMap={tagLabelMap}
+                onOpenDetail={handleDetail}
+                onMove={() => {}}
+                onToggleSelection={() => {}}
+                setTagBubble={() => {}}
+                tagButtonRefs={tagButtonRefs}
+              />
             ))}
           </View>
         ) : (
@@ -349,12 +278,3 @@ export const DashboardView = memo(function DashboardView({
     </ScrollView>
   );
 });
-
-function shiftColor(hex: string, amount: number): string {
-  if (!hex.startsWith("#") || hex.length < 7) return hex;
-  const num = Number.parseInt(hex.slice(1), 16);
-  const r = Math.min(255, Math.max(0, ((num >> 16) & 255) + amount));
-  const g = Math.min(255, Math.max(0, ((num >> 8) & 255) + amount));
-  const b = Math.min(255, Math.max(0, (num & 255) + amount));
-  return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, "0")}`;
-}

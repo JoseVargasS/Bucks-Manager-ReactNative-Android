@@ -46,7 +46,7 @@ export const dark = {
   tagTextDark: "#18202d",
 };
 
-export const light = {
+const light = {
   bg: "#f4efe7",
   card: "#fffaf1",
   input: "#f1eadf",

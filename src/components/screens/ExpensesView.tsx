@@ -8,9 +8,7 @@ import {
 } from "react";
 import {
   Animated,
-  Dimensions,
   Modal,
-  Pressable,
   SectionList,
   StyleSheet,
   TouchableOpacity,
@@ -21,258 +19,28 @@ import type {
   NativeSyntheticEvent,
 } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import { formatMoney } from "@/domain/bucksLogic";
-import {
-  formatCreatedTime,
-  typeColor,
-  typeFill,
-  typeLabelFull,
-} from "@/utils/formats";
-import { abbreviateTag, tagTextColor } from "@/utils/tags";
 import { groupTransactionsByDate } from "@/utils/transactions";
 import { withAlpha } from "@/utils/helpers";
+import { tagTextColor } from "@/utils/tags";
 import { base } from "@/styles/baseStyles";
 import { expensesStyles } from "@/components/screens/ExpensesView.styles";
+import { txStyles } from "@/styles/transactionRow";
 
-const styles = { ...base, ...expensesStyles };
+const styles = { ...base, ...expensesStyles, ...txStyles };
 import { PeriodControls } from "@/components/layout/PeriodControls";
-import { HighlightedText } from "@/components/ui/HighlightedText";
 import { dark, type Palette } from "@/theme/colors";
-import { type Tag, type Transaction, type MaterialIconName } from "@/types";
+import { type Tag, type Transaction } from "@/types";
 import { type UiCopy } from "@/i18n";
 import { useModalTransition } from "@/components/ui/useModalTransition";
 import { Text } from "@/components/ui/AppText";
+import { useTagMaps } from "@/hooks/useTagMaps";
+import { TransactionRow, type TagBubble, type TagButtonRef } from "@/components/screens/TransactionRow";
 
 type TransactionSection = {
   key: string;
   title: string;
   data: Transaction[];
 };
-
-type TagBubble = { x: number; y: number; tags: string[] };
-
-type TagButtonRef = {
-  measureInWindow?: (
-    cb: (x: number, y: number, width: number, height: number) => void,
-  ) => void;
-};
-
-type TransactionRowProps = {
-  tx: Transaction;
-  index: number;
-  sectionLength: number;
-  selected: boolean;
-  colors: Palette;
-  currencySymbol: string;
-  copy: UiCopy;
-  searchActive: boolean;
-  searchText: string;
-  tagColorMap: Record<string, string>;
-  tagLabelMap: Record<string, string>;
-  onOpenDetail: (tx: Transaction) => void;
-  onMove: (tx: Transaction) => void;
-  onToggleSelection: (tx: Transaction) => void;
-  setTagBubble: (bubble: TagBubble | null) => void;
-  tagButtonRefs: { current: Record<number, TagButtonRef | null> };
-};
-
-const TransactionRow = memo(function TransactionRow({
-  tx,
-  index,
-  sectionLength,
-  selected,
-  colors,
-  currencySymbol,
-  copy,
-  searchActive,
-  searchText,
-  tagColorMap,
-  tagLabelMap,
-  onOpenDetail,
-  onMove,
-  onToggleSelection,
-  setTagBubble,
-  tagButtonRefs,
-}: TransactionRowProps) {
-  const icon =
-    tx.amount >= 0
-      ? "bank-transfer-in"
-      : tx.type === "GASTO FRECUENTE"
-        ? "credit-card-outline"
-        : "basket-outline";
-  const isFreqExpense = tx.type === "GASTO FRECUENTE";
-  const showPill = tx.type !== "GASTO NO FRECUENTE";
-  const tags = (tx.tags || []).filter((t) => tagColorMap[t] || tagLabelMap[t]);
-  const visibleTags = tags.slice(0, 2);
-  const hiddenTagCount = Math.max(0, tags.length - visibleTags.length);
-
-  const handlePress = useCallback(() => onOpenDetail(tx), [onOpenDetail, tx]);
-  const handleLongPress = useCallback(
-    () => (selected ? onMove(tx) : onToggleSelection(tx)),
-    [onMove, onToggleSelection, selected, tx],
-  );
-  const handleTagRef = useCallback(
-    (ref: TagButtonRef | null) => {
-      if (ref) tagButtonRefs.current[tx.rowId] = ref;
-      else delete tagButtonRefs.current[tx.rowId];
-    },
-    [tagButtonRefs, tx.rowId],
-  );
-  const handleHiddenTagsPress = useCallback(() => {
-    const allTags = (tx.tags || []).filter((t) => tagColorMap[t] || tagLabelMap[t]);
-    const hiddenTags = allTags.slice(2);
-    if (!hiddenTags.length) return;
-    tagButtonRefs.current[tx.rowId]?.measureInWindow?.((x, y) => {
-      const screen = Dimensions.get("window");
-      setTagBubble({
-        x: Math.min(x, screen.width - 176),
-        y: Math.min(y, screen.height - 190),
-        tags: hiddenTags,
-      });
-    });
-  }, [setTagBubble, tagButtonRefs, tagColorMap, tagLabelMap, tx.rowId, tx.tags]);
-
-  return (
-    <Pressable
-      onPress={handlePress}
-      onLongPress={handleLongPress}
-      style={[
-        styles.groupedTxRow,
-        styles.sectionCardRow,
-        { backgroundColor: colors.card },
-        index > 0 && { borderTopWidth: 0.5, borderColor: colors.border },
-        index === 0 && styles.sectionCardFirstRow,
-        index === sectionLength - 1 && styles.sectionCardLastRow,
-        isFreqExpense && { backgroundColor: colors.freqExpenseRow },
-        selected && { backgroundColor: colors.primarySoft },
-      ]}
-    >
-      <View
-        style={[
-          styles.txIcon,
-          {
-            backgroundColor: selected
-              ? colors.infoSoft
-              : typeFill(tx.type, colors),
-          },
-        ]}
-      >
-        <MaterialCommunityIcons
-          name={selected ? "check" : (icon as MaterialIconName)}
-          size={18}
-          color={selected ? colors.blue : typeColor(tx.type, colors)}
-        />
-      </View>
-      <View style={styles.groupedTxMain}>
-        <HighlightedText
-          text={tx.detail}
-          query={searchActive ? searchText : ""}
-          style={[styles.groupedTxTitle, { color: colors.text }]}
-          highlightStyle={{
-            color: colors.onPrimary,
-            backgroundColor: colors.primary,
-            borderRadius: 4,
-          }}
-        />
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            gap: 6,
-            marginTop: 3,
-          }}
-        >
-          {showPill && (
-            <View
-              style={{
-                paddingHorizontal: 7,
-                paddingVertical: 2,
-                borderRadius: 5,
-                backgroundColor: typeFill(tx.type, colors),
-              }}
-            >
-              <Text
-                style={{
-                  fontSize: 11,
-                  fontWeight: "600",
-                  color: typeColor(tx.type, colors),
-                }}
-              >
-                {typeLabelFull(tx.type, copy)}
-              </Text>
-            </View>
-          )}
-          <Text style={[styles.groupedTxMeta, { color: colors.muted }]}>
-            {formatCreatedTime(tx.createdAt).slice(0, 5)}
-          </Text>
-          {visibleTags.map((tag) => {
-            const tagColor = tagColorMap[tag] || colors.muted;
-            const tagLabel = tagLabelMap[tag] || tag;
-            return (
-              <View
-                key={tag}
-                style={{
-                  paddingHorizontal: 6,
-                  paddingVertical: 2,
-                  borderRadius: 5,
-                  backgroundColor: tagColor,
-                }}
-              >
-                <Text
-                  style={{
-                    fontSize: 10,
-                    fontWeight: "700",
-                    color: tagTextColor(tagColor, colors),
-                  }}
-                >
-                  {abbreviateTag(tagLabel)}
-                </Text>
-              </View>
-            );
-          })}
-          {hiddenTagCount > 0 && (
-            <TouchableOpacity
-              ref={handleTagRef}
-              onPress={handleHiddenTagsPress}
-              style={{
-                paddingHorizontal: 6,
-                paddingVertical: 2,
-                borderRadius: 5,
-                backgroundColor: colors.primary,
-              }}
-            >
-              <Text
-                style={{
-                  fontSize: 10,
-                  fontWeight: "700",
-                  color: colors.onPrimary,
-                }}
-              >
-                +{hiddenTagCount}
-              </Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      </View>
-      <Text
-        numberOfLines={1}
-        style={[
-          styles.groupedTxAmount,
-          { color: tx.amount >= 0 ? colors.green : colors.red },
-        ]}
-      >
-        {formatMoney(tx.amount, currencySymbol)}
-      </Text>
-      {selected && (
-        <MaterialCommunityIcons
-          name="drag-vertical"
-          size={18}
-          color={colors.muted}
-        />
-      )}
-    </Pressable>
-  );
-});
 
 export const ExpensesView = memo(function ExpensesView({
   colors,
@@ -353,20 +121,7 @@ export const ExpensesView = memo(function ExpensesView({
   );
   const tagBubbleTransition = useModalTransition(Boolean(tagBubble), 6, 0.99);
   const tagButtonRefs = useRef<Record<number, TagButtonRef | null>>({});
-  const tagColorMap = useMemo(() => {
-    const map: Record<string, string> = {};
-    tagsList.forEach((t) => {
-      map[t.id] = t.color;
-    });
-    return map;
-  }, [tagsList]);
-  const tagLabelMap = useMemo(() => {
-    const map: Record<string, string> = {};
-    tagsList.forEach((t) => {
-      map[t.id] = t.label;
-    });
-    return map;
-  }, [tagsList]);
+  const { tagColorMap, tagLabelMap } = useTagMaps(tagsList);
   // ponytail: stable id from rowId+date+created time. Avoids remounting rows when
   // the Sheet normalizes the amount or detail string back into a slightly different value.
   const keyExtractor = useCallback(

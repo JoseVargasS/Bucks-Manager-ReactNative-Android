@@ -21,7 +21,7 @@ export function setAppFontPreference(preference: FontPreference) {
   listeners.forEach((listener) => listener());
 }
 
-export function getAppFontFamily(preference: FontPreference) {
+function getAppFontFamily(preference: FontPreference) {
   return FONT_FAMILIES[preference];
 }
 
