@@ -8,6 +8,7 @@ const TRANSACTION_HEADERS = [
   "Type",
   "CREATION TIME",
   "Tags",
+  "LINE ITEMS",
 ];
 
 const SUMMARY_HEADERS = [
@@ -116,7 +117,7 @@ function transactionRowFormatRequests(sheetId: number, rowIndex: number) {
           startRowIndex: rowIndex,
           endRowIndex: rowIndex + 1,
           startColumnIndex: 0,
-          endColumnIndex: 6,
+          endColumnIndex: 7,
         },
         innerVertical: blackBorder,
         right: blackBorder,
@@ -276,7 +277,7 @@ async function initializeSpreadsheet(token: string, spreadsheetId: string) {
       valueInputOption: "USER_ENTERED",
       data: [
         {
-          range: `${SHEET_NAMES.transactions}!A1:F1`,
+          range: `${SHEET_NAMES.transactions}!A1:G1`,
           values: [TRANSACTION_HEADERS],
         },
         {

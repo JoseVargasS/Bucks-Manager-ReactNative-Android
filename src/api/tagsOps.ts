@@ -9,7 +9,7 @@ export async function removeTagFromAllRows(
   spreadsheetId: string,
   tagId: string,
 ) {
-  const range = `${SHEET_NAMES.transactions}!F2:F`;
+  const range = `${SHEET_NAMES.transactions}!F2:G`;
   const data = await googleFetch<{ values?: unknown[][] }>(
     token,
     readValuesUrl(spreadsheetId, range),
@@ -18,14 +18,55 @@ export async function removeTagFromAllRows(
   const updates: { range: string; values: string[][] }[] = [];
   rows.forEach((row, index) => {
     const raw = String(row[0] || "").trim();
-    if (!raw) return;
-    const tags = parseTags(raw);
-    if (!tags.includes(tagId)) return;
-    const cleaned = tags.filter((t) => t !== tagId);
-    updates.push({
-      range: `${SHEET_NAMES.transactions}!F${index + 2}`,
-      values: [[cleaned.join(TAG_SEPARATOR)]],
-    });
+    const rawJson = String(row[1] || "").trim();
+    let tagsChanged = false;
+    let lineItemsChanged = false;
+
+    let tags = raw ? parseTags(raw) : [];
+    if (tags.includes(tagId)) {
+      tags = tags.filter((t) => t !== tagId);
+      tagsChanged = true;
+    }
+
+    let lineItemsJson = rawJson;
+    if (rawJson) {
+      try {
+        const parsed = JSON.parse(rawJson);
+        if (Array.isArray(parsed)) {
+          let changed = false;
+          const updated = parsed.map((li: Record<string, unknown>) => {
+            if (Array.isArray(li.tags) && (li.tags as string[]).includes(tagId)) {
+              changed = true;
+              return { ...li, tags: (li.tags as string[]).filter((t: string) => t !== tagId) };
+            }
+            return li;
+          });
+          if (changed) {
+            lineItemsJson = JSON.stringify(updated);
+            lineItemsChanged = true;
+          }
+        }
+      } catch { /* ignore parse errors */ }
+    }
+
+    const values: string[] = [];
+    if (tagsChanged) values.push(tags.join(TAG_SEPARATOR));
+    if (lineItemsChanged && tagsChanged) {
+      updates.push({
+        range: `${SHEET_NAMES.transactions}!F${index + 2}:G${index + 2}`,
+        values: [[tags.join(TAG_SEPARATOR), lineItemsJson]],
+      });
+    } else if (tagsChanged) {
+      updates.push({
+        range: `${SHEET_NAMES.transactions}!F${index + 2}`,
+        values: [[tags.join(TAG_SEPARATOR)]],
+      });
+    } else if (lineItemsChanged) {
+      updates.push({
+        range: `${SHEET_NAMES.transactions}!G${index + 2}`,
+        values: [[lineItemsJson]],
+      });
+    }
   });
   if (!updates.length) return;
   await googleFetch(

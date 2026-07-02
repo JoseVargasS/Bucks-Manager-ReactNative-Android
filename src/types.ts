@@ -8,6 +8,21 @@ export type TransactionType =
   | "GASTO FRECUENTE"
   | "GASTO NO FRECUENTE";
 
+export type LineItem = {
+  id: string;
+  amount: number;
+  formula?: string;
+  description: string;
+  tags: string[];
+};
+
+export type LineItemDraft = {
+  id: string;
+  amount: string;
+  description: string;
+  tags: string[];
+};
+
 export type Transaction = {
   rowId: number;
   date: string;
@@ -20,6 +35,7 @@ export type Transaction = {
   type: TransactionType;
   createdAt?: string;
   tags?: string[];
+  lineItems?: LineItem[];
 };
 
 export type TransactionDraft = {
@@ -29,6 +45,8 @@ export type TransactionDraft = {
   type: TransactionType;
   createdAt?: string;
   tags?: string[];
+  concepto?: string;
+  lineItems?: LineItemDraft[];
 };
 
 export type Tag = {

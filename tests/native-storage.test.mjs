@@ -115,7 +115,7 @@ test("financial cache round-trips valid data and respects spreadsheet ownership"
     freqIncome: { "January 2026": 100 },
   };
   await saveFinancialCache(cache);
-  assert.deepEqual(await loadFinancialCache("sheet-1"), { ...cache, schemaVersion: 2 });
+  assert.deepEqual(await loadFinancialCache("sheet-1"), { ...cache, schemaVersion: 3 });
   assert.equal(await loadFinancialCache("sheet-2"), null);
 
   await deleteFinancialCache();

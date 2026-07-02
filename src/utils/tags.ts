@@ -180,14 +180,37 @@ export function migrateTransactionTags(transactions: Transaction[], tagsList: Ta
   if (!transactions.length || !tagsList.length) return transactions;
   let changed = false;
   const next = transactions.map((tx) => {
-    if (!tx.tags?.length) return tx;
-    const migrated = migrateTagReferences(tx.tags, tagsList);
-    const isSame =
-      migrated.length === tx.tags.length
-      && migrated.every((id, index) => id === tx.tags![index]);
-    if (isSame) return tx;
-    changed = true;
-    return { ...tx, tags: migrated };
+    let txChanged = false;
+    let migratedTags: string[] | undefined;
+    if (tx.tags?.length) {
+      migratedTags = migrateTagReferences(tx.tags, tagsList);
+      const isSameTags =
+        migratedTags.length === tx.tags.length
+        && migratedTags.every((id, index) => id === tx.tags![index]);
+      if (!isSameTags) txChanged = true;
+    }
+
+    let migratedLineItems = tx.lineItems;
+    if (tx.lineItems?.length) {
+      let liChanged = false;
+      migratedLineItems = tx.lineItems.map((li) => {
+        if (!li.tags?.length) return li;
+        const migrated = migrateTagReferences(li.tags, tagsList);
+        const isSame =
+          migrated.length === li.tags.length
+          && migrated.every((id, index) => id === li.tags[index]);
+        if (isSame) return li;
+        liChanged = true;
+        return { ...li, tags: migrated };
+      });
+      if (liChanged) txChanged = true;
+    }
+
+    if (txChanged) {
+      changed = true;
+      return { ...tx, ...(migratedTags && { tags: migratedTags }), ...(migratedLineItems && { lineItems: migratedLineItems }) };
+    }
+    return tx;
   });
   return changed ? next : transactions;
 }

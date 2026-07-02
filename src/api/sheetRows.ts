@@ -1,4 +1,4 @@
-import { type SummaryRow, type Transaction, type TransactionDraft } from "@/types";
+import { type LineItem, type SummaryRow, type Transaction, type TransactionDraft } from "@/types";
 import {
   buildTransactionFromDraft,
   formatDateForSheet,
@@ -31,6 +31,26 @@ import {
 const TAG_SEPARATOR = ", ";
 const TAG_HEADER = "Tags";
 const tagsColumnReady = new Set<string>();
+
+function parseLineItems(raw: string): LineItem[] | undefined {
+  if (!raw || raw === "[]") return undefined;
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed) || parsed.length === 0) return undefined;
+    const valid = parsed.every(
+      (item: unknown) =>
+        typeof item === "object" &&
+        item !== null &&
+        "id" in item &&
+        "amount" in item &&
+        "description" in item &&
+        "tags" in item,
+    );
+    return valid ? (parsed as LineItem[]) : undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 function formatCreatedAtForSheet(value?: string) {
   const raw = String(value || "").trim();
@@ -244,6 +264,7 @@ function buildTransactionRow(tx: Transaction) {
     tx.type,
     formatCreatedAtForSheet(tx.createdAt),
     (tx.tags || []).join(TAG_SEPARATOR),
+    JSON.stringify(tx.lineItems ?? []),
   ];
 }
 
@@ -254,7 +275,7 @@ async function writeRow(
   values: unknown[],
 ) {
   await ensureTransactionTagsColumn(token, spreadsheetId);
-  const range = `${SHEET_NAMES.transactions}!A${rowNumber}:F${rowNumber}`;
+  const range = `${SHEET_NAMES.transactions}!A${rowNumber}:G${rowNumber}`;
   await googleFetch(
     token,
     `${valuesUrl(spreadsheetId, range)}?valueInputOption=USER_ENTERED`,
@@ -270,7 +291,7 @@ async function readSingleRow(
   spreadsheetId: string,
   rowNumber: number,
 ) {
-  const range = `${SHEET_NAMES.transactions}!A${rowNumber}:F${rowNumber}`;
+  const range = `${SHEET_NAMES.transactions}!A${rowNumber}:G${rowNumber}`;
   const data = await googleFetch<{ values?: unknown[][] }>(
     token,
     readValuesUrl(spreadsheetId, range),
@@ -279,7 +300,7 @@ async function readSingleRow(
 }
 
 export async function readTransactions(token: string, spreadsheetId: string) {
-  const range = `${SHEET_NAMES.transactions}!A1:F`;
+  const range = `${SHEET_NAMES.transactions}!A1:G`;
   const [data, formulaData] = await Promise.all([
     googleFetch<{ values?: unknown[][] }>(
       token,
@@ -304,6 +325,7 @@ export async function readTransactions(token: string, spreadsheetId: string) {
       const type = normalizeType(String(row[3] || ""));
       if (!type) return null;
       const createdAt = parseCreatedAt(row[4]);
+      const lineItems = parseLineItems(String(row[6] || ""));
       return {
         rowId: index + 1,
         date: formatDateForSheet(date),
@@ -316,6 +338,7 @@ export async function readTransactions(token: string, spreadsheetId: string) {
         type,
         createdAt,
         tags: parseTags(row[5]),
+        ...(lineItems && { lineItems }),
       };
     })
     .filter(Boolean) as Transaction[];

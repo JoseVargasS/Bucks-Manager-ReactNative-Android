@@ -1,10 +1,10 @@
 import * as FileSystem from "expo-file-system/legacy";
 
 import { TRANSACTION_TYPES } from "@/domain/bucksLogic";
-import type { SummaryRow, Transaction } from "@/types";
+import type { LineItem, SummaryRow, Transaction } from "@/types";
 import { logError } from "@/utils/errorHandler";
 
-const CACHE_VERSION = 2;
+const CACHE_VERSION = 3;
 const CACHE_FILE = `${FileSystem.documentDirectory || FileSystem.cacheDirectory}bucks-finance-cache.json`;
 
 export type FinancialCache = {
@@ -70,7 +70,14 @@ function isTransaction(value: unknown): value is Transaction {
     && TRANSACTION_TYPES.includes(tx.type as Transaction["type"])
     && (tx.formula === undefined || typeof tx.formula === "string")
     && (tx.createdAt === undefined || typeof tx.createdAt === "string")
-    && (tx.tags === undefined || (Array.isArray(tx.tags) && tx.tags.every((tag) => typeof tag === "string")));
+    && (tx.tags === undefined || (Array.isArray(tx.tags) && tx.tags.every((tag) => typeof tag === "string")))
+    && (tx.lineItems === undefined || (Array.isArray(tx.lineItems) && tx.lineItems.every(
+      (li: unknown) =>
+        typeof li === "object" && li !== null &&
+        "id" in li && "amount" in li && "description" in li && "tags" in li &&
+        typeof (li as LineItem).amount === "number" && Number.isFinite((li as LineItem).amount) &&
+        Array.isArray((li as LineItem).tags),
+    )));
 }
 
 function isSummary(value: unknown): value is SummaryRow {

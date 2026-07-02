@@ -684,6 +684,15 @@ function AppContent() {
 
   const openEdit = useCallback((tx: Transaction) => {
     detailModalRef.current?.close();
+    const concepto = tx.lineItems ? (tx.detail.split(":")[0] || "") : "";
+    const lineItems = tx.lineItems
+      ? tx.lineItems.map((li) => ({
+          id: li.id,
+          amount: li.formula ? `=${li.formula}` : String(li.amount),
+          description: li.description,
+          tags: li.tags,
+        }))
+      : [{ id: "li-1", amount: tx.formula ? `=${tx.formula}` : String(tx.amount), description: tx.detail, tags: tx.tags || [] }];
     transactionModalRef.current?.open(
       {
         date: formatDateToISO(tx.rawDate),
@@ -692,6 +701,8 @@ function AppContent() {
         type: tx.type,
         createdAt: tx.createdAt,
         tags: tx.tags || [],
+        concepto,
+        lineItems,
       },
       tx,
     );
@@ -743,11 +754,17 @@ function AppContent() {
     currentDraft: TransactionDraft,
     currentEdit: Transaction | null,
   ): boolean {
-    if (
-      !currentDraft.date ||
-      !currentDraft.amount ||
-      !currentDraft.detail.trim()
-    ) {
+    if (!currentDraft.date) {
+      Alert.alert(copy.incompleteData, copy.completeRequired);
+      return false;
+    }
+    if (currentDraft.lineItems && currentDraft.lineItems.length > 0) {
+      const hasAmount = currentDraft.lineItems.some((li) => li.amount.trim());
+      if (!hasAmount) {
+        Alert.alert(copy.incompleteData, copy.completeRequired);
+        return false;
+      }
+    } else if (!currentDraft.amount || !currentDraft.detail.trim()) {
       Alert.alert(copy.incompleteData, copy.completeRequired);
       return false;
     }
@@ -1032,6 +1049,19 @@ function AppContent() {
     persistFinancialState(restored, nextSummaries, freqIncome, undefined, spreadsheetId);
     if (accessToken && spreadsheetId) {
       pendingSyncRef.current = true;
+      const concepto = entry.transaction.lineItems
+        ? (entry.transaction.detail.split(":")[0] || "")
+        : "";
+      const lineItems = entry.transaction.lineItems
+        ? entry.transaction.lineItems.map((li) => ({
+            id: li.id,
+            amount: li.formula ? `=${li.formula}` : String(li.amount),
+            description: li.description,
+            tags: li.tags,
+          }))
+        : [{ id: "li-1", amount: entry.transaction.formula
+            ? `=${entry.transaction.formula}`
+            : String(Math.abs(entry.transaction.amount)), description: entry.transaction.detail, tags: entry.transaction.tags || [] }];
       const draft: TransactionDraft = {
         date: formatDateToISO(entry.transaction.rawDate),
         amount: entry.transaction.formula
@@ -1041,6 +1071,8 @@ function AppContent() {
         type: entry.transaction.type,
         createdAt: entry.transaction.createdAt,
         tags: entry.transaction.tags || [],
+        concepto,
+        lineItems,
       };
       syncGoogleInBackground(async (freshToken) => {
         await insertTransactionAtRow(

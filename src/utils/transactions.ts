@@ -1,5 +1,5 @@
-import type { Transaction, TransactionDraft, TransactionType } from "@/types";
-import { formatDateToISO } from "@/domain/bucksLogic";
+import type { LineItemDraft, Transaction, TransactionDraft, TransactionType } from "@/types";
+import { calculateExpression, formatDateToISO } from "@/domain/bucksLogic";
 import { UI_COPY, type UiCopy } from "@/i18n";
 import { formatDateGroupLabel } from "./formats";
 
@@ -7,7 +7,27 @@ import { formatDateGroupLabel } from "./formats";
 export function getBlankDraft(
   type: TransactionType = "GASTO NO FRECUENTE",
 ): TransactionDraft {
-  return { date: formatDateToISO(new Date()), amount: "", detail: "", type };
+  return {
+    date: formatDateToISO(new Date()),
+    amount: "",
+    detail: "",
+    type,
+    concepto: "",
+    tags: [],
+    lineItems: [{ id: "li-1", amount: "", description: "", tags: [] }],
+  };
+}
+
+export function computeLineItemsTotal(items: LineItemDraft[]): { total: number; error: string | null } {
+  let total = 0;
+  for (const item of items) {
+    const raw = item.amount.trim();
+    if (!raw) continue;
+    const value = calculateExpression(raw);
+    if (!Number.isFinite(value)) return { total: 0, error: `"${raw}" no es válido` };
+    total += value;
+  }
+  return { total, error: null };
 }
 
 /** Ordena transacciones por fecha descendente, resolviendo empates por createdAt */
