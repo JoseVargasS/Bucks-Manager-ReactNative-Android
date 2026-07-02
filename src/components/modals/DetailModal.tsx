@@ -81,9 +81,40 @@ export const DetailModal = forwardRef<DetailModalHandle, { colors: Palette; curr
                 </View>
               </View>
               <View style={[styles.detailDescription, { backgroundColor: colors.input }]}>
-                <Text style={[styles.detailSectionLabel, { color: colors.muted }]}>{copy.detail}</Text>
-                <Text selectable style={[styles.detailDescriptionText, { color: colors.text }]}>{current?.detail || ""}</Text>
+                <Text style={[styles.detailSectionLabel, { color: colors.muted }]}>{current?.lineItems ? (copy.concepto || "Concepto") : copy.detail}</Text>
+                <Text selectable style={[styles.detailDescriptionText, { color: colors.text }]}>
+                  {current?.lineItems ? current.detail.split(":")[0] || "" : current?.detail || ""}
+                </Text>
               </View>
+              {!!current?.lineItems?.length && (
+                <View style={[styles.detailDescription, { backgroundColor: colors.input }]}>
+                  <Text style={[styles.detailSectionLabel, { color: colors.muted }]}>{copy.detail}</Text>
+                  {current.lineItems.map((li) => (
+                    <View key={li.id} style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6, gap: 8 }}>
+                      <View style={{ flex: 1 }}>
+                        <Text selectable style={[styles.detailDescriptionText, { color: colors.text }]}>{li.description || "—"}</Text>
+                        {li.tags.length > 0 && (
+                          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 4, marginTop: 4 }}>
+                            {li.tags.filter((id) => findTagById(id, tags)).map((id) => {
+                              const tag = findTagById(id, tags);
+                              const tagColor = tag?.color || colors.muted;
+                              const tagLabel = tag?.label || id;
+                              return (
+                                <View key={id} style={{ maxWidth: "100%", borderRadius: 6, paddingHorizontal: 7, paddingVertical: 3, backgroundColor: tagColor }}>
+                                  <Text numberOfLines={1} style={{ color: tagTextColor(tagColor, colors), fontSize: 11, fontWeight: "700" }}>{tagLabel}</Text>
+                                </View>
+                              );
+                            })}
+                          </View>
+                        )}
+                      </View>
+                      <Text style={[styles.detailDescriptionText, { color: li.amount >= 0 ? colors.income : colors.expense, fontVariant: ["tabular-nums"] as never, fontWeight: "600" }]}>
+                        {formatMoney(li.amount, currencySymbol)}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              )}
               {!!current?.tags?.length && (
                 <View style={[styles.detailDescription, { backgroundColor: colors.input }]}>
                   <Text style={[styles.detailSectionLabel, { color: colors.muted }]}>{copy.tagsTitle}</Text>

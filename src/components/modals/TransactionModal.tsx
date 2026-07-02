@@ -1,28 +1,40 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 import { Alert, Animated, BackHandler, Keyboard, ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import { calculateExpression, isValidTransactionDraft, normalizeAmountExpression, TRANSACTION_TYPES } from "@/domain/bucksLogic";
+import { isValidTransactionDraft, TRANSACTION_TYPES } from "@/domain/bucksLogic";
+import { computeLineItemsTotal, getBlankDraft } from "@/utils/transactions";
 import { base } from "@/styles/baseStyles";
 import { recordModalStyles } from "@/components/modals/TransactionModal.styles";
 
 const styles = { ...base, ...recordModalStyles };
 import { Z_INDEX_MODAL } from "@/theme/constants";
-import { Field } from "@/components/ui/Field";
 import { Select } from "@/components/ui/Select";
 import { CalendarPicker } from "@/components/ui/CalendarPicker";
 import { type Palette } from "@/theme/colors";
-import { type Transaction, type TransactionDraft, type TransactionType, type Tag } from "@/types";
+import { type LineItemDraft, type Transaction, type TransactionDraft, type TransactionType, type Tag } from "@/types";
 import { typeColor, typeFill, typeLabelFull } from "@/utils/formats";
 import { type UiCopy } from "@/i18n";
 import { useModalTransition } from "@/components/ui/useModalTransition";
 import { useKeyboardOffset } from "@/components/ui/useKeyboardOffset";
-import { getBlankDraft } from "@/utils/transactions";
-import { labelForTagId } from "@/utils/tags";
+import { findTagById } from "@/utils/tags";
 import { Text, TextInput } from "@/components/ui/AppText";
 
 export type TransactionModalHandle = {
   open: (draft: TransactionDraft, editingTx?: Transaction | null) => void;
 };
+
+function makeLineItemId(index: number): string {
+  return `li-${index + 1}`;
+}
+
+function tagTextTone(tagColor: string): string {
+  const hex = tagColor.replace("#", "");
+  if (hex.length !== 6) return "#FFFFFF";
+  const r = parseInt(hex.slice(0, 2), 16);
+  const g = parseInt(hex.slice(2, 4), 16);
+  const b = parseInt(hex.slice(4, 6), 16);
+  return (r * 299 + g * 587 + b * 114) / 1000 > 150 ? "#1A1A2E" : "#FFFFFF";
+}
 
 export const TransactionModal = forwardRef<TransactionModalHandle, {
   colors: Palette;
@@ -33,14 +45,48 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
   const [formDraft, setFormDraft] = useState(getBlankDraft);
   const [editingTx, setEditingTx] = useState<Transaction | null>(null);
   const [calVisible, setCalVisible] = useState(false);
-  const [tagsOpen, setTagsOpen] = useState(false);
-  const [tagsFrame, setTagsFrame] = useState({ left: 14, top: 160, width: 320, maxHeight: 200 });
+  const [tagsOpenFor, setTagsOpenFor] = useState<string | null>(null);
+  const [tagsFrame, setTagsFrame] = useState({ left: 0, top: 0, width: 0, maxHeight: 0 });
+  const [tagsReady, setTagsReady] = useState(false);
   const kbHeight = useKeyboardOffset(visible);
   const [validationError, setValidationError] = useState("");
-  const scrollRef = useRef<ScrollView>(null);
   const modalRef = useRef<View>(null);
-  const tagsRef = useRef<View>(null);
-  const detailFocusedRef = useRef(false);
+  const scrollRef = useRef<ScrollView>(null);
+  const scrollHostRef = useRef<View>(null);
+  const tagAddRefs = useRef<Record<string, View | null>>({});
+  const inputRefs = useRef<Record<string, View | null>>({});
+  const focusedKey = useRef<string | null>(null);
+  const focusHandledRef = useRef(false);
+
+  useEffect(() => {
+    if (kbHeight === 0) { focusHandledRef.current = false; return; }
+    if (focusHandledRef.current) return;
+    const key = focusedKey.current;
+    if (!key) return;
+    const target = inputRefs.current[key];
+    const host = scrollHostRef.current;
+    if (!target || !host) return;
+    focusHandledRef.current = true;
+    requestAnimationFrame(() => {
+      try {
+        target.measureLayout(
+          host,
+          (_x: number, y: number) => {
+            scrollRef.current?.scrollTo({ y: Math.max(0, y - 24), animated: true });
+          },
+          () => {
+            target.measure((_x, y) => {
+              scrollRef.current?.scrollTo({ y: Math.max(0, y - 24), animated: true });
+            });
+          },
+        );
+      } catch {
+        target.measure((_x, y) => {
+          scrollRef.current?.scrollTo({ y: Math.max(0, y - 24), animated: true });
+        });
+      }
+    });
+  }, [kbHeight]);
   const submittingRef = useRef(false);
   const pendingSubmit = useRef<{ draft: TransactionDraft; editingTx: Transaction | null } | null>(null);
   const transition = useModalTransition(visible, 14, 0.99, () => {
@@ -48,27 +94,30 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
     pendingSubmit.current = null;
     if (pending) onSubmit(pending.draft, pending.editingTx);
   });
-  const amountState = useMemo(() => {
-    const cleanAmount = normalizeAmountExpression(formDraft.amount);
-    const openParens = (cleanAmount.match(/\(/g) || []).length;
-    const closeParens = (cleanAmount.match(/\)/g) || []).length;
-    const complete = Boolean(cleanAmount) && !/[+\-*/.(\s]$/.test(cleanAmount) && openParens === closeParens;
-    const preview = cleanAmount ? calculateExpression(cleanAmount) : 0;
-    return {
-      preview,
-      visible: complete && Number.isFinite(preview),
-      text: `${preview < 0 ? "- " : ""}${currencySymbol} ${Math.abs(preview).toFixed(2)}`,
-    };
-  }, [currencySymbol, formDraft.amount]);
+
+  const lineItems = useMemo(() => formDraft.lineItems || [], [formDraft.lineItems]);
+  const totalState = useMemo(() => {
+    const { total, error } = computeLineItemsTotal(lineItems);
+    const sign = total > 0 ? "+ " : total < 0 ? "- " : "";
+    const formatted = `${sign}${currencySymbol} ${Math.abs(total).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    return { total, error, formatted };
+  }, [currencySymbol, lineItems]);
+
   const typeOptions = useMemo(() => TRANSACTION_TYPES.map((type) => ({
     label: typeLabelFull(type, copy), value: type, color: typeColor(type, colors), softBg: typeFill(type, colors),
   })), [colors, copy]);
+
+  const isExpense = formDraft.type.startsWith("GASTO");
+  const totalColor = totalState.error
+    ? colors.expense
+    : totalState.total > 0 ? colors.income : totalState.total < 0 ? colors.expense : colors.text;
 
   const close = useCallback(() => {
     Keyboard.dismiss();
     setVisible(false);
     setCalVisible(false);
-    setTagsOpen(false);
+    setTagsOpenFor(null);
+    setTagsReady(false);
   }, []);
 
   useImperativeHandle(ref, () => ({
@@ -76,7 +125,8 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
       setFormDraft(nextDraft);
       setEditingTx(nextEditingTx);
       setCalVisible(false);
-      setTagsOpen(false);
+      setTagsOpenFor(null);
+      setTagsReady(false);
       setValidationError("");
       submittingRef.current = false;
       setVisible(true);
@@ -92,38 +142,95 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
     return () => subscription.remove();
   }, [close, visible]);
 
-  useEffect(() => {
-    const showSub = Keyboard.addListener("keyboardDidShow", () => {
-      if (detailFocusedRef.current) scrollRef.current?.scrollToEnd({ animated: true });
-    });
-    return () => { showSub.remove(); };
-  }, []);
+  const dismissTags = useCallback(() => {
+    if (tagsOpenFor) {
+      setTagsOpenFor(null);
+      setTagsReady(false);
+    }
+  }, [tagsOpenFor]);
 
-  const measureTags = useCallback(() => {
-    tagsRef.current?.measureInWindow((x, y, width, height) => {
-      modalRef.current?.measureInWindow((modalX, modalY, _modalWidth, modalHeight) => {
-        const maxHeight = Math.min(220, Math.max(120, modalHeight - 92));
-        const below = y - modalY + height + 4;
-        const top = below + maxHeight <= modalHeight - 10 ? below : Math.max(70, y - modalY - maxHeight - 4);
-        setTagsFrame({ left: x - modalX, top, width, maxHeight: Math.min(maxHeight, modalHeight - top - 8) });
-      });
-    });
-  }, []);
-
-  function toggleTags() {
+  function openTagsOverlay(lineItemId: string) {
     Keyboard.dismiss();
-    if (tagsOpen) {
-      setTagsOpen(false);
+    if (tagsOpenFor === lineItemId) {
+      setTagsOpenFor(null);
+      setTagsReady(false);
       return;
     }
-    setTagsOpen(true);
-    requestAnimationFrame(measureTags);
+    setTagsReady(false);
+    setTagsOpenFor(lineItemId);
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const ref = tagAddRefs.current[lineItemId];
+        if (!ref) return;
+        ref.measureInWindow((_x, y, _w, height) => {
+          if (!modalRef.current) return;
+          modalRef.current.measureInWindow((_mx, _my, modalWidth, modalHeight) => {
+            const maxH = Math.min(200, Math.max(100, modalHeight - 100));
+            const below = y - _my + height + 4;
+            const top = below + maxH <= modalHeight - 10 ? below : Math.max(70, y - _my - maxH - 4);
+            setTagsFrame({
+              left: 14,
+              top,
+              width: Math.min(modalWidth - 28, 310),
+              maxHeight: Math.min(maxH, modalHeight - top - 8),
+            });
+            setTagsReady(true);
+          });
+        });
+      });
+    });
+  }
+
+  function setLineItem(id: string, patch: Partial<LineItemDraft>) {
+    setValidationError("");
+    setFormDraft((current) => ({
+      ...current,
+      lineItems: (current.lineItems || []).map((li) => (li.id === id ? { ...li, ...patch } : li)),
+    }));
+  }
+
+  function addLineItem() {
+    setValidationError("");
+    setFormDraft((current) => ({
+      ...current,
+      lineItems: [...(current.lineItems || []), { id: makeLineItemId((current.lineItems || []).length), amount: "", description: "", tags: [] }],
+    }));
+  }
+
+  function removeLineItem(id: string) {
+    setFormDraft((current) => {
+      if ((current.lineItems || []).length <= 1) return current;
+      const next = (current.lineItems || []).filter((li) => li.id !== id).map((li, i) => ({ ...li, id: makeLineItemId(i) }));
+      return { ...current, lineItems: next };
+    });
+    if (tagsOpenFor === id) { setTagsOpenFor(null); setTagsReady(false); }
+  }
+
+  function toggleTag(lineItemId: string, tagId: string) {
+    setFormDraft((current) => {
+      const currentItems = current.lineItems || [];
+      return {
+        ...current,
+        lineItems: currentItems.map((li) => {
+          if (li.id !== lineItemId) return li;
+          const ts = li.tags || [];
+          return { ...li, tags: ts.includes(tagId) ? ts.filter((t) => t !== tagId) : [tagId] };
+        }),
+      };
+    });
+    setTagsOpenFor(null);
+    setTagsReady(false);
   }
 
   function submit() {
     if (submittingRef.current) return;
-    if (!formDraft.date || !formDraft.amount || !formDraft.detail.trim()) {
-      setValidationError("");
+    if (!formDraft.date) {
+      Alert.alert(copy.incompleteData, copy.completeRequired);
+      return;
+    }
+    const items = formDraft.lineItems || [];
+    const hasAmount = items.some((li) => li.amount.trim());
+    if (!hasAmount) {
       Alert.alert(copy.incompleteData, copy.completeRequired);
       return;
     }
@@ -133,11 +240,17 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
     }
     setValidationError("");
     submittingRef.current = true;
-    pendingSubmit.current = { draft: { ...formDraft, tags: [...(formDraft.tags || [])] }, editingTx };
+    pendingSubmit.current = { draft: { ...formDraft }, editingTx };
     close();
   }
 
   if (!transition.modalVisible) return null;
+
+  const overlayItem = tagsOpenFor ? lineItems.find((li) => li.id === tagsOpenFor) : null;
+  const availableTags = overlayItem
+    ? tags.filter((t) => !(overlayItem.tags || []).includes(t.id))
+    : [];
+
   return (
       <Animated.View
         pointerEvents={transition.modalVisible ? "auto" : "none"}
@@ -146,6 +259,7 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
         style={[StyleSheet.absoluteFill, styles.modalOverlay, { backgroundColor: colors.overlay, zIndex: Z_INDEX_MODAL, elevation: Z_INDEX_MODAL }, transition.containerStyle]}
       >
         <TouchableOpacity style={styles.optionBackdrop} activeOpacity={1} onPress={close} />
+
         <Animated.View ref={modalRef} collapsable={false} style={[styles.recordModal, { backgroundColor: colors.card }, transition.panelStyle]}>
           <View style={[styles.recordHeader, { borderColor: colors.border }]}>
             <Text style={[styles.recordTitle, { color: colors.text }]}>
@@ -155,11 +269,26 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
               <MaterialCommunityIcons name="close" size={22} color={colors.text} />
             </TouchableOpacity>
           </View>
-          <ScrollView ref={scrollRef} style={styles.recordScroll} contentContainerStyle={[styles.recordBody, { paddingBottom: kbHeight + 20 }]} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="always" keyboardDismissMode="none" onScrollBeginDrag={() => setTagsOpen(false)}>
+          {tagsOpenFor && tagsReady && (
+            <View
+              style={StyleSheet.absoluteFill}
+              onStartShouldSetResponderCapture={() => { dismissTags(); return false; }}
+            />
+          )}
+          <View ref={scrollHostRef} collapsable={false} style={styles.recordScroll}>
+          <ScrollView
+            ref={scrollRef}
+            style={styles.recordScroll}
+            contentContainerStyle={[styles.recordBody, { paddingBottom: kbHeight + 20 }]}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="always"
+            keyboardDismissMode="none"
+            onScrollBeginDrag={dismissTags}
+          >
             <Text style={[styles.label, { color: colors.text }]}>{copy.date}</Text>
             <TouchableOpacity
               style={[{ backgroundColor: colors.input, borderColor: colors.border, borderRadius: 10, paddingHorizontal: 12, minHeight: 42, flexDirection: "row", alignItems: "center", gap: 10, borderWidth: 1, marginBottom: 12 }]}
-              onPress={() => { Keyboard.dismiss(); setTagsOpen(false); setCalVisible(true); }}
+              onPress={() => { Keyboard.dismiss(); setTagsOpenFor(null); setCalVisible(true); }}
             >
               <Text style={[{ color: colors.text, fontWeight: "600", flex: 1 }]}>{formDraft.date || copy.selectDate}</Text>
               <MaterialCommunityIcons name="calendar" size={20} color={colors.info} />
@@ -170,86 +299,152 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
               value={formDraft.type}
               options={typeOptions}
               onSelect={(type: string) => {
-                setTagsOpen(false);
+                setTagsOpenFor(null);
                 setValidationError("");
                 setFormDraft((current) => ({
                   ...current,
                   type: type as TransactionType,
-                  tags: type.startsWith("GASTO") ? current.tags : [],
+                  lineItems: type.startsWith("GASTO")
+                    ? (current.lineItems || [])
+                    : (current.lineItems || []).map((li) => ({ ...li, tags: [] })),
                 }));
               }}
               colors={colors}
               placeholder={copy.selectType}
               style={{ marginBottom: 18 }}
             />
-            {formDraft.type.startsWith("GASTO") && tags.length > 0 && (
-              <View style={{ marginBottom: 14 }}>
-                <Text style={[styles.label, { color: colors.text }]}>{copy.tagsTitle}</Text>
-                <TouchableOpacity
-                  ref={tagsRef}
-                  onLayout={measureTags}
-                  onPress={toggleTags}
-                  style={{ minHeight: 42, paddingHorizontal: 12, borderRadius: 10, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.input, flexDirection: "row", alignItems: "center", gap: 8 }}
-                >
-                  <Text numberOfLines={1} style={{ flex: 1, color: (formDraft.tags || []).length ? colors.text : colors.muted, fontWeight: "600" }}>
-                    {(formDraft.tags || []).length
-                      ? (formDraft.tags || []).map((id) => labelForTagId(id, tags)).join(", ")
-                      : copy.tagsTitle}
-                  </Text>
-                  <MaterialCommunityIcons name={tagsOpen ? "chevron-up" : "chevron-down"} size={20} color={colors.muted} />
-                </TouchableOpacity>
+            <Text style={[styles.label, { color: colors.text }]}>{copy.concepto || "Concepto"}</Text>
+            <TextInput
+              ref={(r) => { inputRefs.current["concepto"] = r; }}
+              value={formDraft.concepto}
+              onChangeText={(concepto: string) => setFormDraft((current) => ({ ...current, concepto }))}
+              onFocus={() => { dismissTags(); focusedKey.current = "concepto"; }}
+              placeholder={copy.conceptoPlaceholder || "Ej: Supermercado, Almuerzo, Taxi"}
+              placeholderTextColor={colors.muted}
+              style={[styles.conceptoInput, { backgroundColor: colors.input, color: colors.text, borderColor: colors.border }]}
+            />
+
+            <View style={{ marginTop: 20, marginBottom: 8, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+              <Text style={[styles.label, { color: colors.text, marginBottom: 0 }]}>
+                {copy.amount} <Text style={{ color: colors.muted, fontSize: 13 }}>({copy.amountHelp})</Text>
+              </Text>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                <Text style={{ fontSize: 12, fontWeight: "600", color: colors.muted }}>Líneas</Text>
+                <View style={{ paddingHorizontal: 7, paddingVertical: 2, borderRadius: 8, backgroundColor: colors.primarySoft }}>
+                  <Text style={{ fontSize: 12, fontWeight: "700", color: colors.primary }}>{lineItems.length}</Text>
+                </View>
               </View>
-            )}
-            <Text style={[styles.label, { color: colors.text }]}>
-              {copy.amount} <Text style={{ color: colors.muted, fontSize: 13 }}>({copy.amountHelp})</Text>
-            </Text>
-            <View style={[styles.moneyInputWrap, { backgroundColor: colors.input, borderColor: colors.border }]}>
-              <Text style={[styles.moneyPrefix, { color: colors.text }]}>{currencySymbol}</Text>
-              <TextInput
-                value={formDraft.amount}
-                onChangeText={(amount: string) => {
-                  setValidationError("");
-                  setFormDraft((current) => ({ ...current, amount }));
-                }}
-                placeholder={copy.amountPlaceholder}
-                placeholderTextColor={colors.muted}
-                keyboardType="decimal-pad"
-                inputMode="decimal"
-                onFocus={() => { detailFocusedRef.current = false; setTagsOpen(false); }}
-                style={[styles.moneyInput, { color: colors.text }]}
-              />
-              {amountState.visible && (
-                <Text numberOfLines={1} style={[styles.moneyPreview, { color: amountState.preview < 0 ? colors.expense : colors.income, fontSize: 16 }]}>{amountState.text}</Text>
-              )}
             </View>
+
+            {lineItems.map((item) => {
+              const itemTags = (item.tags || []).map((id) => findTagById(id, tags)).filter(Boolean) as Tag[];
+              const unusedTags = tags.filter((t) => !itemTags.some((it) => it.id === t.id));
+              const cardBorder = itemTags.length > 0
+                ? (itemTags[0]?.color ?? colors.border)
+                : (item.amount.trim() ? colors.primarySoft : colors.border);
+              return (
+                <View key={item.id} style={[styles.lineItemCard, { backgroundColor: colors.input, borderColor: cardBorder }]}>
+                  <View style={styles.lineItemAmountRow}>
+                    <Text style={[styles.lineItemPrefix, { color: colors.text }]}>{currencySymbol}</Text>
+                    <TextInput
+                      ref={(r) => { inputRefs.current[`amount-${item.id}`] = r; }}
+                      value={item.amount}
+                      onChangeText={(amount: string) => setLineItem(item.id, { amount })}
+                      onFocus={() => { dismissTags(); focusedKey.current = `amount-${item.id}`; }}
+                      placeholder={isExpense ? "-0.00" : "0.00"}
+                      placeholderTextColor={colors.muted}
+                      keyboardType="decimal-pad"
+                      inputMode="decimal"
+                      style={[styles.lineItemAmountInput, { color: colors.text }]}
+                    />
+                    {isExpense && tags.length > 0 && (
+                      itemTags.length > 0 ? (
+                        <TouchableOpacity
+                          ref={(ref) => { tagAddRefs.current[item.id] = ref; }}
+                          style={[styles.selectedTagInlineChip, { backgroundColor: itemTags[0].color }]}
+                          onPress={() => openTagsOverlay(item.id)}
+                        >
+                          <Text style={[styles.selectedTagLabel, { color: tagTextTone(itemTags[0].color) }]} numberOfLines={1}>
+                            {itemTags[0].label}
+                          </Text>
+                          <MaterialCommunityIcons name="chevron-down" size={12} color={tagTextTone(itemTags[0].color)} style={{ opacity: 0.85 }} />
+                        </TouchableOpacity>
+                      ) : unusedTags.length > 0 ? (
+                        <TouchableOpacity
+                          ref={(ref) => { tagAddRefs.current[item.id] = ref; }}
+                          style={[styles.addTagInlineBtn, { borderColor: colors.muted }]}
+                          onPress={() => openTagsOverlay(item.id)}
+                        >
+                          <MaterialCommunityIcons name="tag-plus-outline" size={14} color={colors.muted} />
+                          <Text style={[styles.addTagInlineText, { color: colors.muted }]}>Etiqueta</Text>
+                        </TouchableOpacity>
+                      ) : null
+                    )}
+                    {lineItems.length > 1 && (
+                      <TouchableOpacity style={[styles.removeLineItemBtn, { backgroundColor: colors.expenseSoft }]} onPress={() => removeLineItem(item.id)}>
+                        <MaterialCommunityIcons name="close" size={18} color={colors.expense} />
+                      </TouchableOpacity>
+                    )}
+                  </View>
+
+                  <View style={[styles.lineItemDivider, { backgroundColor: cardBorder }]} />
+                  <View style={styles.lineItemDescRow}>
+                    <MaterialCommunityIcons name="text-short" size={16} color={colors.muted} style={styles.lineItemDescIcon} />
+                    <TextInput
+                      ref={(r) => { inputRefs.current[`desc-${item.id}`] = r; }}
+                      value={item.description}
+                      onChangeText={(description: string) => setLineItem(item.id, { description })}
+                      onFocus={() => {
+                dismissTags();
+                focusedKey.current = `desc-${item.id}`;
+                focusHandledRef.current = false;
+                requestAnimationFrame(() => {
+                  const target = inputRefs.current[`desc-${item.id}`];
+                  const host = scrollHostRef.current;
+                  if (!target || !host) return;
+                  try {
+                    target.measureLayout(
+                      host,
+                      (_x: number, y: number) => {
+                        scrollRef.current?.scrollTo({ y: Math.max(0, y - 24), animated: true });
+                      },
+                      () => undefined,
+                    );
+                  } catch {
+                    // ignore
+                  }
+                });
+              }}
+                      placeholder="Descripción"
+                      placeholderTextColor={colors.muted}
+                      style={[styles.lineItemDescInput, { color: colors.text }]}
+                    />
+                  </View>
+                </View>
+              );
+            })}
+
+            <TouchableOpacity
+              style={[styles.addLineItemBtn, { borderColor: colors.muted }]}
+              onPress={addLineItem}
+            >
+              <MaterialCommunityIcons name="plus-circle-outline" size={20} color={colors.muted} />
+              <Text style={[styles.addLineItemText, { color: colors.muted }]}>Agregar monto</Text>
+            </TouchableOpacity>
+
             {!!validationError && (
-              <Text style={{ color: colors.expense, fontSize: 12, fontWeight: "600", marginTop: -12, marginBottom: 12 }}>
+              <Text style={{ color: colors.expense, fontSize: 12, fontWeight: "600", marginTop: 6, marginBottom: 4 }}>
                 {validationError}
               </Text>
             )}
-            <View style={styles.calcToolbar}>
-              {["+", "-", "*", "/", "(", ")"].map((token) => (
-                <TouchableOpacity key={token} style={[styles.calcChip, { backgroundColor: colors.infoSoft }]} onPress={() => { setValidationError(""); setFormDraft((current) => ({ ...current, amount: `${current.amount}${token}` })); }}>
-                  <Text style={[styles.calcChipText, { color: colors.info }]}>{token === "*" ? "×" : token}</Text>
-                </TouchableOpacity>
-              ))}
-              <TouchableOpacity style={[styles.calcChip, { backgroundColor: colors.expenseSoft }]} onPress={() => { setValidationError(""); setFormDraft((current) => ({ ...current, amount: current.amount.slice(0, -1) })); }}>
-                <MaterialCommunityIcons name="backspace-outline" size={17} color={colors.expense} />
-              </TouchableOpacity>
+
+            <View style={[styles.lineItemsTotal, { borderColor: colors.border }]}>
+              <Text style={[styles.lineItemsTotalLabel, { color: colors.text }]}>Total</Text>
+              <Text style={[styles.lineItemsTotalValue, { color: totalColor, fontVariant: ["tabular-nums"] as never }]}>
+                {totalState.error ? "—" : totalState.formatted}
+              </Text>
             </View>
-            <Field
-              label={copy.detail}
-              value={formDraft.detail}
-              onChangeText={(detail: string) => setFormDraft((current) => ({ ...current, detail }))}
-              onFocus={() => {
-                detailFocusedRef.current = true;
-                setTagsOpen(false);
-                requestAnimationFrame(() => scrollRef.current?.scrollToEnd({ animated: true }));
-              }}
-              onBlur={() => { detailFocusedRef.current = false; }}
-              colors={colors}
-              placeholder={copy.detailPlaceholder}
-            />
+
             <View style={styles.recordActions}>
               <TouchableOpacity style={[styles.recordCancel, { backgroundColor: colors.input, borderColor: colors.border }]} onPress={close}>
                 <MaterialCommunityIcons name="close" size={18} color={colors.text} />
@@ -261,31 +456,25 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
               </TouchableOpacity>
             </View>
           </ScrollView>
-          {tagsOpen && (
-            <View style={[styles.selectMenu, { left: tagsFrame.left, top: tagsFrame.top, width: tagsFrame.width, maxHeight: tagsFrame.maxHeight, backgroundColor: colors.card, borderColor: colors.border, zIndex: 40 }]}>
+          </View>
+
+          {tagsOpenFor && tagsReady && isExpense && availableTags.length > 0 && (
+            <View style={[styles.tagsOverlay, { left: tagsFrame.left, top: tagsFrame.top, width: tagsFrame.width, maxHeight: tagsFrame.maxHeight, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: 10, overflow: "hidden" }]}>
               <ScrollView contentContainerStyle={{ padding: 8, flexDirection: "row", flexWrap: "wrap", gap: 8 }} keyboardShouldPersistTaps="always" showsVerticalScrollIndicator={false}>
-                {tags.map((tag) => {
-                  const selected = (formDraft.tags || []).includes(tag.id);
-                  return (
-                    <TouchableOpacity
-                      key={tag.id}
-                      style={[styles.selectOptionRow, { width: "48%", backgroundColor: selected ? colors.primarySoft : colors.input }]}
-                      onPress={() => {
-                        setFormDraft((currentDraft) => {
-                          const current = currentDraft.tags || [];
-                          return { ...currentDraft, tags: current.includes(tag.id) ? current.filter((item) => item !== tag.id) : [...current, tag.id] };
-                        });
-                      }}
-                    >
-                      <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: tag.color }} />
-                      <Text numberOfLines={1} style={[styles.selectOptionLabel, { color: selected ? colors.primary : colors.text }]}>{tag.label}</Text>
-                      {selected && <MaterialCommunityIcons name="check" size={16} color={colors.primary} />}
-                    </TouchableOpacity>
-                  );
-                })}
+                {availableTags.map((tag) => (
+                  <TouchableOpacity
+                    key={tag.id}
+                    style={[styles.selectOptionRow, { width: "48%", backgroundColor: colors.input }]}
+                    onPress={() => toggleTag(tagsOpenFor!, tag.id)}
+                  >
+                    <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: tag.color }} />
+                    <Text numberOfLines={1} style={[styles.selectOptionLabel, { color: colors.text }]}>{tag.label}</Text>
+                  </TouchableOpacity>
+                ))}
               </ScrollView>
             </View>
           )}
+
         </Animated.View>
       </Animated.View>
   );

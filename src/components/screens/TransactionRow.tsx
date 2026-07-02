@@ -63,6 +63,8 @@ export const TransactionRow = memo(function TransactionRow({
         ? "credit-card-outline"
         : "basket-outline";
   const isFreqExpense = tx.type === "GASTO FRECUENTE";
+  const hasLineItems = !!tx.lineItems?.length;
+  const displayText = hasLineItems ? (tx.detail.split(":")[0] || tx.detail) : tx.detail;
   const showPill = tx.type !== "GASTO NO FRECUENTE";
   const tags = (tx.tags || []).filter((t) => tagColorMap[t] || tagLabelMap[t]);
   const visibleTags = tags.slice(0, 2);
@@ -127,7 +129,7 @@ export const TransactionRow = memo(function TransactionRow({
       </View>
       <View style={txStyles.groupedTxMain}>
         <HighlightedText
-          text={tx.detail}
+          text={displayText}
           query={searchActive ? searchText : ""}
           style={[txStyles.groupedTxTitle, { color: colors.text }]}
           highlightStyle={{

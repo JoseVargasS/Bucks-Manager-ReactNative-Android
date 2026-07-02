@@ -1,4 +1,4 @@
-import { memo, useSyncExternalStore } from "react";
+import { forwardRef, memo, useSyncExternalStore } from "react";
 import {
   StyleSheet,
   Text as NativeText,
@@ -64,7 +64,7 @@ function TextImpl({ style, ...props }: TextProps) {
   return <NativeText {...props} style={[{ fontFamily: family }, style]} />;
 }
 
-function TextInputImpl({ style, ...props }: TextInputProps) {
+const TextInputImpl = forwardRef<NativeTextInput, TextInputProps>(function TextInputImpl({ style, ...props }, ref) {
   const family = useAppFontFamily();
   const preference = useAppFontPreference();
   const scale = FONT_SIZE_SCALE[preference] || 1;
@@ -74,13 +74,14 @@ function TextInputImpl({ style, ...props }: TextInputProps) {
     const adjustedSize = Math.round(baseSize * scale);
     return (
       <NativeTextInput
+        ref={ref}
         {...props}
         style={[{ fontFamily: family }, style, { fontSize: adjustedSize }]}
       />
     );
   }
-  return <NativeTextInput {...props} style={[{ fontFamily: family }, style]} />;
-}
+  return <NativeTextInput ref={ref} {...props} style={[{ fontFamily: family }, style]} />;
+});
 
 export const Text = memo(TextImpl);
 export const TextInput = memo(TextInputImpl);
