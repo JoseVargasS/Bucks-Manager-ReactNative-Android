@@ -1403,6 +1403,7 @@ function AppContent() {
         copy={copy}
         currencySymbol={currencySymbol}
         onSubmit={submitDraft}
+        onAddTag={(tag) => setTagsList((prev) => [...prev.filter((t) => t.id !== tag.id), tag])}
       />
       <DetailModal
         ref={detailModalRef}

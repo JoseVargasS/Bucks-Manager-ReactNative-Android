@@ -85,6 +85,20 @@ export const DetailModal = forwardRef<DetailModalHandle, { colors: Palette; curr
                 <Text selectable style={[styles.detailDescriptionText, { color: colors.text }]}>
                   {current?.lineItems ? current.detail.split(":")[0] || "" : current?.detail || ""}
                 </Text>
+                {!current?.lineItems?.length && !!current?.tags?.length && (
+                  <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 4, marginTop: 6 }}>
+                    {current.tags.filter((id) => findTagById(id, tags)).map((id) => {
+                      const tag = findTagById(id, tags);
+                      const tagColor = tag?.color || colors.muted;
+                      const tagLabel = tag?.label || id;
+                      return (
+                        <View key={id} style={{ maxWidth: "100%", borderRadius: 6, paddingHorizontal: 7, paddingVertical: 3, backgroundColor: tagColor }}>
+                          <Text numberOfLines={1} style={{ color: tagTextColor(tagColor, colors), fontSize: 11, fontWeight: "700" }}>{tagLabel}</Text>
+                        </View>
+                      );
+                    })}
+                  </View>
+                )}
               </View>
               {!!current?.lineItems?.length && (
                 <View style={[styles.detailDescription, { backgroundColor: colors.input }]}>
@@ -113,23 +127,6 @@ export const DetailModal = forwardRef<DetailModalHandle, { colors: Palette; curr
                       </Text>
                     </View>
                   ))}
-                </View>
-              )}
-              {!!current?.tags?.length && (
-                <View style={[styles.detailDescription, { backgroundColor: colors.input }]}>
-                  <Text style={[styles.detailSectionLabel, { color: colors.muted }]}>{copy.tagsTitle}</Text>
-                  <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-                    {current.tags.filter((id) => findTagById(id, tags)).map((id) => {
-                      const tag = findTagById(id, tags);
-                      const tagColor = tag?.color || colors.muted;
-                      const tagLabel = tag?.label || id;
-                      return (
-                        <View key={id} style={{ maxWidth: "100%", borderRadius: 8, paddingHorizontal: 9, paddingVertical: 5, backgroundColor: tagColor }}>
-                          <Text numberOfLines={1} style={{ color: tagTextColor(tagColor, colors), fontSize: 12, fontWeight: "700" }}>{tagLabel}</Text>
-                        </View>
-                      );
-                    })}
-                  </View>
                 </View>
               )}
               <View style={styles.detailMetaGrid}>

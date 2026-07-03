@@ -2,18 +2,18 @@ import { type ColorSchemePreference, accents } from "./accents";
 export type { ColorSchemePreference };
 
 const SHARED_TAG_COLORS = [
-  "#FF6B6B",
-  "#FF8E53",
-  "#FFD93D",
-  "#6BCB77",
-  "#4D96FF",
-  "#9B59B6",
-  "#3498DB",
-  "#1ABC9C",
-  "#F39C12",
-  "#E74C3C",
-  "#2ECC71",
-  "#E91E63",
+  "#f43f5e",
+  "#f59e0b",
+  "#10b981",
+  "#0ea5e9",
+  "#8b5cf6",
+  "#84cc16",
+  "#d946ef",
+  "#14b8a6",
+  "#f97316",
+  "#6366f1",
+  "#ec4899",
+  "#06b6d4",
 ];
 
 export const dark = {

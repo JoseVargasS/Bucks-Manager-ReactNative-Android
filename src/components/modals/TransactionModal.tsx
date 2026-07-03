@@ -16,7 +16,8 @@ import { typeColor, typeFill, typeLabelFull } from "@/utils/formats";
 import { type UiCopy } from "@/i18n";
 import { useModalTransition } from "@/components/ui/useModalTransition";
 import { useKeyboardOffset } from "@/components/ui/useKeyboardOffset";
-import { findTagById } from "@/utils/tags";
+import { findTagById, saveTags, slugifyTagLabel, tagTextColor, DEFAULT_TAG_COLOR } from "@/utils/tags";
+import { ColorPicker } from "@/components/ui/ColorPicker";
 import { Text, TextInput } from "@/components/ui/AppText";
 
 export type TransactionModalHandle = {
@@ -27,20 +28,12 @@ function makeLineItemId(index: number): string {
   return `li-${index + 1}`;
 }
 
-function tagTextTone(tagColor: string): string {
-  const hex = tagColor.replace("#", "");
-  if (hex.length !== 6) return "#FFFFFF";
-  const r = parseInt(hex.slice(0, 2), 16);
-  const g = parseInt(hex.slice(2, 4), 16);
-  const b = parseInt(hex.slice(4, 6), 16);
-  return (r * 299 + g * 587 + b * 114) / 1000 > 150 ? "#1A1A2E" : "#FFFFFF";
-}
-
 export const TransactionModal = forwardRef<TransactionModalHandle, {
   colors: Palette;
   copy: UiCopy; currencySymbol: string; tags: Tag[];
   onSubmit: (draft: TransactionDraft, editingTx: Transaction | null) => boolean;
-}>(function TransactionModal({ colors, copy, currencySymbol, tags, onSubmit }, ref) {
+  onAddTag?: (tag: Tag) => void;
+}>(function TransactionModal({ colors, copy, currencySymbol, tags, onSubmit, onAddTag }, ref) {
   const [visible, setVisible] = useState(false);
   const [formDraft, setFormDraft] = useState(getBlankDraft);
   const [editingTx, setEditingTx] = useState<Transaction | null>(null);
@@ -48,6 +41,10 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
   const [tagsOpenFor, setTagsOpenFor] = useState<string | null>(null);
   const [tagsFrame, setTagsFrame] = useState({ left: 0, top: 0, width: 0, maxHeight: 0 });
   const [tagsReady, setTagsReady] = useState(false);
+  const [showCreateTag, setShowCreateTag] = useState(false);
+  const [createTagLabel, setCreateTagLabel] = useState("");
+  const [createTagColor, setCreateTagColor] = useState(DEFAULT_TAG_COLOR);
+  const [creatingTagFor, setCreatingTagFor] = useState<string | null>(null);
   const kbHeight = useKeyboardOffset(visible);
   const [validationError, setValidationError] = useState("");
   const modalRef = useRef<View>(null);
@@ -118,6 +115,8 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
     setCalVisible(false);
     setTagsOpenFor(null);
     setTagsReady(false);
+    setShowCreateTag(false);
+    setCreateTagLabel("");
   }, []);
 
   useImperativeHandle(ref, () => ({
@@ -127,6 +126,8 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
       setCalVisible(false);
       setTagsOpenFor(null);
       setTagsReady(false);
+      setShowCreateTag(false);
+      setCreateTagLabel("");
       setValidationError("");
       submittingRef.current = false;
       setVisible(true);
@@ -229,7 +230,33 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
     });
     setTagsOpenFor(null);
     setTagsReady(false);
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const target = inputRefs.current[`desc-${lineItemId}`];
+        if (target && typeof (target as unknown as { focus?: () => void }).focus === "function") {
+          (target as unknown as { focus: () => void }).focus();
+        }
+      });
+    });
   }
+
+  const handleCreateTag = useCallback(() => {
+    const label = createTagLabel.trim();
+    if (!label || !creatingTagFor) return;
+    const newId = slugifyTagLabel(label);
+    const newTag: Tag = { id: newId, label, color: createTagColor };
+    saveTags([...tags, newTag]).catch(() => {});
+    onAddTag?.(newTag);
+    setFormDraft((current) => ({
+      ...current,
+      lineItems: (current.lineItems || []).map((li) =>
+        li.id === creatingTagFor ? { ...li, tags: [...(li.tags || []), newId] } : li,
+      ),
+    }));
+    setShowCreateTag(false);
+    setCreatingTagFor(null);
+    setCreateTagLabel("");
+  }, [createTagLabel, createTagColor, creatingTagFor, tags, onAddTag]);
 
   function submit() {
     if (submittingRef.current) return;
@@ -373,10 +400,10 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
                           style={[styles.selectedTagInlineChip, { backgroundColor: itemTags[0].color }]}
                           onPress={() => openTagsOverlay(item.id)}
                         >
-                          <Text style={[styles.selectedTagLabel, { color: tagTextTone(itemTags[0].color) }]} numberOfLines={1}>
+                          <Text style={[styles.selectedTagLabel, { color: tagTextColor(itemTags[0].color, colors) }]} numberOfLines={1}>
                             {itemTags[0].label}
                           </Text>
-                          <MaterialCommunityIcons name="chevron-down" size={12} color={tagTextTone(itemTags[0].color)} style={{ opacity: 0.85 }} />
+                          <MaterialCommunityIcons name="chevron-down" size={12} color={tagTextColor(itemTags[0].color, colors)} style={{ opacity: 0.85 }} />
                         </TouchableOpacity>
                       ) : unusedTags.length > 0 ? (
                         <TouchableOpacity
@@ -441,6 +468,36 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
               <Text style={[styles.addLineItemText, { color: colors.muted }]}>Agregar monto</Text>
             </TouchableOpacity>
 
+            {showCreateTag && (
+              <View style={{ backgroundColor: colors.input, borderRadius: 12, padding: 12, gap: 10, marginTop: 4 }}>
+                <Text style={{ fontSize: 12, fontWeight: "600", color: colors.primary, textTransform: "uppercase" }}>{copy.createTag}</Text>
+                <TextInput
+                  value={createTagLabel}
+                  onChangeText={setCreateTagLabel}
+                  placeholder={copy.tagsNewPlaceholder || "Nombre de etiqueta"}
+                  placeholderTextColor={colors.muted}
+                  style={{ borderRadius: 8, paddingHorizontal: 10, minHeight: 38, fontWeight: "600", backgroundColor: colors.card, color: colors.text }}
+                  onSubmitEditing={handleCreateTag}
+                  autoFocus
+                />
+                <ColorPicker color={createTagColor} onChange={setCreateTagColor} compact />
+                <View style={{ flexDirection: "row", gap: 8 }}>
+                  <TouchableOpacity
+                    style={{ flex: 1, borderRadius: 8, paddingVertical: 9, alignItems: "center", backgroundColor: colors.border }}
+                    onPress={() => { setShowCreateTag(false); setCreatingTagFor(null); }}
+                  >
+                    <Text style={{ fontSize: 13, fontWeight: "600", color: colors.muted }}>{copy.cancel}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={{ flex: 1, borderRadius: 8, paddingVertical: 9, alignItems: "center", backgroundColor: colors.primary }}
+                    onPress={handleCreateTag}
+                  >
+                    <Text style={{ fontSize: 13, fontWeight: "700", color: colors.onPrimary }}>{copy.add}</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+
             {!!validationError && (
               <Text style={{ color: colors.expense, fontSize: 12, fontWeight: "600", marginTop: 6, marginBottom: 4 }}>
                 {validationError}
@@ -467,19 +524,39 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
           </ScrollView>
           </View>
 
-          {tagsOpenFor && tagsReady && isExpense && availableTags.length > 0 && (
-            <View style={[styles.tagsOverlay, { left: tagsFrame.left, top: tagsFrame.top, width: tagsFrame.width, maxHeight: tagsFrame.maxHeight, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: 10, overflow: "hidden" }]}>
-              <ScrollView contentContainerStyle={{ padding: 8, flexDirection: "row", flexWrap: "wrap", gap: 8 }} keyboardShouldPersistTaps="always" showsVerticalScrollIndicator={false}>
-                {availableTags.map((tag) => (
+          {tagsOpenFor && tagsReady && isExpense && (
+            <View key={`tags-${tags.length}`} style={[styles.tagsOverlay, { left: tagsFrame.left, top: tagsFrame.top, width: tagsFrame.width, maxHeight: tagsFrame.maxHeight, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: 10, overflow: "hidden" }]}>
+              <ScrollView contentContainerStyle={{ padding: 8 }} keyboardShouldPersistTaps="always" showsVerticalScrollIndicator={false}>
+                {availableTags.length > 0 && (
+                  <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 8 }}>
+                    {availableTags.map((tag) => (
+                      <TouchableOpacity
+                        key={tag.id}
+                        style={[styles.selectOptionRow, { width: "48%", backgroundColor: colors.input }]}
+                        onPress={() => toggleTag(tagsOpenFor!, tag.id)}
+                      >
+                        <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: tag.color }} />
+                        <Text numberOfLines={1} style={[styles.selectOptionLabel, { color: colors.text }]}>{tag.label}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+                <View style={{ borderTopWidth: availableTags.length > 0 ? 0.5 : 0, borderColor: colors.border, paddingTop: 8 }}>
                   <TouchableOpacity
-                    key={tag.id}
-                    style={[styles.selectOptionRow, { width: "48%", backgroundColor: colors.input }]}
-                    onPress={() => toggleTag(tagsOpenFor!, tag.id)}
+                    style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingVertical: 6 }}
+                    onPress={() => {
+                      setCreatingTagFor(tagsOpenFor);
+                      setTagsOpenFor(null);
+                      setTagsReady(false);
+                      setShowCreateTag(true);
+                      setCreateTagLabel("");
+                      requestAnimationFrame(() => scrollRef.current?.scrollToEnd({ animated: true }));
+                    }}
                   >
-                    <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: tag.color }} />
-                    <Text numberOfLines={1} style={[styles.selectOptionLabel, { color: colors.text }]}>{tag.label}</Text>
+                    <MaterialCommunityIcons name="tag-plus-outline" size={16} color={colors.primary} />
+                    <Text style={{ fontSize: 13, fontWeight: "600", color: colors.primary }}>{copy.createTag || "Crear etiqueta"}</Text>
                   </TouchableOpacity>
-                ))}
+                </View>
               </ScrollView>
             </View>
           )}

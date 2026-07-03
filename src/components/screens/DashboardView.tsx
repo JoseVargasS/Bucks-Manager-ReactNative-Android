@@ -238,11 +238,13 @@ export const DashboardView = memo(function DashboardView({
             {copy.expenseByTags}
           </Text>
           <PieChart
+            key={`pie-${allTransactions.length}-${month}`}
             data={pieData}
             colors={colors}
             currencySymbol={currencySymbol}
-            formatValue={(v) => formatMoney(v, currencySymbol, 0).replace(/^\+ /, "")}
+            formatValue={(v) => formatMoney(v, currencySymbol, 1).replace(/^\+ /, "")}
             totalLabel={copy.total}
+            otherLabel={copy.otherLabel}
           />
         </View>
       )}

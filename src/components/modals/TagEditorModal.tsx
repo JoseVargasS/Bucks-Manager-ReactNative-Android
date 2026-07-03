@@ -15,9 +15,10 @@ const styles = { ...base, ...recordModalStyles };
 import { type Palette } from "@/theme/colors";
 import { type Tag } from "@/types";
 import { type UiCopy } from "@/i18n";
-import { loadTags, saveTags, slugifyTagLabel } from "@/utils/tags";
+import { loadTags, saveTags, slugifyTagLabel, DEFAULT_TAG_COLOR } from "@/utils/tags";
 import { useModalTransition } from "@/components/ui/useModalTransition";
 import { useKeyboardOffset } from "@/components/ui/useKeyboardOffset";
+import { ColorPicker } from "@/components/ui/ColorPicker";
 import { Text, TextInput } from "@/components/ui/AppText";
 
 export function TagEditorModal({
@@ -88,7 +89,7 @@ export function TagEditorModal({
       { id: newId, label, color: newColor },
     ]);
     setNewLabel("");
-    setNewColor(colors.tagColors[0]);
+    setNewColor(DEFAULT_TAG_COLOR);
   };
 
   const handleDelete = useCallback(
@@ -173,14 +174,8 @@ export function TagEditorModal({
                 </TouchableOpacity>
               </View>
 
-              <View style={s.colorSwatches}>
-                {colors.tagColors.map((c) => (
-                  <TouchableOpacity
-                    key={c}
-                    onPress={() => setNewColor(c)}
-                    style={[s.swatch, { backgroundColor: c, borderColor: newColor === c ? colors.text : "transparent" }]}
-                  />
-                ))}
+              <View style={{ paddingHorizontal: 4 }}>
+                <ColorPicker color={newColor} onChange={setNewColor} />
               </View>
 
               {tags.length > 0 && (
@@ -257,22 +252,14 @@ const TagRow = memo(function TagRow({
       />
       {editing ? (
         <>
-          <TextInput
-            value={editingLabel}
-            onChangeText={onChangeLabel}
-            style={[s.editInput, { backgroundColor: colors.input, color: colors.text }]}
-            onSubmitEditing={onSave}
-          />
-          <View
-            style={s.editColorRow}
-          >
-            {colors.tagColors.map((color) => (
-              <TouchableOpacity
-                key={color}
-                onPress={() => onChangeColor(color)}
-                style={[s.editColorDot, { backgroundColor: color, borderColor: editingColor === color ? colors.text : "transparent" }]}
-              />
-            ))}
+          <View style={{ flex: 1, gap: 6 }}>
+            <TextInput
+              value={editingLabel}
+              onChangeText={onChangeLabel}
+              style={[s.editInput, { backgroundColor: colors.input, color: colors.text }]}
+              onSubmitEditing={onSave}
+            />
+            <ColorPicker color={editingColor || tag.color} onChange={onChangeColor} compact />
           </View>
           <TouchableOpacity onPress={onSave}>
             <MaterialCommunityIcons

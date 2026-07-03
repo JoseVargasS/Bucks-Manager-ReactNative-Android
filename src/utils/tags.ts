@@ -4,14 +4,15 @@ import { dark, type Palette } from "@/theme/colors";
 import { logError } from "./errorHandler";
 
 const TAGS_KEY = "bucks_tags";
+export const DEFAULT_TAG_COLOR = "#e05070";
 
 const DEFAULT_TAGS = [
-  { id: "default-salud", es: "Salud", en: "Health", color: dark.tagColors[0] },
-  { id: "default-comida", es: "Comida", en: "Food", color: dark.tagColors[1] },
-  { id: "default-viaje", es: "Viaje", en: "Travel", color: dark.tagColors[4] },
-  { id: "default-transporte", es: "Transporte", en: "Transport", color: dark.tagColors[2] },
-  { id: "default-ocio", es: "Ocio", en: "Leisure", color: dark.tagColors[5] },
-  { id: "default-educacion", es: "Educación", en: "Education", color: dark.tagColors[3] },
+  { id: "default-salud", es: "Salud", en: "Health", color: "#f43f5e" },
+  { id: "default-comida", es: "Comida", en: "Food", color: "#f59e0b" },
+  { id: "default-viaje", es: "Viaje", en: "Travel", color: "#0ea5e9" },
+  { id: "default-transporte", es: "Transporte", en: "Transport", color: "#10b981" },
+  { id: "default-ocio", es: "Ocio", en: "Leisure", color: "#8b5cf6" },
+  { id: "default-educacion", es: "Educación", en: "Education", color: "#84cc16" },
 ];
 
 const DEFAULT_TAG_IDS = new Set(DEFAULT_TAGS.map((tag) => tag.id));
