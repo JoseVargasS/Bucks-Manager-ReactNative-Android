@@ -32,7 +32,10 @@ function sharedTxHandlers(requests) {
     const body = init.body ? JSON.parse(init.body) : null;
     requests.push({ url, method: init.method || "GET", body });
     if (url.includes("fields=sheets.properties(sheetId,title)")) {
-      return json({ sheets: [{ properties: { sheetId: 7, title: "INCOME AND EXPENSES" } }] });
+      return json({ sheets: [
+        { properties: { sheetId: 7, title: "INCOME AND EXPENSES" } },
+        { properties: { sheetId: 8, title: "MONTHLY SUMMARY" } },
+      ] });
     }
     if (url.includes("INCOME AND EXPENSES!A2:A")) return json({ values: [] });
     if (url.includes("INCOME AND EXPENSES!F1")) return json({ values: [["TAGS"]] });
@@ -131,7 +134,10 @@ test("saving a transaction inserts the row chronologically and refreshes its mon
     const body = init.body ? JSON.parse(init.body) : null;
     requests.push({ url, method: init.method || "GET", body });
     if (url.includes("fields=sheets.properties(sheetId,title)")) {
-      return json({ sheets: [{ properties: { sheetId: 7, title: "INCOME AND EXPENSES" } }] });
+      return json({ sheets: [
+        { properties: { sheetId: 7, title: "INCOME AND EXPENSES" } },
+        { properties: { sheetId: 8, title: "MONTHLY SUMMARY" } },
+      ] });
     }
     if (url.includes("INCOME AND EXPENSES!A2:A")) {
       return json({ values: [["01-jan-26"], ["20-jan-26"]] });
@@ -184,7 +190,10 @@ test("saving frequent income refreshes the frequent-income summary formula", asy
     const body = init.body ? JSON.parse(init.body) : null;
     requests.push({ url, method: init.method || "GET", body });
     if (url.includes("fields=sheets.properties(sheetId,title)")) {
-      return json({ sheets: [{ properties: { sheetId: 7, title: "INCOME AND EXPENSES" } }] });
+      return json({ sheets: [
+        { properties: { sheetId: 7, title: "INCOME AND EXPENSES" } },
+        { properties: { sheetId: 8, title: "MONTHLY SUMMARY" } },
+      ] });
     }
     if (url.includes("INCOME AND EXPENSES!A2:A")) return json({});
     if (url.includes("INCOME AND EXPENSES!F1")) return json({ values: [["Tags"]] });
@@ -220,7 +229,10 @@ test("saving a transaction creates a missing monthly summary row with default lo
     const body = init.body ? JSON.parse(init.body) : null;
     requests.push({ url, method: init.method || "GET", body });
     if (url.includes("fields=sheets.properties(sheetId,title)")) {
-      return json({ sheets: [{ properties: { sheetId: 7, title: "INCOME AND EXPENSES" } }] });
+      return json({ sheets: [
+        { properties: { sheetId: 7, title: "INCOME AND EXPENSES" } },
+        { properties: { sheetId: 8, title: "MONTHLY SUMMARY" } },
+      ] });
     }
     if (url.includes("INCOME AND EXPENSES!A2:A")) return json({});
     if (url.includes("INCOME AND EXPENSES!F1")) return json({ values: [["Tags"]] });
@@ -297,7 +309,10 @@ test("updateTransaction rewrites same row when date unchanged", async (t) => {
     const body = init.body ? JSON.parse(init.body) : null;
     requests.push({ url, method: init.method || "GET", body });
     if (url.includes("fields=sheets.properties(sheetId,title)")) {
-      return json({ sheets: [{ properties: { sheetId: 7, title: "INCOME AND EXPENSES" } }] });
+      return json({ sheets: [
+        { properties: { sheetId: 7, title: "INCOME AND EXPENSES" } },
+        { properties: { sheetId: 8, title: "MONTHLY SUMMARY" } },
+      ] });
     }
     if (url.includes("INCOME AND EXPENSES!A5:G5") && (init.method || "GET") === "GET") {
       return json({ values: [["2026-01-15", "-10", "Old", "GASTO FRECUENTE", "10:00:00", ""]] });
@@ -335,7 +350,10 @@ test("updateTransaction moves row when date changes", async (t) => {
     const body = init.body ? JSON.parse(init.body) : null;
     requests.push({ url, method: init.method || "GET", body });
     if (url.includes("fields=sheets.properties(sheetId,title)")) {
-      return json({ sheets: [{ properties: { sheetId: 7, title: "INCOME AND EXPENSES" } }] });
+      return json({ sheets: [
+        { properties: { sheetId: 7, title: "INCOME AND EXPENSES" } },
+        { properties: { sheetId: 8, title: "MONTHLY SUMMARY" } },
+      ] });
     }
     if (url.includes("INCOME AND EXPENSES!A5:G5") && (init.method || "GET") === "GET") {
       return json({ values: [["2026-01-15", "-10", "Old", "GASTO FRECUENTE", "10:00:00", ""]] });

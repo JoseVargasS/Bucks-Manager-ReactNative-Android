@@ -20,10 +20,12 @@ import { googleFetch, readValuesUrl, formulaValuesUrl, valuesUrl, SHEETS } from 
 
 import {
   getTransactionSheetId,
+  getSheetIdByName,
   insertBlankRow,
   deleteSheetRow,
   getSpreadsheetLocale,
   buildSummaryRowFormulas,
+  summaryRowFormatRequests,
   TRANSACTION_HEADERS,
   SUMMARY_HEADERS,
 } from "./sheetInit";
@@ -555,6 +557,13 @@ async function ensureMonthlySummaryRowByDate(
           body: JSON.stringify({ values: [formulas] }),
         },
       );
+      const summarySheetId = await getSheetIdByName(token, spreadsheetId, SHEET_NAMES.summary);
+      await googleFetch(token, `${SHEETS}/${spreadsheetId}:batchUpdate`, {
+        method: "POST",
+        body: JSON.stringify({
+          requests: summaryRowFormatRequests(summarySheetId, rowNumber - 1),
+        }),
+      });
       return rowNumber;
     }
   }
@@ -570,6 +579,13 @@ async function ensureMonthlySummaryRowByDate(
       }),
     },
   );
+  const summarySheetId = await getSheetIdByName(token, spreadsheetId, SHEET_NAMES.summary);
+  await googleFetch(token, `${SHEETS}/${spreadsheetId}:batchUpdate`, {
+    method: "POST",
+    body: JSON.stringify({
+      requests: summaryRowFormatRequests(summarySheetId, rowNumber - 1),
+    }),
+  });
   return rowNumber;
 }
 

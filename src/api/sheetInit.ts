@@ -55,6 +55,14 @@ function buildSummaryRowFormulas(
 }
 
 async function getTransactionSheetId(token: string, spreadsheetId: string) {
+  return getSheetIdByName(token, spreadsheetId, SHEET_NAMES.transactions);
+}
+
+async function getSheetIdByName(
+  token: string,
+  spreadsheetId: string,
+  sheetName: string,
+) {
   const meta = await googleFetch<{
     sheets?: { properties?: { sheetId?: number; title?: string } }[];
   }>(
@@ -62,10 +70,10 @@ async function getTransactionSheetId(token: string, spreadsheetId: string) {
     `${SHEETS}/${spreadsheetId}?fields=sheets.properties(sheetId,title)`,
   );
   const sheetId = meta.sheets?.find(
-    (s) => s.properties?.title === SHEET_NAMES.transactions,
+    (s) => s.properties?.title === sheetName,
   )?.properties?.sheetId;
   if (sheetId == null)
-    throw new Error("No se encontro la hoja de transacciones");
+    throw new Error(`No se encontro la hoja "${sheetName}"`);
   return sheetId;
 }
 
@@ -145,6 +153,48 @@ function transactionRowFormatRequests(sheetId: number, rowIndex: number) {
         },
         properties: { pixelSize: 20 },
         fields: "pixelSize",
+      },
+    },
+  ];
+}
+
+function summaryRowFormatRequests(sheetId: number, rowIndex: number) {
+  return [
+    {
+      repeatCell: {
+        range: {
+          sheetId,
+          startRowIndex: rowIndex,
+          endRowIndex: rowIndex + 1,
+          startColumnIndex: 0,
+          endColumnIndex: 1,
+        },
+        cell: {
+          userEnteredFormat: {
+            numberFormat: { type: "DATE", pattern: "MMM YYYY" },
+          },
+        },
+        fields: "userEnteredFormat.numberFormat",
+      },
+    },
+    {
+      repeatCell: {
+        range: {
+          sheetId,
+          startRowIndex: rowIndex,
+          endRowIndex: rowIndex + 1,
+          startColumnIndex: 1,
+          endColumnIndex: 9,
+        },
+        cell: {
+          userEnteredFormat: {
+            numberFormat: {
+              type: "NUMBER",
+              pattern: '#,##0.00;[Red]-#,##0.00',
+            },
+          },
+        },
+        fields: "userEnteredFormat.numberFormat",
       },
     },
   ];
@@ -259,12 +309,12 @@ async function formatSpreadsheet(token: string, spreadsheetId: string) {
 }
 
 const DEFAULT_TAGS_CATALOGUE = JSON.stringify([
-  { id: "default-salud", label: "Salud", color: "#FF5252" },
-  { id: "default-comida", label: "Comida", color: "#FFB74D" },
-  { id: "default-viaje", label: "Viaje", color: "#4FC3F7" },
-  { id: "default-transporte", label: "Transporte", color: "#81C784" },
-  { id: "default-ocio", label: "Ocio", color: "#CE93D8" },
-  { id: "default-educacion", label: "Educación", color: "#FFD54F" },
+  { id: "default-salud", label: "Salud", color: "#f43f5e" },
+  { id: "default-comida", label: "Comida", color: "#f59e0b" },
+  { id: "default-viaje", label: "Viaje", color: "#0ea5e9" },
+  { id: "default-transporte", label: "Transporte", color: "#10b981" },
+  { id: "default-ocio", label: "Ocio", color: "#8b5cf6" },
+  { id: "default-educacion", label: "Educación", color: "#84cc16" },
 ]);
 
 async function initializeSpreadsheet(token: string, spreadsheetId: string) {
@@ -319,7 +369,9 @@ export {
   SUMMARY_HEADERS,
   TRANSACTION_HEADERS,
   getTransactionSheetId,
+  getSheetIdByName,
   transactionRowFormatRequests,
+  summaryRowFormatRequests,
   insertBlankRow,
   deleteSheetRow,
   getSpreadsheetLocale,
