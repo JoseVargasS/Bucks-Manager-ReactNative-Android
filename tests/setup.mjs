@@ -73,12 +73,46 @@ const fileSystemUrl = moduleUrl(`
   export const deleteAsync = (...args) => mock().deleteAsync(...args);
 `);
 const vectorIconsUrl = moduleUrl(`export default {};`);
+const reactNativeUrl = moduleUrl(`
+  const globalAlert = globalThis.__bucksAlertMock || { alert: () => {} };
+  export const Alert = globalAlert;
+  export const Platform = { OS: "android", select: (o) => o.android ?? o.default };
+  export const Dimensions = { get: () => ({ width: 390, height: 844 }) };
+  export const PixelRatio = { get: () => 3 };
+`);
+const googleSigninUrl = moduleUrl(`
+  const mock = () => globalThis.__bucksGoogleSigninMock;
+  export const GoogleSignin = {
+    getTokens: async () => mock().getTokens(),
+    signIn: async () => mock().signIn(),
+    signOut: async () => mock().signOut(),
+    hasPreviousSignIn: () => mock().hasPreviousSignIn(),
+    getCurrentUser: () => mock().getCurrentUser(),
+    addScopes: async () => mock().addScopes(),
+    configure: () => mock().configure(),
+  };
+`);
+
+globalThis.__bucksAlertMock = {
+  alert: () => {},
+};
+globalThis.__bucksGoogleSigninMock = {
+  getTokens: async () => ({ accessToken: "mock-token", idToken: "mock-id" }),
+  signIn: async () => ({ data: null }),
+  signOut: async () => {},
+  hasPreviousSignIn: () => false,
+  getCurrentUser: () => null,
+  addScopes: async () => {},
+  configure: () => {},
+};
 
 registerHooks({
   resolve(specifier, context, nextResolve) {
     if (specifier === "expo-secure-store") return { url: secureStoreUrl, shortCircuit: true };
     if (specifier === "expo-file-system/legacy") return { url: fileSystemUrl, shortCircuit: true };
     if (specifier === "@expo/vector-icons/MaterialCommunityIcons") return { url: vectorIconsUrl, shortCircuit: true };
+    if (specifier === "react-native") return { url: reactNativeUrl, shortCircuit: true };
+    if (specifier === "@react-native-google-signin/google-signin") return { url: googleSigninUrl, shortCircuit: true };
     if (specifier.startsWith("@/")) {
       const rel = specifier.slice(2);
       const candidates = [`${rel}.ts`, `${rel}.tsx`, `${rel}/index.ts`, `${rel}/index.tsx`];

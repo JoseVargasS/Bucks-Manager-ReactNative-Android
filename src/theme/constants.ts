@@ -16,6 +16,7 @@ export const Z_INDEX_SEARCH = 1002;
 
 export const SPLASH_BG = "#050E0B";
 export const SPLASH_SPINNER = "#C8FF00";
+export const SPLASH_TEXT = "#ffffff";
 export const SPLASH_INDICATOR_OFFSET = 72;
 
 export const TOKEN_KEY = "bucks_google_access_token";
