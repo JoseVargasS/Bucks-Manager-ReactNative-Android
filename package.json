@@ -1,6 +1,7 @@
 {
   "name": "bucksmanagerandroid",
   "version": "1.0.0",
+  "packageManager": "pnpm@11.9.0",
   "main": "index.ts",
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",
