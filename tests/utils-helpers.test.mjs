@@ -8,7 +8,10 @@ const {
   getAvailableMonthsForYear,
   detectDeviceLanguage,
   detectDeviceCurrencySymbol,
+  withAlpha,
 } = await import("../src/utils/helpers.ts");
+
+const { getDraftAmountValue, isMathFormula } = await import("../src/utils/expressionParser.ts");
 
 // --- buildExportFileName ---
 test("buildExportFileName generates correct filename for date range", () => {
@@ -152,5 +155,30 @@ test("detectDeviceCurrencySymbol falls back to language-level map when locale ha
   const result = detectDeviceCurrencySymbol();
   assert.ok(result.includes("S"), `expected S/ symbol for es locale, got ${result}`);
   Intl.DateTimeFormat = originalDateTimeFormat;
+});
+
+// --- withAlpha ---
+test("withAlpha converts hex to rgba", () => {
+  assert.equal(withAlpha("#ff0000", 0.5), "rgba(255, 0, 0, 0.5)");
+  assert.equal(withAlpha("#0f0", 0.3), "rgba(0, 255, 0, 0.3)");
+});
+
+test("withAlpha returns input for invalid hex", () => {
+  assert.equal(withAlpha("invalid", 0.5), "invalid");
+  assert.equal(withAlpha("#12345", 0.5), "#12345");
+});
+
+// --- expressionParser ---
+test("getDraftAmountValue computes amount from draft", () => {
+  assert.equal(getDraftAmountValue({ amount: "100", type: "GASTO NO FRECUENTE" }), 100);
+  assert.equal(getDraftAmountValue({ amount: "=10+20", type: "INGRESO FRECUENTE" }), 30);
+  assert.equal(getDraftAmountValue({ amount: "", type: "GASTO FRECUENTE" }), 0);
+});
+
+test("isMathFormula detects math expressions", () => {
+  assert.equal(isMathFormula("=10+20"), true);
+  assert.equal(isMathFormula("10*5"), true);
+  assert.equal(isMathFormula("100"), false);
+  assert.equal(isMathFormula("=100"), true);
 });
 

@@ -19,6 +19,7 @@ const {
   getMonthYear,
   normalizeAmountExpression,
   calculateExpression,
+  normalizeDraftAmount,
   SHEET_NAMES,
   TRANSACTION_TYPES,
   MONTH_NAMES,
@@ -725,4 +726,157 @@ test("uniqueMonthKeys deduplicates month keys across many transactions", () => {
   ];
   const keys = uniqueMonthKeys(transactions);
   assert.deepEqual(keys.sort(), ["February 2026", "January 2026"]);
+});
+
+// --- normalizeDraftAmount (line items) ---
+test("normalizeDraftAmount sums line items", () => {
+  const draft = {
+    amount: "",
+    detail: "test",
+    type: "INGRESO NO FRECUENTE",
+    date: "2026-01-15",
+    lineItems: [
+      { id: "li-1", amount: "100", description: "A", tags: [] },
+      { id: "li-2", amount: "50", description: "B", tags: [] },
+    ],
+  };
+  const amount = normalizeDraftAmount(draft);
+  assert.equal(amount, 150);
+});
+
+test("normalizeDraftAmount handles income line items", () => {
+  const draft = {
+    amount: "",
+    detail: "test",
+    type: "INGRESO NO FRECUENTE",
+    date: "2026-01-15",
+    lineItems: [
+      { id: "li-1", amount: "100", description: "A", tags: [] },
+    ],
+  };
+  assert.equal(normalizeDraftAmount(draft), 100);
+});
+
+test("normalizeDraftAmount uses draft.amount when no lineItems", () => {
+  const draft = { amount: "100", detail: "test", type: "GASTO FRECUENTE", date: "2026-01-15" };
+  assert.equal(normalizeDraftAmount(draft), -100);
+});
+
+// --- isValidTransactionDraft (line items) ---
+test("isValidTransactionDraft validates line items", () => {
+  const base = {
+    date: "2026-01-15",
+    amount: "",
+    detail: "",
+    type: "GASTO NO FRECUENTE",
+    lineItems: [
+      { id: "li-1", amount: "-100", description: "A", tags: [] },
+      { id: "li-2", amount: "-50", description: "B", tags: [] },
+    ],
+    tags: [],
+  };
+  assert.equal(isValidTransactionDraft(base), true);
+  assert.equal(isValidTransactionDraft({ ...base, type: "INGRESO NO FRECUENTE" }), false);
+  assert.equal(isValidTransactionDraft({ ...base, lineItems: [{ id: "li-1", amount: "", description: "A", tags: [] }] }), false);
+  assert.equal(isValidTransactionDraft({ ...base, lineItems: [{ id: "li-1", amount: "0", description: "A", tags: [] }] }), false);
+});
+
+test("isValidTransactionDraft rejects expense line items with positive total", () => {
+  const draft = {
+    date: "2026-01-15",
+    amount: "",
+    detail: "",
+    type: "GASTO NO FRECUENTE",
+    lineItems: [
+      { id: "li-1", amount: "=100", description: "A", tags: [] },
+    ],
+  };
+  assert.equal(isValidTransactionDraft(draft), false);
+});
+
+// --- buildTransactionFromDraft (line items) ---
+test("buildTransactionFromDraft with line items creates transaction correctly", () => {
+  const draft = {
+    date: "2026-01-15",
+    amount: "",
+    detail: "",
+    type: "GASTO NO FRECUENTE",
+    tags: [],
+    lineItems: [
+      { id: "li-1", amount: "-100", description: "Comida", tags: ["tag1"] },
+      { id: "li-2", amount: "-50", description: "Delivery", tags: ["tag2"] },
+    ],
+  };
+  const tx = buildTransactionFromDraft(draft, 2);
+  assert.equal(tx.amount, -150);
+  assert.equal(tx.detail, "Comida, Delivery");
+  assert.ok(tx.lineItems);
+  assert.equal(tx.lineItems.length, 2);
+  assert.deepEqual(tx.tags, ["tag1", "tag2"]);
+});
+
+test("buildTransactionFromDraft with concepto prefixes detail", () => {
+  const draft = {
+    date: "2026-01-15",
+    amount: "",
+    detail: "",
+    type: "GASTO NO FRECUENTE",
+    tags: [],
+    concepto: "Cena",
+    lineItems: [
+      { id: "li-1", amount: "-30", description: "Pizza", tags: [] },
+    ],
+  };
+  const tx = buildTransactionFromDraft(draft, 2);
+  assert.equal(tx.detail, "Cena: Pizza");
+});
+
+test("buildTransactionFromDraft with line items strips formula correctly", () => {
+  const draft = {
+    date: "2026-01-15",
+    amount: "",
+    detail: "",
+    type: "INGRESO NO FRECUENTE",
+    tags: [],
+    lineItems: [
+      { id: "li-1", amount: "=10+20", description: "Math", tags: [] },
+    ],
+  };
+  const tx = buildTransactionFromDraft(draft, 2);
+  assert.equal(tx.amount, 30);
+  assert.equal(tx.lineItems[0].formula, "10+20");
+});
+
+test("buildTransactionFromDraft with line items throws on empty items", () => {
+  const draft = {
+    date: "2026-01-15",
+    amount: "",
+    detail: "",
+    type: "GASTO NO FRECUENTE",
+    tags: [],
+    lineItems: [{ id: "li-1", amount: "", description: "", tags: [] }],
+  };
+  assert.throws(() => buildTransactionFromDraft(draft, 2), /Invalid transaction draft/);
+});
+
+// --- getTransactionMonthKey edge cases ---
+test("getTransactionMonthKey parses non-ISO rawDate via parseLocalDate fallback", () => {
+  const tx = {
+    rowId: 1, amount: 100, detail: "x", type: "GASTO NO FRECUENTE",
+    rawDate: "Jan 15 2026",
+  };
+  const key = getTransactionMonthKey(tx);
+  assert.equal(key, "January 2026");
+});
+
+// --- insertChronologically edge cases ---
+test("insertChronologically resolves ties by rowId", () => {
+  const existing = [
+    { rowId: 2, rawDate: "2026-01-15T00:00:00.000Z", amount: 100, detail: "A", type: "INGRESO FRECUENTE", createdAt: "", rawDateMs: 1736899200000, createdAtMs: 0 },
+    { rowId: 3, rawDate: "2026-01-15T00:00:00.000Z", amount: -50, detail: "B", type: "GASTO NO FRECUENTE", createdAt: "", rawDateMs: 1736899200000, createdAtMs: 0 },
+  ];
+  const newTx = { rowId: 99, rawDate: "2026-01-15T00:00:00.000Z", amount: -30, detail: "C", type: "GASTO FRECUENTE", createdAt: "", rawDateMs: 1736899200000, createdAtMs: 0 };
+  const result = insertChronologically(existing, newTx);
+  assert.deepEqual(result.map((r) => r.detail), ["A", "B", "C"]);
+  assert.deepEqual(result.map((r) => r.rowId), [2, 3, 4]);
 });

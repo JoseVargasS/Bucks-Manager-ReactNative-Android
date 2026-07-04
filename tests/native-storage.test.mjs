@@ -137,6 +137,40 @@ test("financial cache rejects malformed JSON and corrupt nested records", async 
   assert.equal(await loadFinancialCache("sheet-1"), null);
 });
 
+test("financial cache rejects transaction with invalid lineItems structure", async () => {
+  fileSystemMock.files.set("mock://document/bucks-finance-cache.json", JSON.stringify({
+    schemaVersion: 1,
+    spreadsheetId: "sheet-1",
+    lastSyncedAt: "2026-01-15T12:00:00.000Z",
+    transactions: [{
+      rowId: 2, date: "15-jan-26", rawDate: "2026-01-15T05:00:00.000Z",
+      amount: -25, detail: "Test", type: "GASTO NO FRECUENTE",
+      lineItems: [{ id: "li-1", amount: "bad", description: "X", tags: "not-array" }],
+    }],
+    summaries: [summary],
+    freqIncome: {},
+  }));
+  assert.equal(await loadFinancialCache("sheet-1"), null);
+});
+
+test("financial cache accepts transaction with valid lineItems", async () => {
+  fileSystemMock.files.set("mock://document/bucks-finance-cache.json", JSON.stringify({
+    schemaVersion: 1,
+    spreadsheetId: "sheet-1",
+    lastSyncedAt: "2026-01-15T12:00:00.000Z",
+    transactions: [{
+      rowId: 2, date: "15-jan-26", rawDate: "2026-01-15T05:00:00.000Z",
+      amount: -25, detail: "Test", type: "GASTO NO FRECUENTE",
+      lineItems: [{ id: "li-1", amount: 25, description: "X", tags: [] }],
+    }],
+    summaries: [summary],
+    freqIncome: {},
+  }));
+  const cache = await loadFinancialCache("sheet-1");
+  assert.ok(cache);
+  assert.equal(cache.transactions.length, 1);
+});
+
 test("financial cache exposes write failures instead of reporting a false save", async () => {
   fileSystemMock.writeError = new Error("disk full");
   await assert.rejects(

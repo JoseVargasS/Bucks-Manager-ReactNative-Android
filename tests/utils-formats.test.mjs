@@ -156,3 +156,11 @@ test("transaction type translations use complete words", () => {
     ["Recurring income", "Non-recurring income", "Recurring expense", "Non-recurring expense"],
   );
 });
+
+test("typeColor falls back to warn for unknown type", () => {
+  assert.equal(typeColor("UNKNOWN", mockColors), mockColors.warn);
+});
+
+test("typeFill falls back to warnSoft for unknown type", () => {
+  assert.equal(typeFill("UNKNOWN", mockColors), mockColors.warnSoft);
+});

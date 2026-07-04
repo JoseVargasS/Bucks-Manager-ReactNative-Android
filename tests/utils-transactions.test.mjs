@@ -7,6 +7,7 @@ const {
   sortTransactionsDesc,
   filterTransactionsByRollingPeriod,
   groupTransactionsByDate,
+  computeLineItemsTotal,
 } = await import("../src/utils/transactions.ts");
 
 // --- getBlankDraft ---
@@ -288,4 +289,24 @@ test("groupTransactionsByDate generates correct labels", () => {
   assert.ok(
     groups[0].label.includes("HOY") || groups[0].label.includes("TODAY"),
   );
+});
+
+// --- computeLineItemsTotal ---
+test("computeLineItemsTotal sums amounts and returns errors", () => {
+  const valid = [
+    { id: "li-1", amount: "100", description: "A", tags: [] },
+    { id: "li-2", amount: "50", description: "B", tags: [] },
+  ];
+  assert.deepEqual(computeLineItemsTotal(valid), { total: 150, error: null });
+});
+
+test("computeLineItemsTotal handles amounts gracefully", () => {
+  const result = computeLineItemsTotal([{ id: "li-1", amount: "1/0", description: "A", tags: [] }]);
+  assert.equal(result.error, null);
+  assert.equal(result.total, 0);
+});
+
+test("computeLineItemsTotal handles empty items", () => {
+  assert.deepEqual(computeLineItemsTotal([]), { total: 0, error: null });
+  assert.deepEqual(computeLineItemsTotal([{ id: "li-1", amount: "", description: "A", tags: [] }]), { total: 0, error: null });
 });

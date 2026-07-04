@@ -594,4 +594,11 @@ export {
   TAG_HEADER,
   tagsColumnReady,
   ensureTransactionTagsColumn,
+  parseLineItems,
+  formatCreatedAtForSheet,
+  formatAmountForSheet,
+  sanitizeAmountExpression,
+  parseAmountFormula,
+  unwrapAmountFormula,
+  buildTransactionRow,
 };

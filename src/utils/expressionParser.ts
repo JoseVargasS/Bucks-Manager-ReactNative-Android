@@ -58,11 +58,7 @@ function skipSpaces(expr: string, ctx: { pos: number }) {
 export function calculateExpression(expression: string): number {
   const clean = expression.replace(/[^0-9+\-*/().\s]/g, "");
   if (!clean.trim()) return 0;
-  try {
-    return parseAddSub(clean, { pos: 0 });
-  } catch {
-    return 0;
-  }
+  return parseAddSub(clean, { pos: 0 });
 }
 
 export function normalizeAmountExpression(value: string): string {

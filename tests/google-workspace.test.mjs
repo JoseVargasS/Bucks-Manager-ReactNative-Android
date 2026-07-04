@@ -14,7 +14,9 @@ const {
   moveTransaction,
   readTagsCatalog,
   writeTagsCatalog,
+  isSheetTrashed,
 } = await import("../src/api/googleWorkspace.ts");
+
 
 function json(value, status = 200) {
   return new Response(JSON.stringify(value), { status, headers: { "content-type": "application/json" } });
@@ -570,6 +572,38 @@ test("findCompatibleSheets paginates through multiple pages", async (t) => {
   assert.equal(pageCalls, 2);
 });
 
+test("removeTagFromAllRows handles JSON parse errors in lineItems", async (t) => {
+  const { removeTagFromAllRows: removeTag } = await import("../src/api/googleWorkspace.ts");
+  let called = false;
+  installFetch(t, async (input, init) => {
+    const url = decodeURIComponent(String(input));
+    if (url.includes("values:batchUpdate")) { called = true; return json({}); }
+    if (url.includes("F2:G")) {
+      return json({ values: [
+        ["tag-uno", "not-valid-json"],
+      ] });
+    }
+    return json({});
+  });
+  await removeTag("token", "sid", "tag-uno");
+  assert.ok(called);
+});
+
+test("isSheetTrashed returns true for trashed spreadsheet", async (t) => {
+  installFetch(t, async () => json({ trashed: true }));
+  assert.equal(await isSheetTrashed("token", "sid"), true);
+});
+
+test("isSheetTrashed returns false for active spreadsheet", async (t) => {
+  installFetch(t, async () => json({ trashed: false }));
+  assert.equal(await isSheetTrashed("token", "sid"), false);
+});
+
+test("isSheetTrashed returns false on fetch error", async (t) => {
+  installFetch(t, async () => { throw new Error("network"); });
+  assert.equal(await isSheetTrashed("token", "sid"), false);
+});
+
 test("readTagsCatalog returns empty array when cell is empty", async (t) => {
   installFetch(t, async (input) => {
     const url = decodeURIComponent(String(input));
@@ -677,6 +711,58 @@ test("removeTagFromAllRows does nothing when tag not found", async (t) => {
   const { removeTagFromAllRows: removeTag } = await import("../src/api/googleWorkspace.ts");
   await removeTag("token", "sheet", "custom-vivienda");
   assert.equal(batchCalled, false, "should not call batchUpdate when tag not found");
+});
+
+test("removeTagFromAllRows updates both tags and lineItems when both contain tag", async (t) => {
+  const requests = [];
+  installFetch(t, async (input, init = {}) => {
+    const url = decodeURIComponent(String(input));
+    const method = init.method || "GET";
+    requests.push({ url, method, body: init.body ? JSON.parse(init.body) : null });
+    if (url.includes("INCOME AND EXPENSES!F2:G") && method === "GET") {
+      return json({ values: [[
+        "tag-uno, tag-dos",
+        '[{"tags":["tag-uno"]}, {"tags":["tag-otro"]}]',
+      ]] });
+    }
+    if (url.includes("values:batchUpdate")) return json({});
+    return json({});
+  });
+  const { removeTagFromAllRows: removeTag } = await import("../src/api/googleWorkspace.ts");
+  await removeTag("token", "sheet", "tag-uno");
+  const batchCall = requests.find((r) => r.url.includes("values:batchUpdate"));
+  assert.ok(batchCall, "should call batchUpdate");
+  assert.equal(batchCall.body.data.length, 1);
+  assert.deepEqual(batchCall.body.data[0], {
+    range: "INCOME AND EXPENSES!F2:G2",
+    values: [["tag-dos", '[{"tags":[]},{"tags":["tag-otro"]}]']],
+  });
+});
+
+test("removeTagFromAllRows updates lineItems when tag only in lineItems", async (t) => {
+  const requests = [];
+  installFetch(t, async (input, init = {}) => {
+    const url = decodeURIComponent(String(input));
+    const method = init.method || "GET";
+    requests.push({ url, method, body: init.body ? JSON.parse(init.body) : null });
+    if (url.includes("INCOME AND EXPENSES!F2:G") && method === "GET") {
+      return json({ values: [[
+        "tag-otro",
+        '[{"tags":["tag-uno"]}]',
+      ]] });
+    }
+    if (url.includes("values:batchUpdate")) return json({});
+    return json({});
+  });
+  const { removeTagFromAllRows: removeTag } = await import("../src/api/googleWorkspace.ts");
+  await removeTag("token", "sheet", "tag-uno");
+  const batchCall = requests.find((r) => r.url.includes("values:batchUpdate"));
+  assert.ok(batchCall, "should call batchUpdate");
+  assert.equal(batchCall.body.data.length, 1);
+  assert.deepEqual(batchCall.body.data[0], {
+    range: "INCOME AND EXPENSES!G2",
+    values: [['[{"tags":[]}]']],
+  });
 });
 
 test("saveTransaction with ISO createdAt formats time correctly", async (t) => {
