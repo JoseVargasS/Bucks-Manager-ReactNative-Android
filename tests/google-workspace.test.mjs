@@ -12,6 +12,8 @@ const {
   updateTransaction,
   deleteTransaction,
   moveTransaction,
+  readTagsCatalog,
+  writeTagsCatalog,
 } = await import("../src/api/googleWorkspace.ts");
 
 function json(value, status = 200) {
@@ -566,6 +568,72 @@ test("findCompatibleSheets paginates through multiple pages", async (t) => {
   const result = await findCompatibleSheets("token");
   assert.ok(Array.isArray(result));
   assert.equal(pageCalls, 2);
+});
+
+test("readTagsCatalog returns empty array when cell is empty", async (t) => {
+  installFetch(t, async (input) => {
+    const url = decodeURIComponent(String(input));
+    if (url.includes("MONTHLY SUMMARY!K2")) return json({ values: [[undefined]] });
+    return json({});
+  });
+  const result = await readTagsCatalog("token", "sheet");
+  assert.deepEqual(result, []);
+});
+
+test("readTagsCatalog returns empty array when cell value is not JSON", async (t) => {
+  installFetch(t, async (input) => {
+    const url = decodeURIComponent(String(input));
+    if (url.includes("MONTHLY SUMMARY!K2")) return json({ values: [["not json"]] });
+    return json({});
+  });
+  const result = await readTagsCatalog("token", "sheet");
+  assert.deepEqual(result, []);
+});
+
+test("readTagsCatalog parses valid tags from cell", async (t) => {
+  const tags = [{ id: "default-comida", label: "Comida", color: "#ff0000" }];
+  installFetch(t, async (input) => {
+    const url = decodeURIComponent(String(input));
+    if (url.includes("MONTHLY SUMMARY!K2")) return json({ values: [[JSON.stringify(tags)]] });
+    return json({});
+  });
+  const result = await readTagsCatalog("token", "sheet");
+  assert.deepEqual(result, tags);
+});
+
+test("readTagsCatalog filters out invalid tag objects", async (t) => {
+  const mixed = [{ id: "a", label: "A", color: "#000" }, { id: "b" }, "string"];
+  installFetch(t, async (input) => {
+    const url = decodeURIComponent(String(input));
+    if (url.includes("MONTHLY SUMMARY!K2")) return json({ values: [[JSON.stringify(mixed)]] });
+    return json({});
+  });
+  const result = await readTagsCatalog("token", "sheet");
+  assert.equal(result.length, 1);
+  assert.equal(result[0].id, "a");
+});
+
+test("readTagsCatalog handles fetch errors gracefully", async (t) => {
+  installFetch(t, async () => { throw new Error("network"); });
+  const result = await readTagsCatalog("token", "sheet");
+  assert.deepEqual(result, []);
+});
+
+test("writeTagsCatalog writes header and tags to K1:K2", async (t) => {
+  const requests = [];
+  installFetch(t, async (input, init = {}) => {
+    const url = decodeURIComponent(String(input));
+    requests.push({ url, method: init.method, body: init.body ? JSON.parse(init.body) : null });
+    return json({});
+  });
+  const tags = [{ id: "test", label: "Test", color: "#fff" }];
+  await writeTagsCatalog("token", "sheet", tags);
+
+  const put = requests.find((r) => r.method === "PUT");
+  assert.ok(put, "should call PUT");
+  assert.ok(put.url.includes("MONTHLY SUMMARY!K1:K2"), "should target K1:K2");
+  assert.equal(put.body.values[0][0], "TAGS CATALOGUE");
+  assert.deepEqual(JSON.parse(put.body.values[1][0]), tags);
 });
 
 test("removeTagFromAllRows cleans tag from column F and batch writes", async (t) => {
