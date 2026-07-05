@@ -4,7 +4,6 @@ export const optionSheetStyles = StyleSheet.create({
   optionOverlay: {
     flex: 1,
     justifyContent: "flex-end",
-    backgroundColor: "rgba(0,0,0,0.58)",
   },
   optionHeader: {
     minHeight: 62,

@@ -8,11 +8,11 @@
 
 ## Color
 
-- **Dark theme**: Blue-slate shell (`#0f1117`), lime brand accent (`#C8FF00`).
-- **Light theme**: Soft warm gray backgrounds (`#f4efe7`), white surfaces (`#fffaf1`), lime/olive accent (`#8ab800`).
-- **Semantic colors**: Green for income, red for expense. Used only for financial states, not accent.
-- **10 accent schemes**: lime, ocean, violet, amber, graphite, pink, sports, techy, sky, forest. Each has dark/light variants.
+- **Default scheme (cyprus)**: dark `#004741` Cyprus green shell with `#9ed9c8` sand-mint primary. Light `#F0EDE4` Sand bg with Cyprus as primary. Botanical-museum, the calmest and most universal green in the catalogue.
+- **11 accent schemes**: cyprus, ocean, vulcanico, tiffany, charcoalline, truepink, silver, milky, sky, turmeric, bridal. Each has dark/light variants and redeclares every palette token (including `periodBg` and `text`) so scheme switches never leak the base value.
+- **Semantic colors**: Green for income, red for expense. Hue is tuned per scheme so the financial signal stays recognisable while harmonising with the accent.
 - **Palette resolution**: `getPalette` memoized per `(theme, scheme)` pair in a small LRU.
+- **WCAG AA**: every scheme's text-vs-bg and primary-vs-bg contrast is verified ≥ 4.5:1; semantic colors vs their card surface ≥ 4.5:1 (or ≥ 4.8:1 for non-text affordances on the warmer schemes).
 
 ## Component Tokens
 

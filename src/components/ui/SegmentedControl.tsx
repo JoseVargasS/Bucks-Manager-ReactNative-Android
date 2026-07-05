@@ -61,7 +61,7 @@ export const SegmentedControl = memo(function SegmentedControl({
             width: segmentW,
             backgroundColor: colors.card,
             borderRadius: 8,
-            shadowColor: "#000",
+            shadowColor: colors.shadow,
             shadowOffset: { width: 0, height: 1 },
             shadowOpacity: 0.06,
             shadowRadius: 2,

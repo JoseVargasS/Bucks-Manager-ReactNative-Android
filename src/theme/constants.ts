@@ -14,9 +14,12 @@ export const Z_INDEX_MODAL = 1000;
 export const Z_INDEX_DETAIL = 1001;
 export const Z_INDEX_SEARCH = 1002;
 
-export const SPLASH_BG = "#050E0B";
-export const SPLASH_SPINNER = "#C8FF00";
-export const SPLASH_TEXT = "#ffffff";
+// Splash uses raw constants because it renders before ThemeProvider mounts.
+// The values match the cyprus dark scheme (new default): a near-black green
+// shell, a sand-mint spinner, and a chalk-white title.
+export const SPLASH_BG = "#001a16";
+export const SPLASH_SPINNER = "#9ed9c8";
+export const SPLASH_TEXT = "#f0ede4";
 export const SPLASH_INDICATOR_OFFSET = 72;
 
 export const TOKEN_KEY = "bucks_google_access_token";
@@ -36,52 +39,59 @@ export const COLOR_SCHEME_OPTIONS: Array<{
   icon: MaterialIconName;
 }> = [
   {
-    value: "lime",
-    labelEs: "Lima Bucks",
-    labelEn: "Bucks Lime",
-    icon: "sprout",
+    value: "cyprus",
+    labelEs: "Chipre",
+    labelEn: "Cyprus",
+    icon: "leaf",
   },
   { value: "ocean", labelEs: "Océano", labelEn: "Ocean", icon: "waves" },
   {
-    value: "violet",
-    labelEs: "Violeta",
-    labelEn: "Violet",
-    icon: "circle-multiple-outline",
+    value: "vulcanico",
+    labelEs: "Volcánico",
+    labelEn: "Vulcanico",
+    icon: "fire",
   },
   {
-    value: "amber",
-    labelEs: "Ámbar",
-    labelEn: "Amber",
-    icon: "white-balance-sunny",
+    value: "tiffany",
+    labelEs: "Tiffany",
+    labelEn: "Tiffany",
+    icon: "diamond-stone",
   },
   {
-    value: "graphite",
-    labelEs: "Grafito",
-    labelEn: "Graphite",
-    icon: "circle-half-full",
+    value: "charcoalline",
+    labelEs: "Carbón Línea",
+    labelEn: "Charcoal Line",
+    icon: "lightning-bolt",
   },
   {
-    value: "pink",
-    labelEs: "Rosa",
-    labelEn: "Pink",
+    value: "truepink",
+    labelEs: "Rosa Verdad",
+    labelEn: "True Pink",
     icon: "heart",
   },
   {
-    value: "sports",
-    labelEs: "Deportes",
-    labelEn: "Sports",
-    icon: "trophy",
+    value: "silver",
+    labelEs: "Plata",
+    labelEn: "Silver",
+    icon: "circle-half-full",
   },
   {
-    value: "techy",
-    labelEs: "Techy",
-    labelEn: "Techy",
-    icon: "chip",
+    value: "milky",
+    labelEs: "Lácteo",
+    labelEn: "Milky",
+    icon: "sprout",
+  },
+  { value: "sky", labelEs: "Cielo", labelEn: "Sky", icon: "weather-night" },
+  {
+    value: "turmeric",
+    labelEs: "Cúrcuma",
+    labelEn: "Turmeric",
+    icon: "white-balance-sunny",
   },
   {
-    value: "sky",
-    labelEs: "Cielo",
-    labelEn: "Sky",
-    icon: "weather-night",
+    value: "bridal",
+    labelEs: "Nupcial",
+    labelEn: "Bridal",
+    icon: "flower-tulip",
   },
 ];
