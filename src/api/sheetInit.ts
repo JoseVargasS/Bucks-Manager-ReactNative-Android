@@ -1,6 +1,7 @@
 import { DEFAULT_SPREADSHEET_LOCALE, SHEET_NAMES, TRANSACTION_TYPES } from "@/domain/bucksLogic";
 import { googleFetch, SHEETS } from "./googleFetch";
 import { DEFAULT_TAGS } from "@/utils/tags";
+import { UI_PREFERENCES_HEADER, UI_PREFERENCES_INIT_JSON } from "./preferencesOps";
 
 const TRANSACTION_HEADERS = [
   "Date",
@@ -336,6 +337,10 @@ async function initializeSpreadsheet(token: string, spreadsheetId: string) {
         {
           range: `${SHEET_NAMES.summary}!K1:K2`,
           values: [["TAGS CATALOGUE"], [DEFAULT_TAGS_CATALOGUE]],
+        },
+        {
+          range: `${SHEET_NAMES.summary}!L1:L2`,
+          values: [[UI_PREFERENCES_HEADER], [UI_PREFERENCES_INIT_JSON]],
         },
       ],
     }),

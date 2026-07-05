@@ -7,6 +7,17 @@ export function logError(error: unknown, context: string) {
   }
 }
 
+// ponytail: dev-only debug log. Silenced in release builds via __DEV__.
+// Use this to surface the cloud-sync path of UI preferences writes —
+// silent failures here are the kind of thing that's painful to debug
+// from a user report alone.
+export function logDebug(context: string, payload: unknown) {
+  if (typeof __DEV__ === "undefined" || __DEV__) {
+    // eslint-disable-next-line no-console
+    console.log(`[${context}]`, payload);
+  }
+}
+
 export function getErrorMessage(error: unknown, fallback: string) {
   return error instanceof Error ? error.message : fallback;
 }

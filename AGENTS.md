@@ -123,6 +123,14 @@ Do not re-merge these contexts. Do not introduce a global "settings" context tha
 - `loadHistory` prunes entries older than 30 days on read.
 - Tag persistence uses the catalogue at the current language. The catalogue must always include the six default ids (`default-salud`, `default-comida`, `default-viaje`, `default-transporte`, `default-ocio`, `default-educacion`) even when the user hides them in the UI.
 
+### Cloud-synced UI preferences
+
+- Cosmetic preferences (language, currency symbol, font, accent scheme) are persisted to `MONTHLY SUMMARY!L1:L2` (L1 = header `UI PREFERENCES`, L2 = compact JSON `{ v: 1, language, currencySymbol, fontPreference, colorScheme }`). PIN, token, and history stay device-local.
+- `usePreferences.save*()` schedules a 1.5s debounced write that runs through the same `syncQueue` as tags and transactions. `sanitizeUiPreferences` drops unknown / out-of-vocabulary fields so a corrupted sheet row never reaches state.
+- On `reloadFromGoogle`, `readUiPreferences` is the 4th parallel read. If the sheet carries a value, `useGoogleSync` calls `usePreferences.applyRemotePreferences` to overwrite the local copy. The sheet wins; SecureStore only leads the UI between launch and the first successful sync.
+- `App.tsx` wires the two hooks bidirectionally: `wireSheetPersistence(scheduleUiPreferencesWrite)` (preferences → sheet) and `wireRemoteUiPreferences(applyRemotePreferences)` (sheet → preferences).
+- New spreadsheets initialize L1:L2 with a `sky` scheme and detected device language so the user always sees a coherent first-run look.
+
 ### Mutation pipeline
 
 - A module-level `syncQueue` serializes Sheets mutations so a fast edit cannot race the reconcile read of an earlier edit.

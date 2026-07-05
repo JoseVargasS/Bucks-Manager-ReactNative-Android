@@ -24,7 +24,7 @@ const PaletteContext = createContext<Palette | null>(null);
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setTheme] = useState<ThemeMode>("dark");
   const [colorScheme, setColorSchemeState] =
-    useState<ColorSchemePreference>("lime");
+    useState<ColorSchemePreference>("sky");
 
   const toggleTheme = useCallback(() => {
     setTheme((current) => (current === "dark" ? "light" : "dark"));

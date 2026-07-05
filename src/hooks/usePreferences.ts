@@ -20,8 +20,13 @@ const FONT_KEY = "bucks_font";
 const COLOR_SCHEME_KEY = "bucks_color_scheme";
 const FONT_PREFERENCES = Object.keys(FONT_FAMILIES) as FontPreference[];
 const COLOR_SCHEME_PREFERENCES: ColorSchemePreference[] = [
-  "lime", "ocean", "violet", "amber", "graphite", "pink", "sports", "techy", "sky",
+  "cyprus", "ocean", "vulcanico", "tiffany", "charcoalline",
+  "truepink", "silver", "milky", "sky", "turmeric", "bridal",
 ];
+const DEFAULT_COLOR_SCHEME: ColorSchemePreference = "sky";
+const CURRENCY_OPTIONS_SET = new Set([
+  "S/", "$", "€", "£", "¥", "R$", "MX$", "COP$", "CLP$",
+]);
 
 const FONT_COPY_KEYS: Record<FontPreference, keyof UiCopy> = {
   dmsans: "system",
@@ -77,16 +82,28 @@ export const CURRENCY_OPTIONS: Array<{
   { labelEs: "Pesos chilenos (CLP$)", labelEn: "Chilean pesos (CLP$)", value: "CLP$", icon: "cash" },
 ];
 
+// Snapshot of all cloud-synced cosmetic preferences. Mirrors the shape
+// persisted in MONTHLY SUMMARY!L1:L2. App.tsx is responsible for the
+// actual sheet write — usePreferences just owns the SecureStore + state.
+export type UiPreferencesSnapshot = {
+  language: LanguageMode;
+  currencySymbol: string;
+  fontPreference: FontPreference;
+  colorScheme: ColorSchemePreference;
+};
+
 type PreferencesState = {
   language: LanguageMode;
   currencySymbol: string;
   fontPreference: FontPreference;
+  colorScheme: ColorSchemePreference;
   copy: UiCopy;
   saveLanguage: (next: string) => void;
   saveCurrencySymbol: (next: string) => void;
   saveFontPreference: (next: string) => void;
   saveColorScheme: (next: string) => void;
   restorePreferences: () => Promise<void>;
+  applyRemotePreferences: (prefs: UiPreferencesSnapshot) => void;
 };
 
 export function usePreferences(): PreferencesState {
@@ -94,8 +111,22 @@ export function usePreferences(): PreferencesState {
   const [language, setLanguage] = useState<LanguageMode>(detectDeviceLanguage);
   const [currencySymbol, setCurrencySymbol] = useState(detectDeviceCurrencySymbol);
   const [fontPreference, setFontPreference] = useState<FontPreference>("dmsans");
+  const [colorScheme, setColorSchemeState] = useState<ColorSchemePreference>(DEFAULT_COLOR_SCHEME);
 
   const copy: UiCopy = UI_COPY[language];
+
+  const sanitizeColorScheme = (next: string): ColorSchemePreference =>
+    COLOR_SCHEME_PREFERENCES.includes(next as ColorSchemePreference)
+      ? (next as ColorSchemePreference)
+      : DEFAULT_COLOR_SCHEME;
+  const sanitizeFont = (next: string): FontPreference =>
+    FONT_PREFERENCES.includes(next as FontPreference)
+      ? (next as FontPreference)
+      : "dmsans";
+  const sanitizeCurrency = (next: string): string =>
+    CURRENCY_OPTIONS_SET.has(next) ? next : detectDeviceCurrencySymbol();
+  const sanitizeLanguage = (next: string): LanguageMode =>
+    next === "en" ? "en" : "es";
 
   const restorePreferences = useCallback(async () => {
     const [storedLanguage, storedCurrency, storedFont, storedColorScheme] =
@@ -105,63 +136,81 @@ export function usePreferences(): PreferencesState {
         getItemAsync(FONT_KEY),
         getItemAsync(COLOR_SCHEME_KEY),
       ]);
-    if (storedLanguage === "es" || storedLanguage === "en") {
-      setLanguage(storedLanguage);
+    const nextLanguage = sanitizeLanguage(storedLanguage || detectDeviceLanguage());
+    if (storedLanguage !== nextLanguage) {
+      setLanguage(nextLanguage);
+      await setItemAsync(LANGUAGE_KEY, nextLanguage);
     } else {
-      const detectedLanguage = detectDeviceLanguage();
-      setLanguage(detectedLanguage);
-      await setItemAsync(LANGUAGE_KEY, detectedLanguage);
+      setLanguage(nextLanguage);
     }
-    if (
-      storedCurrency &&
-      CURRENCY_OPTIONS.some((option) => option.value === storedCurrency)
-    ) {
-      setCurrencySymbol(storedCurrency);
+    const nextCurrency = storedCurrency && CURRENCY_OPTIONS_SET.has(storedCurrency)
+      ? storedCurrency
+      : detectDeviceCurrencySymbol();
+    if (storedCurrency !== nextCurrency) {
+      setCurrencySymbol(nextCurrency);
+      await setItemAsync(CURRENCY_SYMBOL_KEY, nextCurrency);
     } else {
-      const detectedCurrency = detectDeviceCurrencySymbol();
-      setCurrencySymbol(detectedCurrency);
-      await setItemAsync(CURRENCY_SYMBOL_KEY, detectedCurrency);
+      setCurrencySymbol(nextCurrency);
     }
-    if (
-      storedFont === "system" ||
-      FONT_PREFERENCES.includes(storedFont as FontPreference)
-    ) {
-      const preference: FontPreference =
-        storedFont === "system" ? "dmsans" : (storedFont as FontPreference);
-      setFontPreference(preference);
-      setAppFontPreference(preference);
-      if (storedFont === "system") await setItemAsync(FONT_KEY, preference);
+    const nextFont = storedFont === "system" || FONT_PREFERENCES.includes(storedFont as FontPreference)
+      ? sanitizeFont(storedFont === "system" ? "dmsans" : (storedFont as string))
+      : "dmsans";
+    if (storedFont !== nextFont) {
+      setAppFontPreference(nextFont);
+      setFontPreference(nextFont);
+      await setItemAsync(FONT_KEY, nextFont);
+    } else {
+      setAppFontPreference(nextFont);
+      setFontPreference(nextFont);
     }
-    if (COLOR_SCHEME_PREFERENCES.includes(storedColorScheme as ColorSchemePreference)) {
-      setColorScheme(storedColorScheme as ColorSchemePreference);
-    }
+    const nextColor = sanitizeColorScheme(storedColorScheme || DEFAULT_COLOR_SCHEME);
+    setColorScheme(nextColor);
+    setColorSchemeState(nextColor);
   }, [setColorScheme]);
 
+  const applyRemotePreferences = useCallback(
+    (prefs: UiPreferencesSnapshot) => {
+      const nextLanguage = sanitizeLanguage(prefs.language);
+      const nextCurrency = sanitizeCurrency(prefs.currencySymbol);
+      const nextFont = sanitizeFont(prefs.fontPreference);
+      const nextColor = sanitizeColorScheme(prefs.colorScheme);
+      setLanguage(nextLanguage);
+      setCurrencySymbol(nextCurrency);
+      setAppFontPreference(nextFont);
+      setFontPreference(nextFont);
+      setColorScheme(nextColor);
+      setColorSchemeState(nextColor);
+      setItemAsync(LANGUAGE_KEY, nextLanguage).catch(() => undefined);
+      setItemAsync(CURRENCY_SYMBOL_KEY, nextCurrency).catch(() => undefined);
+      setItemAsync(FONT_KEY, nextFont).catch(() => undefined);
+      setItemAsync(COLOR_SCHEME_KEY, nextColor).catch(() => undefined);
+    },
+    [setColorScheme],
+  );
+
   const saveLanguage = useCallback((next: string) => {
-    const value = next === "en" ? "en" : "es";
+    const value = sanitizeLanguage(next);
     setLanguage(value);
     setItemAsync(LANGUAGE_KEY, value).catch(() => undefined);
   }, []);
 
   const saveCurrencySymbol = useCallback((next: string) => {
-    setCurrencySymbol(next);
-    setItemAsync(CURRENCY_SYMBOL_KEY, next).catch(() => undefined);
+    const value = sanitizeCurrency(next);
+    setCurrencySymbol(value);
+    setItemAsync(CURRENCY_SYMBOL_KEY, value).catch(() => undefined);
   }, []);
 
   const saveFontPreference = useCallback((next: string) => {
-    const value = FONT_PREFERENCES.includes(next as FontPreference)
-      ? (next as FontPreference)
-      : "dmsans";
+    const value = sanitizeFont(next);
     setAppFontPreference(value);
     setFontPreference(value);
     setItemAsync(FONT_KEY, value).catch(() => undefined);
   }, []);
 
   const saveColorScheme = useCallback((next: string) => {
-    const value = COLOR_SCHEME_PREFERENCES.includes(next as ColorSchemePreference)
-      ? (next as ColorSchemePreference)
-      : "lime";
+    const value = sanitizeColorScheme(next);
     setColorScheme(value);
+    setColorSchemeState(value);
     setItemAsync(COLOR_SCHEME_KEY, value).catch(() => undefined);
   }, [setColorScheme]);
 
@@ -169,11 +218,13 @@ export function usePreferences(): PreferencesState {
     language,
     currencySymbol,
     fontPreference,
+    colorScheme,
     copy,
     saveLanguage,
     saveCurrencySymbol,
     saveFontPreference,
     saveColorScheme,
     restorePreferences,
+    applyRemotePreferences,
   };
 }

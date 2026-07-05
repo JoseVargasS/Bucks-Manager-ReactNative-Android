@@ -55,6 +55,9 @@ export const fileSystemMock = {
 
 globalThis.__bucksSecureStoreMock = secureStoreMock;
 globalThis.__bucksFileSystemMock = fileSystemMock;
+globalThis.__bucksReactMock = {
+  resetReactMock: () => {},
+};
 
 const moduleUrl = (source) => `data:text/javascript,${encodeURIComponent(source)}`;
 const secureStoreUrl = moduleUrl(`
@@ -79,6 +82,36 @@ const reactNativeUrl = moduleUrl(`
   export const Platform = { OS: "android", select: (o) => o.android ?? o.default };
   export const Dimensions = { get: () => ({ width: 390, height: 844 }) };
   export const PixelRatio = { get: () => 3 };
+`);
+// ponytail: hook-using modules (e.g. useGoogleSync) are unit-tested outside
+// of a render. The mock here lets them be called directly. State/refs are
+// backed by plain JS objects that mirror React's surface.
+const reactUrl = moduleUrl(`
+  const states = [];
+  const refs = [];
+  let stateIndex = 0;
+  let refIndex = 0;
+  const resetIndices = () => { stateIndex = 0; refIndex = 0; };
+  export const useState = (initial) => {
+    const i = stateIndex++;
+    if (states[i] === undefined) states[i] = typeof initial === "function" ? initial() : initial;
+    const setter = (v) => { states[i] = typeof v === "function" ? v(states[i]) : v; };
+    return [states[i], setter];
+  };
+  export const useEffect = () => {};
+  export const useMemo = (fn) => fn();
+  export const useCallback = (fn) => fn;
+  export const useRef = (initial) => {
+    const i = refIndex++;
+    if (refs[i] === undefined) refs[i] = { current: initial };
+    return refs[i];
+  };
+  export const resetReactMock = () => {
+    states.length = 0;
+    refs.length = 0;
+    stateIndex = 0;
+    refIndex = 0;
+  };
 `);
 const googleSigninUrl = moduleUrl(`
   const mock = () => globalThis.__bucksGoogleSigninMock;
@@ -108,6 +141,7 @@ globalThis.__bucksGoogleSigninMock = {
 
 registerHooks({
   resolve(specifier, context, nextResolve) {
+    if (specifier === "react") return { url: reactUrl, shortCircuit: true };
     if (specifier === "expo-secure-store") return { url: secureStoreUrl, shortCircuit: true };
     if (specifier === "expo-file-system/legacy") return { url: fileSystemUrl, shortCircuit: true };
     if (specifier === "@expo/vector-icons/MaterialCommunityIcons") return { url: vectorIconsUrl, shortCircuit: true };

@@ -1,7 +1,8 @@
 import { Alert } from "react-native";
+import { useCallback, useRef } from "react";
 import { getItemAsync, setItemAsync, deleteItemAsync } from "expo-secure-store";
 import { GoogleSignin } from "@react-native-google-signin/google-signin";
-import { shouldRescanForSheetError } from "@/utils/errorHandler";
+import { logDebug, shouldRescanForSheetError } from "@/utils/errorHandler";
 import {
   findCompatibleSheets,
   createBucksSpreadsheet,
@@ -9,12 +10,16 @@ import {
   readTransactions,
   readSummaries,
   readTagsCatalog,
+  readUiPreferences,
+  writeUiPreferences as writeUiPreferencesApi,
+  buildUiPreferences,
 } from "@/api/googleWorkspace";
 import { calculateSummaries, SHEET_NAMES } from "@/domain/bucksLogic";
 import { loadFinancialCache, deleteFinancialCache } from "@/data/localCache";
 import { mergeTagsFromSheet, saveTags } from "@/utils/tags";
 import { TOKEN_KEY, SHEET_KEY } from "@/theme/constants";
 import type { Tag, Transaction, SummaryRow } from "@/types";
+import type { UiPreferencesSnapshot } from "@/hooks/usePreferences";
 import type { SessionApi } from "./useSession";
 
 // ponytail: module-level promise chain serializes every Sheets mutation so a
@@ -28,6 +33,13 @@ export interface GoogleSyncApi {
   syncGoogleInBackground: (task: (freshToken: string) => Promise<void>, title: string) => void;
   connectGoogleWorkspace: (token: string, preferredSheetId?: string, forceScan?: boolean) => Promise<void>;
   selectSpreadsheet: (token: string, sheetId: string, showLoader?: boolean) => Promise<void>;
+  // Writes a UI preferences snapshot to MONTHLY SUMMARY!L1:L2. Mirrors the
+  // shape and queueing used by tag catalogue and transaction writes. Returns
+  // a noop when the user has not connected a sheet yet.
+  writeUiPreferences: (snapshot: UiPreferencesSnapshot) => void;
+  // Registers a callback that applies remote UI preferences (from sheet) to
+  // local state. Called once on mount; the callback itself is stable.
+  wireRemoteUiPreferences: (apply: (prefs: UiPreferencesSnapshot) => void) => void;
 }
 
 export function useGoogleSync(
@@ -63,6 +75,7 @@ export function useGoogleSync(
   const { applyFinancialState, persistFinancialState, hasLocalDataRef, freqIncomeRef, transactions: txList } = fin;
   const { tagsList, setTagsList } = tags;
   const { errMsg, authErr, copy, tagColors } = helpers;
+  const remoteUiPreferencesRef = useRef<((prefs: UiPreferencesSnapshot) => void) | null>(null);
 
   async function restoreSession() {
     const [token, sheetId] = await Promise.all([
@@ -156,10 +169,11 @@ export function useGoogleSync(
       setSyncError("");
       if (!hasLocalDataRef.current && !txList.length)
         setIsFirstRemoteLoad(true);
-      const [tx, summary, sheetTags] = await Promise.all([
+      const [tx, summary, sheetTags, sheetUiPreferences] = await Promise.all([
         readTransactions(token, sheetId),
         readSummaries(token, sheetId),
         readTagsCatalog(token, sheetId),
+        readUiPreferences(token, sheetId),
       ]);
       if (pendingSyncRef.current) {
         if (showLoader) setLoading(false);
@@ -182,6 +196,19 @@ export function useGoogleSync(
       if (mergedTags !== tagsList) {
         saveTags(mergedTags).catch(() => undefined);
         setTagsList(mergedTags);
+      }
+      // Sheet is the source of truth for cosmetic preferences; the local
+      // value only leads the UI between app launch and the first sync.
+      if (sheetUiPreferences) {
+        const apply = remoteUiPreferencesRef.current;
+        if (apply) {
+          apply({
+            language: sheetUiPreferences.language,
+            currencySymbol: sheetUiPreferences.currencySymbol,
+            fontPreference: sheetUiPreferences.fontPreference,
+            colorScheme: sheetUiPreferences.colorScheme,
+          });
+        }
       }
       persistFinancialState(
         tx,
@@ -253,6 +280,54 @@ export function useGoogleSync(
     }
   }
 
+  // Walks the same sync queue used by mutations so writes serialize with
+  // transactions. Reads spreadsheetId and accessToken from the live
+  // session state at call time (no closure capture), so the writer always
+  // targets the spreadsheet the user is currently connected to.
+  const writeUiPreferences = useCallback(
+    (snapshot: UiPreferencesSnapshot) => {
+      if (!spreadsheetId) {
+        logDebug("preferences", {
+          msg: "skipping sheet write — no spreadsheetId; local-only save",
+          colorScheme: snapshot.colorScheme,
+        });
+        return;
+      }
+      logDebug("preferences", {
+        msg: "enqueueing sheet write",
+        spreadsheetId,
+        colorScheme: snapshot.colorScheme,
+        language: snapshot.language,
+      });
+      syncGoogleInBackground(async (freshToken) => {
+        await writeUiPreferencesApi(
+          freshToken,
+          spreadsheetId,
+          buildUiPreferences(snapshot),
+        );
+        logDebug("preferences", {
+          msg: "sheet write OK",
+          spreadsheetId,
+          colorScheme: snapshot.colorScheme,
+        });
+      }, copy.syncError);
+    },
+    // syncGoogleInBackground is a stable closure for the hook's lifetime.
+    // Including it would force a new reference every render and tear the
+    // shared queue. spreadsheetId changes (token refresh, sheet change)
+    // are read at call time via the closure re-creation that useCallback
+    // performs on dep change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [spreadsheetId, copy.syncError],
+  );
+
+  const wireRemoteUiPreferences = useCallback(
+    (applyRemote: (prefs: UiPreferencesSnapshot) => void) => {
+      remoteUiPreferencesRef.current = applyRemote;
+    },
+    [],
+  );
+
   async function connectGoogleWorkspace(
     token: string,
     preferredSheetId = "",
@@ -296,5 +371,7 @@ export function useGoogleSync(
     syncGoogleInBackground,
     connectGoogleWorkspace,
     selectSpreadsheet,
+    writeUiPreferences,
+    wireRemoteUiPreferences,
   };
 }

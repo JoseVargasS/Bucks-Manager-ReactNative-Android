@@ -29,6 +29,7 @@ A module-level `syncQueue` serializes Sheets mutations so a fast edit cannot rac
 - Frequent income is created through the transaction form. Legacy monthly summary values remain a read-only fallback when a month has no frequent-income transactions.
 - Legacy Spanish headers are still accepted on read: `Fecha`, `Monto`, `Detalle`, `Tipo` / `Tipo de gasto`, `HORA DE CREACION`, `Etiquetas`, `MES`, `NETO SIN ING FRECUENTE`, etc.
 - Tag catalogue is persisted in `MONTHLY SUMMARY!K1:K2` (K1 header, K2 full JSON array). Custom tag colours survive app data clear and device changes.
+- Cosmetic UI preferences (language, currency symbol, font, accent scheme) are persisted in `MONTHLY SUMMARY!L1:L2` (L1 header `UI PREFERENCES`, L2 JSON). Writes are debounced 1.5s and serialized through the same `syncQueue` as tag and transaction writes. On `reloadFromGoogle` the sheet value wins over the local SecureStore copy; the local copy only leads the UI between launch and the first successful sync. PIN, token, and history are device-local only.
 - User-entered descriptions are never translated or normalized.
 
 ## Tag Identity

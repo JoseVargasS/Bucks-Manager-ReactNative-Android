@@ -96,18 +96,18 @@ preventAutoHideAsync().catch(() => undefined);
 setSplashOptions({ duration: ANIM_SPLASH_DURATION, fade: true });
 
 function AppContent() {
-  const { colors, theme, colorScheme, toggleTheme } = useTheme();
+  const { colors, theme, colorScheme: accentColorScheme, toggleTheme } = useTheme();
   const themeProgress = useRef(
     new Animated.Value(theme === "dark" ? 1 : 0),
   ).current;
   const themeAnimRef = useRef<Animated.CompositeAnimation | null>(null);
   const themeBgDark = useMemo(
-    () => getPalette("dark", colorScheme).bg,
-    [colorScheme],
+    () => getPalette("dark", accentColorScheme).bg,
+    [accentColorScheme],
   );
   const themeBgLight = useMemo(
-    () => getPalette("light", colorScheme).bg,
-    [colorScheme],
+    () => getPalette("light", accentColorScheme).bg,
+    [accentColorScheme],
   );
   const themeProgressBg = useMemo(
     () =>
@@ -139,7 +139,9 @@ function AppContent() {
     saveCurrencySymbol,
     saveFontPreference,
     saveColorScheme,
+    colorScheme,
     restorePreferences,
+    applyRemotePreferences,
   } = usePreferences();
   const errMsg = useCallback((error: unknown) => getErrorMessage(error, copy.syncError), [copy.syncError]);
   const authErr = useCallback((error: unknown) => isAuthError(error, copy.syncError), [copy.syncError]);
@@ -297,6 +299,41 @@ function AppContent() {
       .catch(() => undefined);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Wire the remote-applier (sheet → local) once on mount. The
+  // local → sheet direction is handled by the useEffect below, which
+  // mirrors the tag catalogue pattern: it observes the prefs snapshot
+  // and debounces a single write per change.
+  useEffect(() => {
+    syncApi.wireRemoteUiPreferences(applyRemotePreferences);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [applyRemotePreferences]);
+
+  // Debounced sheet write whenever the user changes a preference. Same
+  // shape as the tag catalogue debounce in this file: skip the first
+  // render via a ref guard so we don't push a write just because the
+  // effect ran. syncApi is purposefully *not* in the dependency array
+  // — it's a new object every render and would tear the timer on every
+  // session change. Instead we keep a ref to the latest writer.
+  const writeUiPrefsRef = useRef(syncApi.writeUiPreferences);
+  writeUiPrefsRef.current = syncApi.writeUiPreferences;
+  const prevPrefsRef = useRef<{ language: string; currencySymbol: string; fontPreference: string; colorScheme: string } | null>(null);
+  useEffect(() => {
+    if (!accessToken || !spreadsheetId) return;
+    const snapshot = { language, currencySymbol, fontPreference, colorScheme };
+    if (prevPrefsRef.current &&
+        prevPrefsRef.current.language === snapshot.language &&
+        prevPrefsRef.current.currencySymbol === snapshot.currencySymbol &&
+        prevPrefsRef.current.fontPreference === snapshot.fontPreference &&
+        prevPrefsRef.current.colorScheme === snapshot.colorScheme) {
+      return;
+    }
+    prevPrefsRef.current = snapshot;
+    const timer = setTimeout(() => {
+      writeUiPrefsRef.current(snapshot);
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, [language, currencySymbol, fontPreference, colorScheme, accessToken, spreadsheetId]);
 
   useEffect(() => {
     loadTags(language)
