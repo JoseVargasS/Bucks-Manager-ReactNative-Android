@@ -94,4 +94,10 @@ export const COLOR_SCHEME_OPTIONS: Array<{
     labelEn: "Bridal",
     icon: "flower-tulip",
   },
+  {
+    value: "obsidian",
+    labelEs: "Obsidiana",
+    labelEn: "Obsidian",
+    icon: "moon-waning-crescent",
+  },
 ];

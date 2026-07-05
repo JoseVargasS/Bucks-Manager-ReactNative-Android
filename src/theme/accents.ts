@@ -9,7 +9,8 @@ export type ColorSchemePreference =
   | "milky"
   | "sky"
   | "turmeric"
-  | "bridal";
+  | "bridal"
+  | "obsidian";
 
 import type { Palette } from "./colors";
 
@@ -723,6 +724,71 @@ export const accents: Record<
       freqExpenseRow: "rgba(168,32,32,0.07)",
       overlay: "rgba(20,4,8,0.34)",
       shadow: "#a07868",
+    },
+  },
+
+  // obsidian. Monocromático premium — un solo matiz (220) para toda la
+  // superficie, rojo/verde semánticos con saturación preservada (>40%),
+  // acento lima #C8FF00. Todas las superficies usan sombras de negro puro.
+  // Todos los valores están pre-computados desde HSL.
+  obsidian: {
+    dark: {
+      bg: "#0D0F12",
+      card: "#14161A",
+      input: "#1B1D22",
+      border: "#292C32",
+      borderStrong: "#363B45",
+      text: "#F1F2F4",
+      textSubtle: "#ACB0B9",
+      muted: "#838995",
+      primary: "#C8FF00",
+      primarySoft: "rgba(200,255,0,0.14)",
+      onPrimary: "#0D0F12",
+      income: "#3A885A",
+      incomeSoft: "rgba(58,136,90,0.12)",
+      expense: "#9B3B3B",
+      expenseSoft: "rgba(155,59,59,0.13)",
+      warn: "#DF9920",
+      warnSoft: "rgba(223,153,32,0.12)",
+      info: "#9196A1",
+      infoSoft: "rgba(145,150,161,0.14)",
+      periodBg: "rgba(200,255,0,0.35)",
+      disabled: "#1B1D22",
+      switchTrack: "#1B1D22",
+      editBg: "#0B0C0F",
+      editBorder: "#C8FF00",
+      freqExpenseRow: "rgba(155,59,59,0.10)",
+      overlay: "rgba(0,0,0,0.76)",
+      shadow: "#000000",
+    },
+    light: {
+      bg: "#F4F5F6",
+      card: "#FFFFFF",
+      input: "#E7E8E9",
+      border: "#D3D5D9",
+      borderStrong: "#A7ABB4",
+      text: "#1F2228",
+      textSubtle: "#6A707C",
+      muted: "#838995",
+      primary: "#C8FF00",
+      primarySoft: "rgba(200,255,0,0.14)",
+      onPrimary: "#0D0F12",
+      income: "#356E4D",
+      incomeSoft: "rgba(53,110,77,0.12)",
+      expense: "#813737",
+      expenseSoft: "rgba(129,55,55,0.10)",
+      warn: "#B17E25",
+      warnSoft: "rgba(177,126,37,0.10)",
+      info: "#797D86",
+      infoSoft: "rgba(121,125,134,0.12)",
+      periodBg: "rgba(200,255,0,0.25)",
+      disabled: "#E7E8E9",
+      switchTrack: "#DCDDE0",
+      editBg: "#ECEDEE",
+      editBorder: "#C8FF00",
+      freqExpenseRow: "rgba(129,55,55,0.06)",
+      overlay: "rgba(0,0,0,0.30)",
+      shadow: "#000000",
     },
   },
 };

@@ -95,4 +95,32 @@ export const base = StyleSheet.create({
   cancelBtn: { borderRadius: 8, paddingVertical: 12, paddingHorizontal: 14 },
   saveBtn: { borderRadius: 8, paddingVertical: 12, paddingHorizontal: 18 },
   saveText: { fontWeight: "700" },
+
+  // Financial text – tabular numbers for consistent digit widths
+  financialText: {
+    fontVariant: ["tabular-nums"],
+  },
+
+  // Pure-black shadows with controlled opacity (Obsidian standard)
+  shadowSm: {
+    shadowColor: "#000000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  shadowMd: {
+    shadowColor: "#000000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  shadowLg: {
+    shadowColor: "#000000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.4,
+    shadowRadius: 16,
+    elevation: 8,
+  },
 });
