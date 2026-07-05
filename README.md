@@ -117,11 +117,10 @@ npm test
 npm run test:watch
 npm run test:coverage
 npm run lint
-npm run typecheck
 npm run format:check
 ```
 
-`test:coverage` enforces the initial critical-code thresholds: 85% lines, 75% branches, and 85% functions. See [TESTING.md](./TESTING.md) for scope, conventions, and known limits.
+`test:coverage` enforces the initial critical-code thresholds: 85% lines, 85% branches, and 85% functions. See [TESTING.md](./TESTING.md) for scope, conventions, and known limits.
 
 Install/run on a physical Android phone:
 

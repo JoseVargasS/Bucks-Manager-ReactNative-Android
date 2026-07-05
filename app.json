@@ -31,7 +31,10 @@
               "pathPrefix": "/oauthredirect"
             }
           ],
-          "category": ["BROWSABLE", "DEFAULT"]
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         }
       ]
     },
@@ -307,6 +310,13 @@
         }
       ]
     ],
-    "owner": "jose-vass"
+    "owner": "jose-vass",
+    "extra": {
+      "googleAndroidClientId": "",
+      "googleWebClientId": "",
+      "eas": {
+        "projectId": "3d5e761d-91e2-455f-993f-be80f182ea36"
+      }
+    }
   }
 }

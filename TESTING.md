@@ -15,7 +15,7 @@ npm run test:coverage    # Run tests and enforce coverage thresholds
 npm run ci               # Format, lint, types, tests, and coverage
 ```
 
-Coverage starts at 85% lines, 75% branches, and 85% functions across `src/api`, `src/data`, `src/domain`, and `src/utils`. These thresholds are a regression floor, not a target to game. Raise them only after useful behavior tests keep the suite comfortably above the new value.
+Coverage starts at 85% lines, 85% branches, and 85% functions across `src/api`, `src/data`, `src/domain`, and `src/utils`. These thresholds are a regression floor, not a target to game. Raise them only after useful behavior tests keep the suite comfortably above the new value.
 
 ## Test types and locations
 

@@ -4,6 +4,18 @@
   "packageManager": "pnpm@11.9.0",
   "main": "index.ts",
   "dependencies": {
+    "@expo-google-fonts/bebas-neue": "^0.4.1",
+    "@expo-google-fonts/comic-neue": "^0.4.1",
+    "@expo-google-fonts/dm-sans": "^0.4.2",
+    "@expo-google-fonts/fredoka": "^0.4.1",
+    "@expo-google-fonts/inter": "^0.4.2",
+    "@expo-google-fonts/jetbrains-mono": "^0.4.1",
+    "@expo-google-fonts/orbitron": "^0.4.2",
+    "@expo-google-fonts/patrick-hand": "^0.4.1",
+    "@expo-google-fonts/playfair-display": "^0.4.2",
+    "@expo-google-fonts/plus-jakarta-sans": "^0.4.2",
+    "@expo-google-fonts/sora": "^0.4.2",
+    "@expo-google-fonts/space-mono": "^0.4.2",
     "@expo/vector-icons": "^15.0.2",
     "@react-native-google-signin/google-signin": "^16.1.2",
     "expo": "~56.0.14",
@@ -11,6 +23,7 @@
     "expo-constants": "~56.0.20",
     "expo-dev-client": "~56.0.22",
     "expo-file-system": "~56.0.8",
+    "expo-font": "~56.0.7",
     "expo-print": "~56.0.4",
     "expo-secure-store": "~56.0.4",
     "expo-sharing": "~56.0.20",
@@ -29,22 +42,22 @@
     "typescript-eslint": "^8.62.0"
   },
   "scripts": {
-    "start": "expo start",
-    "dev": "expo start --dev-client",
-    "test": "node --no-warnings --test tests/*.test.mjs",
-    "test:watch": "node --watch --no-warnings --test tests/*.test.mjs",
-    "test:coverage": "node --experimental-test-coverage --test-coverage-lines=85 --test-coverage-branches=75 --test-coverage-functions=85 --test-coverage-include=src/api/*.ts --test-coverage-include=src/data/*.ts --test-coverage-include=src/domain/*.ts --test-coverage-include=src/utils/*.ts --no-warnings --test tests/*.test.mjs",
-    "lint": "tsc --noEmit --noUnusedLocals --noUnusedParameters && eslint \"src/**/*.{ts,tsx}\" \"App.tsx\" \"index.ts\" --max-warnings 0",
-    "eslint": "eslint .",
-    "eslint:fix": "eslint . --fix",
-    "typecheck": "tsc --noEmit",
-    "format:check": "node scripts/check-format.mjs",
-    "ci": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test:coverage",
-    "hooks:install": "git config core.hooksPath .githooks",
     "android": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/run-android.ps1",
     "android:build-dev": "eas build -p android --profile development",
-    "ios": "expo run:ios",
+    "ci": "pnpm format:check && pnpm lint && pnpm test:coverage",
+    "dev": "expo start --dev-client",
+    "eslint:fix": "eslint . --fix",
+    "format:check": "node scripts/check-format.mjs",
+    "hooks:install": "git config core.hooksPath .githooks",
+    "lint": "tsc --noEmit --noUnusedLocals --noUnusedParameters && eslint \"src/**/*.{ts,tsx}\" \"App.tsx\" \"index.ts\" --max-warnings 0",
+    "start": "expo start",
+    "test": "node --no-warnings --test tests/*.test.mjs",
+    "test:coverage": "node --experimental-test-coverage --test-coverage-lines=85 --test-coverage-branches=85 --test-coverage-functions=85 --test-coverage-include=src/api/*.ts --test-coverage-include=src/data/*.ts --test-coverage-include=src/domain/*.ts --test-coverage-include=src/utils/*.ts --no-warnings --test tests/*.test.mjs",
+    "test:watch": "node --watch --no-warnings --test tests/*.test.mjs",
     "web": "expo start --web"
   },
-  "private": true
+  "private": true,
+  "overrides": {
+    "expo-constants": "~56.0.20"
+  }
 }
