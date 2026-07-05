@@ -13,6 +13,11 @@ const {
   getTransactionMonthKey,
   recalculateSummariesForMonths,
   uniqueMonthKeys,
+  aggregateExpensesByTag,
+  aggregateIncomesByTag,
+  groupSummariesByYear,
+  detectNonFreqSpike,
+  computeSavingsLinePoints,
   formatDateToISO,
   formatDateForSheet,
   parseSpanishDate,
@@ -880,3 +885,360 @@ test("insertChronologically resolves ties by rowId", () => {
   assert.deepEqual(result.map((r) => r.detail), ["A", "B", "C"]);
   assert.deepEqual(result.map((r) => r.rowId), [2, 3, 4]);
 });
+
+// --- aggregateExpensesByTag ---
+test("aggregateExpensesByTag returns empty array for empty transactions", () => {
+  const result = aggregateExpensesByTag([], {}, [], "#888", "Otros");
+  assert.deepEqual(result, []);
+});
+
+test("aggregateExpensesByTag returns empty array when no expense transactions", () => {
+  const txs = [
+    { rowId: 1, rawDate: "2026-01-15", amount: 100, detail: "x", type: "INGRESO FRECUENTE", tags: [] },
+  ];
+  const result = aggregateExpensesByTag(txs, {}, [], "#888", "Otros");
+  assert.deepEqual(result, []);
+});
+
+test("aggregateExpensesByTag aggregates expenses by tag from direct tags", () => {
+  const txs = [
+    { rowId: 1, rawDate: "2026-01-15", amount: -100, detail: "x", type: "GASTO NO FRECUENTE", tags: ["default-comida"] },
+    { rowId: 2, rawDate: "2026-01-16", amount: -50, detail: "x", type: "GASTO FRECUENTE", tags: ["default-salud"] },
+    { rowId: 3, rawDate: "2026-01-17", amount: -30, detail: "x", type: "GASTO NO FRECUENTE", tags: ["default-comida"] },
+  ];
+  const tagColorMap = { "default-comida": "#f59e0b", "default-salud": "#f43f5e" };
+  const tagsList = [
+    { id: "default-comida", label: "Comida", color: "#f59e0b" },
+    { id: "default-salud", label: "Salud", color: "#f43f5e" },
+  ];
+  const result = aggregateExpensesByTag(txs, tagColorMap, tagsList, "#888", "Otros");
+  assert.equal(result.length, 2);
+  const comida = result.find((s) => s.label === "Comida");
+  const salud = result.find((s) => s.label === "Salud");
+  assert.ok(comida);
+  assert.ok(salud);
+  assert.equal(comida.value, 130);
+  assert.equal(salud.value, 50);
+  assert.equal(Math.round(comida.percentage + salud.percentage), 100);
+});
+
+test("aggregateExpensesByTag handles untagged expenses as 'Otros'", () => {
+  const txs = [
+    { rowId: 1, rawDate: "2026-01-15", amount: -100, detail: "x", type: "GASTO NO FRECUENTE", tags: ["default-comida"] },
+    { rowId: 2, rawDate: "2026-01-16", amount: -50, detail: "x", type: "GASTO NO FRECUENTE", tags: [] },
+  ];
+  const tagColorMap = { "default-comida": "#f59e0b" };
+  const tagsList = [{ id: "default-comida", label: "Comida", color: "#f59e0b" }];
+  const result = aggregateExpensesByTag(txs, tagColorMap, tagsList, "#888", "Otros");
+  assert.equal(result.length, 2);
+  const otros = result.find((s) => s.label === "Otros");
+  assert.ok(otros);
+  assert.equal(otros.value, 50);
+});
+
+test("aggregateExpensesByTag aggregates expenses from lineItems with multiple tags", () => {
+  const txs = [
+    {
+      rowId: 1, rawDate: "2026-01-15", amount: -150, detail: "x", type: "GASTO NO FRECUENTE", tags: [],
+      lineItems: [
+        { id: "li1", amount: -100, description: "A", tags: ["default-comida"] },
+        { id: "li2", amount: -50, description: "B", tags: ["default-salud", "default-transporte"] },
+      ],
+    },
+  ];
+  const tagColorMap = { "default-comida": "#f59e0b", "default-salud": "#f43f5e", "default-transporte": "#10b981" };
+  const tagsList = [
+    { id: "default-comida", label: "Comida", color: "#f59e0b" },
+    { id: "default-salud", label: "Salud", color: "#f43f5e" },
+    { id: "default-transporte", label: "Transporte", color: "#10b981" },
+  ];
+  const result = aggregateExpensesByTag(txs, tagColorMap, tagsList, "#888", "Otros");
+  assert.equal(result.length, 3);
+  const comida = result.find((s) => s.label === "Comida");
+  const salud = result.find((s) => s.label === "Salud");
+  const transporte = result.find((s) => s.label === "Transporte");
+  assert.ok(comida);
+  assert.ok(salud);
+  assert.ok(transporte);
+  assert.equal(comida.value, 100);
+  assert.equal(salud.value, 50);
+  assert.equal(transporte.value, 50);
+});
+
+test("aggregateExpensesByTag handles empty tagColorMap gracefully", () => {
+  const txs = [
+    { rowId: 1, rawDate: "2026-01-15", amount: -100, detail: "x", type: "GASTO NO FRECUENTE", tags: ["custom-unknown"] },
+  ];
+  const result = aggregateExpensesByTag(txs, {}, [], "#888", "Otros");
+  assert.equal(result.length, 1);
+  assert.equal(result[0].color, "#888");
+});
+
+test("aggregateExpensesByTag with zero-value line items ignores them", () => {
+  const txs = [
+    {
+      rowId: 1, rawDate: "2026-01-15", amount: -100, detail: "x", type: "GASTO NO FRECUENTE", tags: [],
+      lineItems: [
+        { id: "li1", amount: 0, description: "A", tags: ["default-comida"] },
+        { id: "li2", amount: -100, description: "B", tags: ["default-salud"] },
+      ],
+    },
+  ];
+  const tagColorMap = { "default-comida": "#f59e0b", "default-salud": "#f43f5e" };
+  const tagsList = [
+    { id: "default-comida", label: "Comida", color: "#f59e0b" },
+    { id: "default-salud", label: "Salud", color: "#f43f5e" },
+  ];
+  const result = aggregateExpensesByTag(txs, tagColorMap, tagsList, "#888", "Otros");
+  assert.equal(result.length, 1);
+  assert.equal(result[0].label, "Salud");
+  assert.equal(result[0].value, 100);
+});
+
+test("aggregateExpensesByTag sorts slices by value descending", () => {
+  const txs = [
+    { rowId: 1, rawDate: "2026-01-15", amount: -30, detail: "x", type: "GASTO NO FRECUENTE", tags: ["default-salud"] },
+    { rowId: 2, rawDate: "2026-01-16", amount: -100, detail: "x", type: "GASTO NO FRECUENTE", tags: ["default-comida"] },
+    { rowId: 3, rawDate: "2026-01-17", amount: -60, detail: "x", type: "GASTO NO FRECUENTE", tags: ["default-transporte"] },
+  ];
+  const tagColorMap = { "default-comida": "#f59e0b", "default-salud": "#f43f5e", "default-transporte": "#10b981" };
+  const tagsList = [
+    { id: "default-comida", label: "Comida", color: "#f59e0b" },
+    { id: "default-salud", label: "Salud", color: "#f43f5e" },
+    { id: "default-transporte", label: "Transporte", color: "#10b981" },
+  ];
+  const result = aggregateExpensesByTag(txs, tagColorMap, tagsList, "#888", "Otros");
+  assert.equal(result[0].label, "Comida");
+  assert.equal(result[1].label, "Transporte");
+  assert.equal(result[2].label, "Salud");
+});
+
+// --- aggregateIncomesByTag ---
+test("aggregateIncomesByTag returns empty array for empty transactions", () => {
+  const result = aggregateIncomesByTag([], {}, [], "#888", "Otros");
+  assert.deepEqual(result, []);
+});
+
+test("aggregateIncomesByTag returns empty array when no income transactions", () => {
+  const txs = [
+    { rowId: 1, rawDate: "2026-01-15", amount: -100, detail: "x", type: "GASTO FRECUENTE", tags: ["default-comida"] },
+  ];
+  const result = aggregateIncomesByTag(txs, {}, [], "#888", "Otros");
+  assert.deepEqual(result, []);
+});
+
+test("aggregateIncomesByTag aggregates incomes by tag", () => {
+  const txs = [
+    { rowId: 1, rawDate: "2026-01-15", amount: 500, detail: "x", type: "INGRESO FRECUENTE", tags: ["default-salud"] },
+    { rowId: 2, rawDate: "2026-01-16", amount: 300, detail: "x", type: "INGRESO NO FRECUENTE", tags: ["default-comida"] },
+    { rowId: 3, rawDate: "2026-01-17", amount: 200, detail: "x", type: "INGRESO FRECUENTE", tags: ["default-salud"] },
+  ];
+  const tagColorMap = { "default-salud": "#f43f5e", "default-comida": "#f59e0b" };
+  const tagsList = [
+    { id: "default-salud", label: "Salud", color: "#f43f5e" },
+    { id: "default-comida", label: "Comida", color: "#f59e0b" },
+  ];
+  const result = aggregateIncomesByTag(txs, tagColorMap, tagsList, "#888", "Otros");
+  assert.equal(result.length, 2);
+  const salud = result.find((s) => s.label === "Salud");
+  const comida = result.find((s) => s.label === "Comida");
+  assert.equal(salud.value, 700);
+  assert.equal(comida.value, 300);
+});
+
+test("aggregateIncomesByTag handles untagged incomes", () => {
+  const txs = [
+    { rowId: 1, rawDate: "2026-01-15", amount: 100, detail: "x", type: "INGRESO FRECUENTE", tags: [] },
+  ];
+  const result = aggregateIncomesByTag(txs, {}, [], "#888", "Otros");
+  assert.equal(result.length, 1);
+  assert.equal(result[0].label, "Otros");
+});
+
+test("aggregateIncomesByTag aggregates from lineItems", () => {
+  const txs = [
+    { rowId: 1, rawDate: "2026-01-15", amount: 0, detail: "x", type: "INGRESO FRECUENTE", tags: [], lineItems: [
+      { id: "1", amount: "200", description: "A", tags: ["default-comida"] },
+      { id: "2", amount: "150", description: "B", tags: ["default-salud"] },
+    ]},
+  ];
+  const tagColorMap = { "default-salud": "#f43f5e", "default-comida": "#f59e0b" };
+  const tagsList = [
+    { id: "default-salud", label: "Salud", color: "#f43f5e" },
+    { id: "default-comida", label: "Comida", color: "#f59e0b" },
+  ];
+  const result = aggregateIncomesByTag(txs, tagColorMap, tagsList, "#888", "Otros");
+  assert.equal(result.length, 2);
+});
+
+// --- groupSummariesByYear ---
+test("groupSummariesByYear returns empty array for empty input", () => {
+  assert.deepEqual(groupSummariesByYear([]), []);
+});
+
+test("groupSummariesByYear merges multiple months into one year row", () => {
+  const rows = [
+    monthRow("January 2025", 1000, 500, -200, -100),
+    monthRow("February 2025", 800, 300, -150, -50),
+    monthRow("March 2026", 500, 200, -100, -80),
+  ];
+  const result = groupSummariesByYear(rows);
+  assert.equal(result.length, 2);
+  const y2025 = result.find((r) => r.monthYear === "Year 2025");
+  const y2026 = result.find((r) => r.monthYear === "Year 2026");
+  assert.ok(y2025);
+  assert.ok(y2026);
+  assert.equal(y2025.freqIncome, 1800);
+  assert.equal(y2025.nonFreqIncome, 800);
+  assert.equal(y2025.totalIncome, 2600);
+  assert.equal(y2025.freqExpense, -350);
+  assert.equal(y2025.nonFreqExpense, -150);
+  assert.equal(y2025.totalExpense, -500);
+  assert.equal(y2025.netMonthly, 2100);
+});
+
+test("groupSummariesByYear handles single year", () => {
+  const rows = [monthRow("January 2025", 100, 0, -50, 0)];
+  const result = groupSummariesByYear(rows);
+  assert.equal(result.length, 1);
+  assert.equal(result[0].monthYear, "Year 2025");
+  assert.equal(result[0].totalIncome, 100);
+});
+
+test("groupSummariesByYear sorts by year ascending", () => {
+  const rows = [
+    monthRow("December 2026", 10, 0, 0, 0),
+    monthRow("January 2024", 10, 0, 0, 0),
+    monthRow("June 2025", 10, 0, 0, 0),
+  ];
+  const result = groupSummariesByYear(rows);
+  assert.deepEqual(result.map((r) => r.monthYear), ["Year 2024", "Year 2025", "Year 2026"]);
+});
+
+// --- detectNonFreqSpike ---
+test("detectNonFreqSpike returns null for empty rows", () => {
+  assert.equal(detectNonFreqSpike([]), null);
+});
+
+test("detectNonFreqSpike returns null when only one month", () => {
+  const rows = [monthRow("January 2026", 0, 0, 0, -500)];
+  assert.equal(detectNonFreqSpike(rows), null);
+});
+
+test("detectNonFreqSpike returns null when no spike detected", () => {
+  const rows = [
+    monthRow("January 2026", 0, 0, 0, -200),
+    monthRow("February 2026", 0, 0, 0, -220),
+    monthRow("March 2026", 0, 0, 0, -180),
+  ];
+  assert.equal(detectNonFreqSpike(rows), null);
+});
+
+test("detectNonFreqSpike detects spike above default threshold", () => {
+  const rows = [
+    monthRow("January 2026", 0, 0, 0, -100),
+    monthRow("February 2026", 0, 0, 0, -100),
+    monthRow("March 2026", 0, 0, 0, -500),
+  ];
+  const spike = detectNonFreqSpike(rows);
+  assert.ok(spike);
+  assert.equal(spike.monthYear, "March 2026");
+  assert.equal(spike.amount, 500);
+  assert.equal(spike.avg, 100);
+  assert.equal(spike.ratioPct, 500);
+});
+
+test("detectNonFreqSpike respects custom threshold", () => {
+  const rows = [
+    monthRow("January 2026", 0, 0, 0, -100),
+    monthRow("February 2026", 0, 0, 0, -100),
+    monthRow("March 2026", 0, 0, 0, -250),
+  ];
+  assert.ok(detectNonFreqSpike(rows, 1.5));
+  assert.equal(detectNonFreqSpike(rows, 3.0), null);
+});
+
+test("detectNonFreqSpike uses last 6 months for lookback", () => {
+  const rows = [];
+  for (let i = 0; i < 10; i++) {
+    rows.push(monthRow(`${MONTH_NAMES[i % 12]} ${2025 + Math.floor(i / 12)}`, 0, 0, 0, -100));
+  }
+  rows[9] = monthRow("October 2025", 0, 0, 0, -700);
+  const spike = detectNonFreqSpike(rows);
+  assert.ok(spike);
+  assert.equal(spike.amount, 700);
+  assert.equal(spike.avg, 100);
+});
+
+test("detectNonFreqSpike returns null when last month has zero non-freq expense", () => {
+  const rows = [
+    monthRow("January 2026", 0, 0, 0, -100),
+    monthRow("February 2026", 0, 0, 0, 0),
+  ];
+  assert.equal(detectNonFreqSpike(rows), null);
+});
+
+test("detectNonFreqSpike returns null when average is zero", () => {
+  const rows = [
+    monthRow("January 2026", 0, 0, 0, 0),
+    monthRow("February 2026", 0, 0, 0, -500),
+  ];
+  assert.equal(detectNonFreqSpike(rows), null);
+});
+
+// --- computeSavingsLinePoints ---
+test("computeSavingsLinePoints returns empty array for empty input", () => {
+  assert.deepEqual(computeSavingsLinePoints([], "income", 158, 126), []);
+  assert.deepEqual(computeSavingsLinePoints([], "expense", 158, 126), []);
+});
+
+test("computeSavingsLinePoints income mode uses scale against max", () => {
+  const rows = [
+    monthRow("January 2026", 100, 0, 0, 0),
+    monthRow("February 2026", 500, 0, 0, 0),
+    monthRow("March 2026", 1000, 0, 0, 0),
+  ];
+  const points = computeSavingsLinePoints(rows, "income", 158, 126);
+  assert.equal(points.length, 3);
+  assert.ok(points[0].y > points[2].y);
+  assert.ok(points[1].y > points[2].y);
+  assert.equal(points[2].y, 158 - 126);
+});
+
+test("computeSavingsLinePoints expense mode uses scale against max", () => {
+  const rows = [
+    monthRow("January 2026", 0, 0, 0, -200),
+    monthRow("February 2026", 0, 0, 0, -800),
+  ];
+  const points = computeSavingsLinePoints(rows, "expense", 158, 126);
+  assert.equal(points.length, 2);
+  assert.equal(points[1].y, 158 - 126);
+  assert.ok(points[0].y > points[1].y);
+});
+
+test("computeSavingsLinePoints handles all-zero rows gracefully", () => {
+  const rows = [
+    monthRow("January 2026", 0, 0, 0, 0),
+    monthRow("February 2026", 0, 0, 0, 0),
+  ];
+  const points = computeSavingsLinePoints(rows, "income", 158, 126);
+  assert.equal(points.length, 2);
+  assert.equal(points[0].y, 158);
+  assert.equal(points[1].y, 158);
+});
+
+function monthRow(monthYear, freqInc, nonFreqInc, freqExp, nonFreqExp) {
+  const totalInc = freqInc + nonFreqInc;
+  const totalExp = freqExp + nonFreqExp;
+  return {
+    monthYear,
+    freqIncome: freqInc,
+    nonFreqIncome: nonFreqInc,
+    totalIncome: totalInc,
+    freqExpense: freqExp,
+    nonFreqExpense: nonFreqExp,
+    totalExpense: totalExp,
+    netMonthly: totalInc + totalExp,
+    netNoFreq: totalInc + totalExp - freqInc,
+  };
+}
