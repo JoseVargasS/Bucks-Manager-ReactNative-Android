@@ -856,3 +856,168 @@ test("googleFetch handles network failures with retry", async (t) => {
   assert.ok(Array.isArray(result));
   assert.equal(calls, 2);
 });
+
+test("saveTransaction falls back to row 2 when date column read fails", async (t) => {
+  const requests = [];
+  installFetch(t, async (input, init = {}) => {
+    const url = decodeURIComponent(String(input));
+    const body = init.body ? JSON.parse(init.body) : null;
+    requests.push({ url, method: init.method || "GET", body });
+    if (url.includes("fields=sheets.properties(sheetId,title)")) {
+      return json({ sheets: [
+        { properties: { sheetId: 7, title: "INCOME AND EXPENSES" } },
+        { properties: { sheetId: 8, title: "MONTHLY SUMMARY" } },
+      ] });
+    }
+    if (url.includes("INCOME AND EXPENSES!A2:A")) {
+      return new Response("server error", { status: 500 });
+    }
+    if (url.includes("INCOME AND EXPENSES!F1")) return json({ values: [["Tags"]] });
+    if (url.includes("MONTHLY SUMMARY!A1:I") && (init.method || "GET") === "GET") {
+      return json({ values: [
+        ["MES", "INGRESO FRECUENTE", "INGRESO NO FRECUENTE", "TOTAL INGRESOS", "GASTO FRECUENTE", "GASTO NO FRECUENTE", "TOTAL GASTOS", "NETO MENSUAL", "NETO SIN ING FRECUENTE"],
+        ["January 2026"],
+      ] });
+    }
+    if (url.includes("fields=properties.locale")) return json({ properties: { locale: "en_US" } });
+    return json({});
+  });
+
+  const saved = await saveTransaction("token", "sheet", {
+    date: "2026-01-15",
+    amount: "-10",
+    detail: "Fallback row",
+    type: "GASTO FRECUENTE",
+    createdAt: "",
+    tags: [],
+  });
+
+  assert.equal(saved.rowId, 2);
+});
+
+test("ensureTransactionTagsColumn writes Tags header when F1 is not a tag header", async (t) => {
+  const requests = [];
+  installFetch(t, async (input, init = {}) => {
+    const url = decodeURIComponent(String(input));
+    const body = init.body ? JSON.parse(init.body) : null;
+    requests.push({ url, method: init.method || "GET", body });
+    if (url.includes("fields=sheets.properties(sheetId,title)")) {
+      return json({ sheets: [
+        { properties: { sheetId: 7, title: "INCOME AND EXPENSES" } },
+        { properties: { sheetId: 8, title: "MONTHLY SUMMARY" } },
+      ] });
+    }
+    if (url.includes("INCOME AND EXPENSES!A2:A")) return json({ values: [] });
+    if (url.includes("INCOME AND EXPENSES!F1") && (init.method || "GET") === "GET") {
+      return json({ values: [["CREATION TIME"]] });
+    }
+    if (url.includes("INCOME AND EXPENSES!F1") && init.method === "PUT") {
+      return json({});
+    }
+    if (url.includes("batchUpdate")) return json({});
+    if (url.includes("INCOME AND EXPENSES!F2:F")) return json({ values: [] });
+    if (url.includes("MONTHLY SUMMARY!A1:I") && (init.method || "GET") === "GET") {
+      return json({ values: [
+        ["MES", "INGRESO FRECUENTE", "INGRESO NO FRECUENTE", "TOTAL INGRESOS", "GASTO FRECUENTE", "GASTO NO FRECUENTE", "TOTAL GASTOS", "NETO MENSUAL", "NETO SIN ING FRECUENTE"],
+      ] });
+    }
+    if (url.includes("fields=properties.locale")) return json({ properties: { locale: "en_US" } });
+    return json({});
+  });
+
+  const rows = await readTransactions("token", "no-tags-sheet");
+  assert.ok(Array.isArray(rows));
+
+  const putF1 = requests.find(({ url, method }) => method === "PUT" && url.includes("INCOME AND EXPENSES!F1"));
+  assert.ok(putF1, "should PUT Tags header to F1");
+  assert.deepEqual(putF1.body.values, [["Tags"]]);
+
+  const batchReq = requests.find(({ body }) => body?.requests?.length > 0 && body.requests[0]?.copyPaste);
+  assert.ok(batchReq, "should issue batchUpdate with copyPaste requests");
+});
+
+test("ensureTransactionTagsColumn normalizes existing tag cells with commas", async (t) => {
+  const requests = [];
+  installFetch(t, async (input, init = {}) => {
+    const url = decodeURIComponent(String(input));
+    const body = init.body ? JSON.parse(init.body) : null;
+    requests.push({ url, method: init.method || "GET", body });
+    if (url.includes("fields=sheets.properties(sheetId,title)")) {
+      return json({ sheets: [
+        { properties: { sheetId: 7, title: "INCOME AND EXPENSES" } },
+        { properties: { sheetId: 8, title: "MONTHLY SUMMARY" } },
+      ] });
+    }
+    if (url.includes("INCOME AND EXPENSES!A2:A")) return json({ values: [] });
+    if (url.includes("INCOME AND EXPENSES!F1") && (init.method || "GET") === "GET") {
+      return json({ values: [["CREATION TIME"]] });
+    }
+    if (url.includes("INCOME AND EXPENSES!F1") && init.method === "PUT") {
+      return json({});
+    }
+    if (url.includes("batchUpdate")) return json({});
+    if (url.includes("INCOME AND EXPENSES!F2:F") && (init.method || "GET") === "GET") {
+      return json({ values: [["Comida,\nSalud"], ["Transporte"]] });
+    }
+    if (url.includes("INCOME AND EXPENSES!F2:F") && init.method === "PUT") {
+      return json({});
+    }
+    if (url.includes("MONTHLY SUMMARY!A1:I") && (init.method || "GET") === "GET") {
+      return json({ values: [
+        ["MES", "INGRESO FRECUENTE", "INGRESO NO FRECUENTE", "TOTAL INGRESOS", "GASTO FRECUENTE", "GASTO NO FRECUENTE", "TOTAL GASTOS", "NETO MENSUAL", "NETO SIN ING FRECUENTE"],
+      ] });
+    }
+    if (url.includes("fields=properties.locale")) return json({ properties: { locale: "en_US" } });
+    return json({});
+  });
+
+  const rows = await readTransactions("token", "normalize-tags-sheet");
+  assert.ok(Array.isArray(rows));
+
+  const normalizePut = requests.find(({ url, method }) => method === "PUT" && url.includes("INCOME AND EXPENSES!F2:F"));
+  assert.ok(normalizePut, "should PUT normalized tags");
+  assert.deepEqual(normalizePut.body.values, [["Comida, Salud"], ["Transporte"]]);
+});
+
+test("findCompatibleSheets returns false when only transactions tab exists", async (t) => {
+  installFetch(t, async (input) => {
+    const url = decodeURIComponent(String(input));
+    if (url.includes("drive/v3/files")) {
+      return json({ files: [{ id: "f1", name: "Sheet1", modifiedTime: "2026-01-01" }] });
+    }
+    if (url.includes("sheets.googleapis.com") && url.includes("fields=sheets.properties.title")) {
+      return json({ sheets: [
+        { properties: { title: "INCOME AND EXPENSES" } },
+      ] });
+    }
+    return json({});
+  });
+
+  const result = await findCompatibleSheets("token");
+  assert.deepEqual(result, []);
+});
+
+test("findCompatibleSheets returns false when headers are invalid", async (t) => {
+  installFetch(t, async (input) => {
+    const url = decodeURIComponent(String(input));
+    if (url.includes("drive/v3/files")) {
+      return json({ files: [{ id: "f1", name: "Sheet1", modifiedTime: "2026-01-01" }] });
+    }
+    if (url.includes("sheets.googleapis.com") && url.includes("fields=sheets.properties.title")) {
+      return json({ sheets: [
+        { properties: { title: "INCOME AND EXPENSES" } },
+        { properties: { title: "MONTHLY SUMMARY" } },
+      ] });
+    }
+    if (url.includes("values:batchGet")) {
+      return json({ valueRanges: [
+        { values: [["X", "Y", "Z"]] },
+        { values: [["A", "B", "C"]] },
+      ] });
+    }
+    return json({});
+  });
+
+  const result = await findCompatibleSheets("token");
+  assert.deepEqual(result, []);
+});
