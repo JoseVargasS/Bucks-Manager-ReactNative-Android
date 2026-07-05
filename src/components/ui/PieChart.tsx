@@ -2,17 +2,12 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Animated, Pressable, View } from "react-native";
 import Svg, { G, Line, Path, Text as SvgText } from "react-native-svg";
 
+import { type PieSlice } from "@/domain/bucksLogic";
 import { type Palette } from "@/theme/colors";
 import { Text } from "./AppText";
+import { useChartFade } from "./chartFade";
 
 const AnimPath = Animated.createAnimatedComponent(Path);
-
-export type PieSlice = {
-  label: string;
-  value: number;
-  color: string;
-  percentage: number;
-};
 
 type MergedSlice = PieSlice & { key: string; isMerged: boolean };
 
@@ -21,9 +16,7 @@ const CY = 115;
 const OR = 78;
 const IR = 46;
 const SELECTED_GROW = 8;
-const DIM_OPACITY = 0.32;
 const IDLE_OPACITY = 0.94;
-const SELECTED_OPACITY = 1;
 const SVG_W = 260;
 const SVG_H = 230;
 const LABEL_MARGIN = 35;
@@ -235,26 +228,8 @@ export const PieChart = memo(function PieChart({
     if (selectedIndex === -1) setSelectedKey(null);
   }, [selectedKey, selectedIndex]);
 
-  const opacitiesRef = useRef<Animated.Value[]>([]);
-  const dataRef = useRef(data);
-  if (opacitiesRef.current.length !== merged.length || data !== dataRef.current) {
-    opacitiesRef.current = merged.map(() => new Animated.Value(IDLE_OPACITY));
-    dataRef.current = data;
-  }
+  const opacitiesRef = useChartFade(merged.length, selectedIndex, data);
   const opacities = opacitiesRef.current;
-
-  useEffect(() => {
-    if (opacities.length === 0) return;
-    const target = selectedIndex === -1 ? IDLE_OPACITY : DIM_OPACITY;
-    const anims = opacities.map((value, i) =>
-      Animated.timing(value, {
-        toValue: i === selectedIndex ? SELECTED_OPACITY : target,
-        duration: 220,
-        useNativeDriver: false,
-      }),
-    );
-    Animated.parallel(anims).start();
-  }, [selectedIndex, opacities, merged.length]);
 
   const sweepToken = useRef(0);
   useEffect(() => {

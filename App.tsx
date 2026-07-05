@@ -643,6 +643,7 @@ function AppContent() {
         freqIncome,
         availableYears: fin.availableYears,
         currencySymbol,
+        tagsList,
       },
       settings: {
         contentTopInset: headerTopInset + 62,

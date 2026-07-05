@@ -1,7 +1,7 @@
-import { Fragment, memo, useMemo, useCallback, useRef } from "react";
+import { Fragment, memo, useMemo, useCallback, useRef, useState } from "react";
 import { ScrollView, View } from "react-native";
 
-import { formatMoney, calculateMonthSummary } from "@/domain/bucksLogic";
+import { formatMoney, calculateMonthSummary, aggregateExpensesByTag, aggregateIncomesByTag, type PieSlice } from "@/domain/bucksLogic";
 import { base } from "@/styles/baseStyles";
 import { dashboardStyles } from "@/components/screens/DashboardView.styles";
 import { txStyles } from "@/styles/transactionRow";
@@ -10,10 +10,9 @@ const styles = { ...base, ...dashboardStyles, ...txStyles };
 import { type Palette } from "@/theme/colors";
 import { type SummaryRow, type Tag, type Transaction } from "@/types";
 import { UI_MONTH_NAMES, type UiCopy } from "@/i18n";
-import { labelForTagId } from "@/utils/tags";
-import { shiftColor } from "@/utils/color";
 import { StatCard } from "@/components/ui/StatCard";
-import { PieChart, type PieSlice } from "@/components/ui/PieChart";
+import { PieChart } from "@/components/ui/PieChart";
+import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { Text } from "@/components/ui/AppText";
 import { useTagMaps } from "@/hooks/useTagMaps";
 import { TransactionRow, type TagButtonRef } from "@/components/screens/TransactionRow";
@@ -53,6 +52,7 @@ export const DashboardView = memo(function DashboardView({
   topInset?: number;
 }) {
   const { tagColorMap, tagLabelMap } = useTagMaps(tagsList);
+  const [dashBreakdownTab, setDashBreakdownTab] = useState("expense");
   const tagButtonRefs = useRef<Record<number, TagButtonRef | null>>({});
   const localizedMonthNames = copy.languageCode === "en" ? UI_MONTH_NAMES.en : UI_MONTH_NAMES.es;
   const monthKey = `${localizedMonthNames[month]} ${year}`;
@@ -72,55 +72,21 @@ export const DashboardView = memo(function DashboardView({
     [monthTransactions, monthKey],
   );
 
-  const pieData = useMemo<PieSlice[]>(() => {
-    const expenseTransactions = monthTransactions.filter(
-      (tx) => tx.amount < 0 && tx.type.startsWith("GASTO"),
-    );
-    const tagTotals: Record<string, number> = {};
-    let untaggedTotal = 0;
-    let totalExpense = 0;
-    expenseTransactions.forEach((tx) => {
-      const lineItems = (tx.lineItems && tx.lineItems.length > 0)
-        ? tx.lineItems
-        : [{ amount: String(tx.amount), description: tx.detail ?? "", tags: tx.tags ?? [] }];
-      lineItems.forEach((li) => {
-        const liAmount = Math.abs(parseFloat(String(li.amount)));
-        if (!Number.isFinite(liAmount) || liAmount === 0) return;
-        totalExpense += liAmount;
-        if (li.tags && li.tags.length > 0) {
-          li.tags.forEach((tagId) => {
-            tagTotals[tagId] = (tagTotals[tagId] || 0) + liAmount;
-          });
-        } else {
-          untaggedTotal += liAmount;
-        }
-      });
-    });
-    if (totalExpense === 0) return [];
+  const expensePieData = useMemo<PieSlice[]>(
+    () => aggregateExpensesByTag(monthTransactions, tagColorMap, tagsList, colors.muted, copy.otherLabel),
+    [monthTransactions, tagColorMap, tagsList, colors.muted, copy.otherLabel],
+  );
 
-    const slices: { label: string; value: number; color: string }[] = [];
-    const tagEntries = Object.entries(tagTotals).sort(([, a], [, b]) => b - a);
-    const colorUsed = new Map<string, number>();
-    tagEntries.forEach(([id, val]) => {
-      const baseColor = tagColorMap[id] || colors.muted;
-      const used = colorUsed.get(baseColor) || 0;
-      slices.push({
-        label: labelForTagId(id, tagsList),
-        value: val,
-        color: shiftColor(baseColor, used * 12),
-      });
-      colorUsed.set(baseColor, (colorUsed.get(baseColor) || 0) + 1);
-    });
-    if (untaggedTotal > 0) {
-      slices.push({ label: copy.otherLabel, value: untaggedTotal, color: colors.muted });
-    }
-    slices.sort((a, b) => b.value - a.value);
-    const grandTotal = slices.reduce((s, sl) => s + sl.value, 0) || 1;
-    return slices.map((s) => ({
-      ...s,
-      percentage: (s.value / grandTotal) * 100,
-    }));
-  }, [monthTransactions, tagColorMap, tagsList, colors, copy.otherLabel]);
+  const incomePieData = useMemo<PieSlice[]>(
+    () => aggregateIncomesByTag(monthTransactions, tagColorMap, tagsList, colors.muted, copy.otherLabel),
+    [monthTransactions, tagColorMap, tagsList, colors.muted, copy.otherLabel],
+  );
+
+  const activePieData = dashBreakdownTab === "expense" ? expensePieData : incomePieData;
+  const dashTabOptions = useMemo(() => [
+    { key: "expense", label: copy.expenseBreakdown },
+    { key: "income", label: copy.incomeBreakdown },
+  ], [copy.expenseBreakdown, copy.incomeBreakdown]);
 
   const recentTransactions = useMemo(
     () =>
@@ -219,7 +185,7 @@ export const DashboardView = memo(function DashboardView({
         </View>
       </View>
 
-      {tagsList.length > 0 && pieData.length > 0 && (
+      {tagsList.length > 0 && (expensePieData.length > 0 || incomePieData.length > 0) && (
         <View
           style={{
             backgroundColor: colors.card,
@@ -237,15 +203,23 @@ export const DashboardView = memo(function DashboardView({
           >
             {copy.expenseByTags}
           </Text>
-          <PieChart
-            key={`pie-${allTransactions.length}-${month}`}
-            data={pieData}
-            colors={colors}
-            currencySymbol={currencySymbol}
-            formatValue={(v) => formatMoney(v, currencySymbol, 1).replace(/^\+ /, "")}
-            totalLabel={copy.total}
-            otherLabel={copy.otherLabel}
-          />
+          <SegmentedControl options={dashTabOptions} selected={dashBreakdownTab} onSelect={setDashBreakdownTab} colors={colors} />
+          <View style={{ height: 10 }} />
+          {activePieData.length > 0 ? (
+            <PieChart
+              key={`pie-${allTransactions.length}-${month}-${dashBreakdownTab}`}
+              data={activePieData}
+              colors={colors}
+              currencySymbol={currencySymbol}
+              formatValue={(v) => formatMoney(v, currencySymbol, 1).replace(/^\+ /, "")}
+              totalLabel={copy.total}
+              otherLabel={copy.otherLabel}
+            />
+          ) : (
+            <Text style={{ color: colors.muted, fontSize: 14, textAlign: "center", paddingVertical: 20 }}>
+              {dashBreakdownTab === "income" ? copy.incomeBreakdownEmpty : copy.noTagsData}
+            </Text>
+          )}
         </View>
       )}
 

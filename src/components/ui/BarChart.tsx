@@ -1,13 +1,31 @@
-import { memo } from "react";
+import { memo, useCallback, useMemo, useState } from "react";
+import { Animated } from "react-native";
 import Svg, { G, Line, Rect, Text as SvgText } from "react-native-svg";
 
-import { MONTH_NAMES } from "@/domain/bucksLogic";
+import { MONTH_NAMES, formatMoney } from "@/domain/bucksLogic";
 import { UI_MONTH_NAMES } from "@/i18n";
 import { type Palette } from "@/theme/colors";
 import { type SummaryRow } from "@/types";
 import { useAppFontFamily } from "./AppText";
+import { useChartFade } from "./chartFade";
 
-export const BarChart = memo(function BarChart({ rows, colors, language }: { rows: SummaryRow[]; colors: Palette; language: "es" | "en" }) {
+const AnimG = Animated.createAnimatedComponent(G);
+
+export const BarChart = memo(function BarChart({
+  rows,
+  colors,
+  language,
+  onSelectMonth,
+  isYearly = false,
+  currencySymbol = "",
+}: {
+  rows: SummaryRow[];
+  colors: Palette;
+  language: "es" | "en";
+  onSelectMonth?: (monthYear: string) => void;
+  isYearly?: boolean;
+  currencySymbol?: string;
+}) {
   const fontFamily = useAppFontFamily();
   const displayRows = rows.slice(-12);
   const max = Math.max(1, ...displayRows.map((row) => Math.max(row.totalIncome, Math.abs(row.totalExpense))));
@@ -19,6 +37,37 @@ export const BarChart = memo(function BarChart({ rows, colors, language }: { row
   const columnWidth = plotWidth / Math.max(1, displayRows.length);
   const barWidth = Math.min(10, Math.max(5, columnWidth * 0.28));
   const gap = 3;
+
+  const [selectedKey, setSelectedKey] = useState<string | null>(null);
+
+  const handleSelect = useCallback((monthYear: string) => {
+    setSelectedKey((prev) => {
+      const next = prev === monthYear ? null : monthYear;
+      if (next) onSelectMonth?.(next);
+      return next;
+    });
+  }, [onSelectMonth]);
+
+  const selectedIndex = useMemo(
+    () => (selectedKey === null ? -1 : displayRows.findIndex((r) => r.monthYear === selectedKey)),
+    [selectedKey, displayRows],
+  );
+
+  const opacitiesRef = useChartFade(displayRows.length, selectedIndex);
+
+  const hitTargets = useMemo(() => {
+    return displayRows.map((row, index) => {
+      const groupWidth = barWidth * 2 + gap;
+      const x = plotLeft + index * columnWidth + (columnWidth - groupWidth) / 2;
+      return {
+        key: row.monthYear,
+        x: x - 2,
+        y: baseY - plotHeight - 1,
+        width: groupWidth + 4,
+        height: plotHeight + 20,
+      };
+    });
+  }, [displayRows, barWidth, columnWidth, gap, plotLeft, baseY, plotHeight]);
 
   return (
     <Svg width="100%" height={190} viewBox={`0 0 ${chartWidth} 190`} style={{ marginTop: 12 }}>
@@ -39,16 +88,44 @@ export const BarChart = memo(function BarChart({ rows, colors, language }: { row
         const x = plotLeft + index * columnWidth + (columnWidth - groupWidth) / 2;
         const incomeHeight = row.totalIncome ? Math.max(3, (row.totalIncome / max) * plotHeight) : 0;
         const expenseHeight = row.totalExpense ? Math.max(3, (Math.abs(row.totalExpense) / max) * plotHeight) : 0;
-        const sourceMonth = row.monthYear.split(" ")[0];
-        const month = Math.max(0, MONTH_NAMES.findIndex((name) => name.toLowerCase() === sourceMonth.toLowerCase()));
+        const labelText = isYearly
+          ? row.monthYear.split(" ").pop() || ""
+          : (() => {
+              const sourceMonth = row.monthYear.split(" ")[0];
+              const month = Math.max(0, MONTH_NAMES.findIndex((name) => name.toLowerCase() === sourceMonth.toLowerCase()));
+              return UI_MONTH_NAMES[language][month].slice(0, 3).toUpperCase();
+            })();
+        const isSelectable = typeof onSelectMonth === "function";
+        const isSelected = selectedKey === row.monthYear;
+        const showTooltip = isSelectable && isSelected;
         return (
-          <G key={row.monthYear}>
+          <AnimG key={row.monthYear} opacity={opacitiesRef.current[index]}>
             <Rect x={x} y={baseY - incomeHeight} width={barWidth} height={incomeHeight} rx={3} fill={colors.income} opacity={0.92} />
             <Rect x={x + barWidth + gap} y={baseY - expenseHeight} width={barWidth} height={expenseHeight} rx={3} fill={colors.expense} opacity={0.88} />
+            {showTooltip && (row.totalIncome > 0 || row.totalExpense !== 0) && (
+              <>
+                <SvgText x={x + groupWidth / 2} y={baseY - Math.max(incomeHeight, expenseHeight) - 14} fontSize={9} fill={colors.income} fontFamily={fontFamily} textAnchor="middle" fontWeight="700">
+                  {formatMoney(row.totalIncome, currencySymbol ?? "", 0)}
+                </SvgText>
+                <SvgText x={x + groupWidth / 2} y={baseY - Math.max(incomeHeight, expenseHeight) - 3} fontSize={9} fill={colors.expense} fontFamily={fontFamily} textAnchor="middle" fontWeight="700">
+                  {formatMoney(Math.abs(row.totalExpense), currencySymbol ?? "", 0)}
+                </SvgText>
+              </>
+            )}
             <SvgText x={x + groupWidth / 2} y={baseY + 17} fontSize={10.5} fill={colors.muted} fontFamily={fontFamily} textAnchor="middle" fontWeight="600">
-              {UI_MONTH_NAMES[language][month].slice(0, 3).toUpperCase()}
+              {labelText}
             </SvgText>
-          </G>
+            {isSelectable && (
+              <Rect
+                x={hitTargets[index].x}
+                y={hitTargets[index].y}
+                width={hitTargets[index].width}
+                height={hitTargets[index].height}
+                fill="transparent"
+                onPress={() => handleSelect(row.monthYear)}
+              />
+            )}
+          </AnimG>
         );
       })}
     </Svg>

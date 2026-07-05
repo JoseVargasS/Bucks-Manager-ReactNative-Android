@@ -47,6 +47,7 @@ type SummaryTabProps = {
   freqIncome: Record<string, number>;
   availableYears: number[];
   currencySymbol: string;
+  tagsList: Tag[];
 };
 
 type DashboardTabProps = {
@@ -214,6 +215,7 @@ function TabPageImpl(props: TabPageProps) {
               summaries={tabProps.summaries}
               transactions={tabProps.transactions}
               freqIncome={tabProps.freqIncome}
+              tagsList={tabProps.tagsList}
               availableYears={tabProps.availableYears}
               topInset={tabProps.contentTopInset}
               currencySymbol={tabProps.currencySymbol}
