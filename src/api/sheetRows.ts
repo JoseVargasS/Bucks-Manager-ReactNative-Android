@@ -591,9 +591,6 @@ async function ensureMonthlySummaryRowByDate(
 
 export {
   TAG_SEPARATOR,
-  TAG_HEADER,
-  tagsColumnReady,
-  ensureTransactionTagsColumn,
   parseLineItems,
   formatCreatedAtForSheet,
   formatAmountForSheet,

@@ -65,20 +65,23 @@ export function detectDeviceLanguage(): "es" | "en" {
   return (Intl.DateTimeFormat().resolvedOptions().locale || "es").toLowerCase().startsWith("es") ? "es" : "en";
 }
 
+function extractCurrencySymbol(localeStr: string, region: string) {
+  const fmt = new Intl.NumberFormat(localeStr, {
+    style: "currency",
+    currency: currencyForRegion(region),
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  });
+  return fmt.formatToParts(0).find((p) => p.type === "currency")?.value;
+}
+
 export function detectDeviceCurrencySymbol() {
   try {
     const locale = Intl.DateTimeFormat().resolvedOptions().locale || "en-US";
     const parts = locale.split("-");
     const region = parts.find((p) => /^[A-Z]{2}$/.test(p));
     if (region) {
-      const fmt = new Intl.NumberFormat(locale, {
-        style: "currency",
-        currency: currencyForRegion(region),
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
-      });
-      const symParts = fmt.formatToParts(0);
-      const sym = symParts.find((p) => p.type === "currency")?.value;
+      const sym = extractCurrencySymbol(locale, region);
       if (sym) return sym;
     }
     // ponytail: language-level fallback when locale has no region
@@ -86,14 +89,7 @@ export function detectDeviceCurrencySymbol() {
     if (lang) {
       const fallbackRegion = langFallbackRegion(lang);
       if (fallbackRegion) {
-        const fmt = new Intl.NumberFormat(`${lang}-${fallbackRegion}`, {
-          style: "currency",
-          currency: currencyForRegion(fallbackRegion),
-          minimumFractionDigits: 0,
-          maximumFractionDigits: 0,
-        });
-        const symParts = fmt.formatToParts(0);
-        const sym = symParts.find((p) => p.type === "currency")?.value;
+        const sym = extractCurrencySymbol(`${lang}-${fallbackRegion}`, fallbackRegion);
         if (sym) return sym;
       }
     }

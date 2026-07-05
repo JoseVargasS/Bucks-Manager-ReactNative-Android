@@ -1,5 +1,6 @@
 import { DEFAULT_SPREADSHEET_LOCALE, SHEET_NAMES, TRANSACTION_TYPES } from "@/domain/bucksLogic";
 import { googleFetch, SHEETS } from "./googleFetch";
+import { DEFAULT_TAGS } from "@/utils/tags";
 
 const TRANSACTION_HEADERS = [
   "Date",
@@ -308,14 +309,9 @@ async function formatSpreadsheet(token: string, spreadsheetId: string) {
   }
 }
 
-const DEFAULT_TAGS_CATALOGUE = JSON.stringify([
-  { id: "default-salud", label: "Salud", color: "#f43f5e" },
-  { id: "default-comida", label: "Comida", color: "#f59e0b" },
-  { id: "default-viaje", label: "Viaje", color: "#0ea5e9" },
-  { id: "default-transporte", label: "Transporte", color: "#10b981" },
-  { id: "default-ocio", label: "Ocio", color: "#8b5cf6" },
-  { id: "default-educacion", label: "Educación", color: "#84cc16" },
-]);
+const DEFAULT_TAGS_CATALOGUE = JSON.stringify(
+  DEFAULT_TAGS.map(({ id, es, color }) => ({ id, label: es, color })),
+);
 
 async function initializeSpreadsheet(token: string, spreadsheetId: string) {
   const currentMonth = new Date();
@@ -370,11 +366,9 @@ export {
   TRANSACTION_HEADERS,
   getTransactionSheetId,
   getSheetIdByName,
-  transactionRowFormatRequests,
   summaryRowFormatRequests,
   insertBlankRow,
   deleteSheetRow,
   getSpreadsheetLocale,
-  formulaDialect,
   buildSummaryRowFormulas,
 };

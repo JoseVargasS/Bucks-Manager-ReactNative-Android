@@ -6,7 +6,7 @@ import { logError } from "./errorHandler";
 const TAGS_KEY = "bucks_tags";
 export const DEFAULT_TAG_COLOR = "#e05070";
 
-const DEFAULT_TAGS = [
+export const DEFAULT_TAGS = [
   { id: "default-salud", es: "Salud", en: "Health", color: "#f43f5e" },
   { id: "default-comida", es: "Comida", en: "Food", color: "#f59e0b" },
   { id: "default-viaje", es: "Viaje", en: "Travel", color: "#0ea5e9" },

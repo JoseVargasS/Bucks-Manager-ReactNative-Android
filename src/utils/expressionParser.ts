@@ -25,25 +25,25 @@ function parseMulDiv(expr: string, ctx: { pos: number }): number {
   return result;
 }
 
+function parseParenthesized(expr: string, ctx: { pos: number }): number {
+  ctx.pos++;
+  const result = parseAddSub(expr, ctx);
+  skipSpaces(expr, ctx);
+  if (ctx.pos < expr.length && expr[ctx.pos] === ")") ctx.pos++;
+  return result;
+}
+
 function parsePrimary(expr: string, ctx: { pos: number }): number {
   skipSpaces(expr, ctx);
   if (ctx.pos < expr.length && expr[ctx.pos] === "(") {
-    ctx.pos++;
-    const result = parseAddSub(expr, ctx);
-    skipSpaces(expr, ctx);
-    if (ctx.pos < expr.length && expr[ctx.pos] === ")") ctx.pos++;
-    return result;
+    return parseParenthesized(expr, ctx);
   }
   let sign = 1;
   if (ctx.pos < expr.length && expr[ctx.pos] === "+") { ctx.pos++; }
   else if (ctx.pos < expr.length && expr[ctx.pos] === "-") { sign = -1; ctx.pos++; }
   skipSpaces(expr, ctx);
   if (ctx.pos < expr.length && expr[ctx.pos] === "(") {
-    ctx.pos++;
-    const result = parseAddSub(expr, ctx);
-    skipSpaces(expr, ctx);
-    if (ctx.pos < expr.length && expr[ctx.pos] === ")") ctx.pos++;
-    return sign * result;
+    return sign * parseParenthesized(expr, ctx);
   }
   const start = ctx.pos;
   while (ctx.pos < expr.length && /[\d.]/.test(expr[ctx.pos])) ctx.pos++;
