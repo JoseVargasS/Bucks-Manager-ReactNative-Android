@@ -30,7 +30,7 @@ Changes to calculations, parsing, filtering, sorting, persistence, synchronizati
 ## Pull requests and commits
 
 - Use Conventional Commits.
-- Use hyphen bullets in multi-line commit bodies.
+- Use hyphen bullets in multi-line commit bodies. Each bullet MUST be a single line — no line wrapping.
 - Explain user-visible risk and validation performed.
 - Do not include `.env`, credentials, spreadsheet IDs, logs, build output, `.expo`, or `node_modules`.
 - Do not submit skipped tests or lower coverage thresholds merely to make CI pass.

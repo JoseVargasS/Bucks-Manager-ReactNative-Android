@@ -151,6 +151,7 @@ Read `CONTEXT.md` before changing startup, sync, transaction ordering, navigatio
 
 - Always use Conventional Commits.
 - Use hyphen bullets in the commit body when listing changes.
+- Each bullet point MUST stay on a single line — never wrap a bullet across multiple lines.
 - When the change spans multiple of the invariants above, call out which invariant moved and why.
 
 ## UI Direction
