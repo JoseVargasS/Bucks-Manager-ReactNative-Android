@@ -25,7 +25,7 @@ test("transaction grouping and sorting preserve the existing order contract", ()
   assert.deepEqual(
     groupTransactionsByDate(sorted).map((group) => ({ key: group.key, rows: group.items.map(({ rowId }) => rowId) })),
     [
-      { key: "2026-01-02", rows: [4, 3] },
+      { key: "2026-01-02", rows: [3, 4] },
       { key: "2026-01-01", rows: [2] },
     ],
   );

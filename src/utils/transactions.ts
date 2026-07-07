@@ -80,6 +80,5 @@ export function groupTransactionsByDate(
     }
     group.items.push(tx);
   });
-  for (const group of groups) group.items.reverse();
   return groups;
 }

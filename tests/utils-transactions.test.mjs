@@ -245,7 +245,7 @@ test("groupTransactionsByDate groups transactions by ISO date", () => {
   assert.equal(groups[1].items.length, 1);
 });
 
-test("groupTransactionsByDate reverses items within each group", () => {
+test("groupTransactionsByDate preserves the input order inside each group", () => {
   const transactions = [
     {
       rowId: 1,
@@ -268,7 +268,7 @@ test("groupTransactionsByDate reverses items within each group", () => {
   assert.equal(groups[0].items.length, 2);
   assert.deepEqual(
     groups[0].items.map((t) => t.rowId),
-    [2, 1],
+    [1, 2],
   );
 });
 
