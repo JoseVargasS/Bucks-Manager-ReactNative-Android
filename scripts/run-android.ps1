@@ -1,5 +1,7 @@
 $ErrorActionPreference = "Stop"
 
+$variant = if ($args.Count -gt 0) { $args[0] } else { "" }
+
 $env:JAVA_HOME = "C:\Program Files\Android\Android Studio\jbr"
 $env:ANDROID_HOME = Join-Path $env:LOCALAPPDATA "Android\Sdk"
 $env:ANDROID_SDK_ROOT = $env:ANDROID_HOME
@@ -22,4 +24,11 @@ if ($physicalLines.Count -gt 1) {
 }
 
 $env:ANDROID_SERIAL = $physicalSerial
-expo run:android --device $deviceName
+if ($variant -eq "release") {
+  $apkPath = Join-Path (Get-Location) "build-preview.apk"
+  npx eas build -p android --profile preview --local --output $apkPath
+  if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+  adb install -r $apkPath
+} else {
+  expo run:android --device $deviceName
+}

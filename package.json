@@ -24,6 +24,7 @@
     "expo-dev-client": "~56.0.22",
     "expo-file-system": "~56.0.8",
     "expo-font": "~56.0.7",
+    "expo-modules-core": "~56.0.19",
     "expo-print": "~56.0.4",
     "expo-secure-store": "~56.0.4",
     "expo-sharing": "~56.0.20",
@@ -43,6 +44,7 @@
   },
   "scripts": {
     "android": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/run-android.ps1",
+    "android:release": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/run-android.ps1 release",
     "android:build-dev": "eas build -p android --profile development",
     "ci": "pnpm format:check && pnpm lint && pnpm test:coverage",
     "dev": "expo start --dev-client",
