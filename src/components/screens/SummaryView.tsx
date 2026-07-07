@@ -332,7 +332,6 @@ export const SummaryView = memo(function SummaryView({ colors, copy, summaries, 
             currencySymbol={currencySymbol}
             formatValue={(v) => formatMoney(v, currencySymbol, 1).replace(/^\+ /, "")}
             totalLabel={copy.total}
-            otherLabel={copy.otherLabel}
           />
         </View>
       )}

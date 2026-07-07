@@ -9,7 +9,7 @@ import { useChartFade } from "./chartFade";
 
 const AnimPath = Animated.createAnimatedComponent(Path);
 
-type MergedSlice = PieSlice & { key: string; isMerged: boolean };
+type MergedSlice = PieSlice & { key: string };
 
 const CX = 130;
 const CY = 115;
@@ -156,44 +156,25 @@ export const PieChart = memo(function PieChart({
   currencySymbol,
   formatValue,
   totalLabel = "total",
-  otherLabel,
 }: {
   data: PieSlice[];
   colors: Palette;
   currencySymbol: string;
   formatValue?: (v: number) => string;
   totalLabel?: string;
-  otherLabel?: string;
 }) {
   const fm = useMemo(
     () => formatValue || ((v: number) => `${currencySymbol}${v.toFixed(0)}`),
     [formatValue, currencySymbol],
   );
 
-  const merged = useMemo<MergedSlice[]>(() => {
-    if (!data.length) return [];
-    const sorted = [...data].sort((a, b) => b.value - a.value);
-    const small: PieSlice[] = [];
-    const main: PieSlice[] = [];
-    sorted.forEach((s) => (s.percentage < 5 ? small : main).push(s));
-    if (small.length > 1) {
-      const mergedValue = small.reduce((sum, s) => sum + s.value, 0);
-      const total = data.reduce((sum, s) => sum + s.value, 0) || 1;
-      const mergedSlice: MergedSlice = {
-        key: "__others__",
-        label: otherLabel || "Otros",
-        value: mergedValue,
-        color: colors.muted,
-        percentage: (mergedValue / total) * 100,
-        isMerged: true,
-      };
-      return [
-        ...main.map((s, i) => ({ ...s, key: `${i}`, isMerged: false })),
-        mergedSlice,
-      ].sort((a, b) => b.value - a.value);
-    }
-    return sorted.map((s, i) => ({ ...s, key: `${i}`, isMerged: false }));
-  }, [data, colors.muted, otherLabel]);
+  const merged = useMemo<MergedSlice[]>(
+    () =>
+      [...data]
+        .sort((a, b) => b.value - a.value)
+        .map((s, i) => ({ ...s, key: `${i}` })),
+    [data],
+  );
 
   const total = useMemo(() => data.reduce((s, d) => s + d.value, 0), [data]);
 

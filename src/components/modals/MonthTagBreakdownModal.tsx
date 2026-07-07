@@ -52,8 +52,8 @@ export const MonthTagBreakdownModal = forwardRef<
   );
 
   const incomeData = useMemo<PieSlice[]>(
-    () => aggregateIncomesByTag(monthTransactions, tagColorMap, tagsList, colors.muted, copy.otherLabel),
-    [monthTransactions, tagColorMap, tagsList, colors.muted, copy.otherLabel],
+    () => aggregateIncomesByTag(monthTransactions, tagColorMap, tagsList, colors.income, copy.otherLabel),
+    [monthTransactions, tagColorMap, tagsList, colors.income, copy.otherLabel],
   );
 
   const activeData = breakdownTab === "expenses" ? expenseData : incomeData;
@@ -112,7 +112,6 @@ export const MonthTagBreakdownModal = forwardRef<
               colors={colors}
               currencySymbol={currencySymbol}
               totalLabel={copy.total}
-              otherLabel={copy.otherLabel}
             />
           ) : (
             <Text style={[styles.emptyText, { color: colors.muted, fontSize: 14 }]}>

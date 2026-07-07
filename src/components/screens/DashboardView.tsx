@@ -78,8 +78,8 @@ export const DashboardView = memo(function DashboardView({
   );
 
   const incomePieData = useMemo<PieSlice[]>(
-    () => aggregateIncomesByTag(monthTransactions, tagColorMap, tagsList, colors.muted, copy.otherLabel),
-    [monthTransactions, tagColorMap, tagsList, colors.muted, copy.otherLabel],
+    () => aggregateIncomesByTag(monthTransactions, tagColorMap, tagsList, colors.income, copy.otherLabel),
+    [monthTransactions, tagColorMap, tagsList, colors.income, copy.otherLabel],
   );
 
   const activePieData = dashBreakdownTab === "expense" ? expensePieData : incomePieData;
@@ -213,7 +213,6 @@ export const DashboardView = memo(function DashboardView({
               currencySymbol={currencySymbol}
               formatValue={(v) => formatMoney(v, currencySymbol, 1).replace(/^\+ /, "")}
               totalLabel={copy.total}
-              otherLabel={copy.otherLabel}
             />
           ) : (
             <Text style={{ color: colors.muted, fontSize: 14, textAlign: "center", paddingVertical: 20 }}>
