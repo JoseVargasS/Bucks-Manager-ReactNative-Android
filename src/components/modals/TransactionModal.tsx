@@ -93,6 +93,7 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
   });
 
   const lineItems = useMemo(() => formDraft.lineItems || [], [formDraft.lineItems]);
+  const singleLine = lineItems.length === 1;
   const totalState = useMemo(() => {
     const { total, error } = computeLineItemsTotal(lineItems);
     const sign = total > 0 ? "+ " : total < 0 ? "- " : "";
@@ -349,7 +350,7 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
               placeholder={copy.selectType}
               style={{ marginBottom: 18 }}
             />
-            <Text style={[styles.label, { color: colors.text }]}>{copy.concepto || "Concepto"}</Text>
+            <Text style={[styles.label, { color: colors.text }]}>{singleLine ? (copy.detail || "Detalle") : (copy.concepto || "Concepto")}</Text>
             <TextInput
               ref={(r) => { inputRefs.current["concepto"] = r; }}
               value={formDraft.concepto}
@@ -423,39 +424,43 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
                     )}
                   </View>
 
-                  <View style={[styles.lineItemDivider, { backgroundColor: cardBorder }]} />
-                  <View style={styles.lineItemDescRow}>
-                    <MaterialCommunityIcons name="text-short" size={16} color={colors.muted} style={styles.lineItemDescIcon} />
-                    <TextInput
-                      ref={(r) => { inputRefs.current[`desc-${item.id}`] = r; }}
-                      value={item.description}
-                      onChangeText={(description: string) => setLineItem(item.id, { description })}
-                      onFocus={() => {
-                dismissTags();
-                focusedKey.current = `desc-${item.id}`;
-                focusHandledRef.current = false;
-                requestAnimationFrame(() => {
-                  const target = inputRefs.current[`desc-${item.id}`];
-                  const host = scrollHostRef.current;
-                  if (!target || !host) return;
-                  try {
-                    target.measureLayout(
-                      host,
-                      (_x: number, y: number) => {
-                        scrollRef.current?.scrollTo({ y: Math.max(0, y - 24), animated: true });
-                      },
-                      () => undefined,
-                    );
-                  } catch {
-                    // ignore
-                  }
-                });
-              }}
-                      placeholder="Descripción"
-                      placeholderTextColor={colors.muted}
-                      style={[styles.lineItemDescInput, { color: colors.text }]}
-                    />
-                  </View>
+                  {!singleLine && (
+                    <>
+                      <View style={[styles.lineItemDivider, { backgroundColor: cardBorder }]} />
+                      <View style={styles.lineItemDescRow}>
+                        <MaterialCommunityIcons name="text-short" size={16} color={colors.muted} style={styles.lineItemDescIcon} />
+                        <TextInput
+                          ref={(r) => { inputRefs.current[`desc-${item.id}`] = r; }}
+                          value={item.description}
+                          onChangeText={(description: string) => setLineItem(item.id, { description })}
+                          onFocus={() => {
+                    dismissTags();
+                    focusedKey.current = `desc-${item.id}`;
+                    focusHandledRef.current = false;
+                    requestAnimationFrame(() => {
+                      const target = inputRefs.current[`desc-${item.id}`];
+                      const host = scrollHostRef.current;
+                      if (!target || !host) return;
+                      try {
+                        target.measureLayout(
+                          host,
+                          (_x: number, y: number) => {
+                            scrollRef.current?.scrollTo({ y: Math.max(0, y - 24), animated: true });
+                          },
+                          () => undefined,
+                        );
+                      } catch {
+                        // ignore
+                      }
+                    });
+                  }}
+                          placeholder="Descripción"
+                          placeholderTextColor={colors.muted}
+                          style={[styles.lineItemDescInput, { color: colors.text }]}
+                        />
+                      </View>
+                    </>
+                  )}
                 </View>
               );
             })}
