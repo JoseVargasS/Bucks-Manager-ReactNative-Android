@@ -51,6 +51,20 @@ export const DetailModal = forwardRef<DetailModalHandle, { colors: Palette; curr
   }, [close, visible]);
 
   if (!transition.modalVisible) return null;
+
+  const isSingleLine = current?.lineItems?.length === 1;
+  const singleLineItem = isSingleLine ? current?.lineItems?.[0] : null;
+  const firstSectionValue = current?.lineItems
+    ? (current.detail.split(":")[0] || "")
+    : (current?.detail || "");
+  const firstSectionTags = isSingleLine
+    ? (singleLineItem?.tags || [])
+    : !current?.lineItems?.length
+      ? (current?.tags || [])
+      : [];
+  const showFirstSection = !!firstSectionValue || firstSectionTags.length > 0;
+  const showLineItemsSection = !isSingleLine && !!current?.lineItems?.length;
+
   return (
       <Animated.View
         pointerEvents={transition.modalVisible ? "auto" : "none"}
@@ -80,30 +94,38 @@ export const DetailModal = forwardRef<DetailModalHandle, { colors: Palette; curr
                   <Text numberOfLines={1} style={[styles.detailHeroAmount, { color: isIncome ? colors.income : colors.expense, fontVariant: ["tabular-nums"] }]}>{current ? formatMoney(amount, currencySymbol) : ""}</Text>
                 </View>
               </View>
-              <View style={[styles.detailDescription, { backgroundColor: colors.input }]}>
-                <Text style={[styles.detailSectionLabel, { color: colors.muted }]}>{current?.lineItems ? (copy.concepto || "Concepto") : copy.detail}</Text>
-                <Text selectable style={[styles.detailDescriptionText, { color: colors.text }]}>
-                  {current?.lineItems ? current.detail.split(":")[0] || "" : current?.detail || ""}
-                </Text>
-                {!current?.lineItems?.length && !!current?.tags?.length && (
-                  <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 4, marginTop: 6 }}>
-                    {current.tags.filter((id) => findTagById(id, tags)).map((id) => {
-                      const tag = findTagById(id, tags);
-                      const tagColor = tag?.color || colors.muted;
-                      const tagLabel = tag?.label || id;
-                      return (
-                        <View key={id} style={{ maxWidth: "100%", borderRadius: 6, paddingHorizontal: 7, paddingVertical: 3, backgroundColor: tagColor }}>
-                          <Text numberOfLines={1} style={{ color: tagTextColor(tagColor, colors), fontSize: 11, fontWeight: "700" }}>{tagLabel}</Text>
-                        </View>
-                      );
-                    })}
-                  </View>
-                )}
-              </View>
-              {!!current?.lineItems?.length && (
+              {showFirstSection && (
+                <View style={[styles.detailDescription, { backgroundColor: colors.input }]}>
+                  <Text style={[styles.detailSectionLabel, { color: colors.muted }]}>
+                    {isSingleLine
+                      ? (copy.detail || "Detalle")
+                      : current?.lineItems
+                        ? (copy.concepto || "Concepto")
+                        : copy.detail}
+                  </Text>
+                  <Text selectable style={[styles.detailDescriptionText, { color: colors.text }]}>
+                    {firstSectionValue}
+                  </Text>
+                  {firstSectionTags.length > 0 && (
+                    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 4, marginTop: 6 }}>
+                      {firstSectionTags.filter((id) => findTagById(id, tags)).map((id) => {
+                        const tag = findTagById(id, tags);
+                        const tagColor = tag?.color || colors.muted;
+                        const tagLabel = tag?.label || id;
+                        return (
+                          <View key={id} style={{ maxWidth: "100%", borderRadius: 6, paddingHorizontal: 7, paddingVertical: 3, backgroundColor: tagColor }}>
+                            <Text numberOfLines={1} style={{ color: tagTextColor(tagColor, colors), fontSize: 11, fontWeight: "700" }}>{tagLabel}</Text>
+                          </View>
+                        );
+                      })}
+                    </View>
+                  )}
+                </View>
+              )}
+              {showLineItemsSection && (
                 <View style={[styles.detailDescription, { backgroundColor: colors.input }]}>
                   <Text style={[styles.detailSectionLabel, { color: colors.muted }]}>{copy.detail}</Text>
-                  {current.lineItems.map((li) => (
+                  {current!.lineItems!.map((li) => (
                     <View key={li.id} style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6, gap: 8 }}>
                       <View style={{ flex: 1 }}>
                         <Text selectable style={[styles.detailDescriptionText, { color: colors.text }]}>{li.description || "—"}</Text>

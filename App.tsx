@@ -507,7 +507,7 @@ function AppContent() {
 
   const openEdit = useCallback((tx: Transaction) => {
     detailModalRef.current?.close();
-    const concepto = tx.lineItems ? (tx.detail.split(":")[0] || "") : "";
+    const concepto = tx.lineItems ? (tx.detail.split(":")[0] || "") : tx.detail;
     const lineItems = tx.lineItems
       ? tx.lineItems.map((li) => ({
           id: li.id,
@@ -515,7 +515,7 @@ function AppContent() {
           description: li.description,
           tags: li.tags,
         }))
-      : [{ id: "li-1", amount: tx.formula ? `=${tx.formula}` : String(tx.amount), description: tx.detail, tags: tx.tags || [] }];
+      : [{ id: "li-1", amount: tx.formula ? `=${tx.formula}` : String(tx.amount), description: "", tags: tx.tags || [] }];
     transactionModalRef.current?.open(
       {
         date: formatDateToISO(tx.rawDate),

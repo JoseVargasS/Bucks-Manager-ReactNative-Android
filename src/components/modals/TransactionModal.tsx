@@ -194,10 +194,20 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
   function addLineItem() {
     setValidationError("");
     const newId = makeLineItemId((formDraft.lineItems || []).length);
-    setFormDraft((current) => ({
-      ...current,
-      lineItems: [...(current.lineItems || []), { id: newId, amount: "", description: "", tags: [] }],
-    }));
+    setFormDraft((current) => {
+      const existing = current.lineItems || [];
+      let nextLineItems = existing;
+      let nextConcepto = current.concepto;
+      if (existing.length === 1 && existing[0].description) {
+        if (!nextConcepto) nextConcepto = existing[0].description;
+        nextLineItems = [{ ...existing[0], description: "" }];
+      }
+      return {
+        ...current,
+        concepto: nextConcepto,
+        lineItems: [...nextLineItems, { id: newId, amount: "", description: "", tags: [] }],
+      };
+    });
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         const target = inputRefs.current[`amount-${newId}`];
@@ -212,6 +222,13 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
     setFormDraft((current) => {
       if ((current.lineItems || []).length <= 1) return current;
       const next = (current.lineItems || []).filter((li) => li.id !== id).map((li, i) => ({ ...li, id: makeLineItemId(i) }));
+      if (next.length === 1 && next[0].description) {
+        return {
+          ...current,
+          concepto: next[0].description,
+          lineItems: [{ ...next[0], description: "" }],
+        };
+      }
       return { ...current, lineItems: next };
     });
     if (tagsOpenFor === id) { setTagsOpenFor(null); setTagsReady(false); }
