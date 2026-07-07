@@ -2,7 +2,7 @@ import { Alert } from "react-native";
 import { useCallback, useRef } from "react";
 import { getItemAsync, setItemAsync, deleteItemAsync } from "expo-secure-store";
 import { GoogleSignin } from "@react-native-google-signin/google-signin";
-import { logDebug, shouldRescanForSheetError } from "@/utils/errorHandler";
+import { shouldRescanForSheetError } from "@/utils/errorHandler";
 import {
   findCompatibleSheets,
   createBucksSpreadsheet,
@@ -286,30 +286,13 @@ export function useGoogleSync(
   // targets the spreadsheet the user is currently connected to.
   const writeUiPreferences = useCallback(
     (snapshot: UiPreferencesSnapshot) => {
-      if (!spreadsheetId) {
-        logDebug("preferences", {
-          msg: "skipping sheet write — no spreadsheetId; local-only save",
-          colorScheme: snapshot.colorScheme,
-        });
-        return;
-      }
-      logDebug("preferences", {
-        msg: "enqueueing sheet write",
-        spreadsheetId,
-        colorScheme: snapshot.colorScheme,
-        language: snapshot.language,
-      });
+      if (!spreadsheetId) return;
       syncGoogleInBackground(async (freshToken) => {
         await writeUiPreferencesApi(
           freshToken,
           spreadsheetId,
           buildUiPreferences(snapshot),
         );
-        logDebug("preferences", {
-          msg: "sheet write OK",
-          spreadsheetId,
-          colorScheme: snapshot.colorScheme,
-        });
       }, copy.syncError);
     },
     // syncGoogleInBackground is a stable closure for the hook's lifetime.
