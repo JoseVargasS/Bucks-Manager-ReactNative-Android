@@ -118,6 +118,7 @@ npm run test:watch
 npm run test:coverage
 npm run lint
 npm run format:check
+npm run eslint:fix
 ```
 
 `test:coverage` enforces the initial critical-code thresholds: 85% lines, 85% branches, and 85% functions. See [TESTING.md](./TESTING.md) for scope, conventions, and known limits.
@@ -129,6 +130,22 @@ npm run android
 ```
 
 `npm run android` sets `JAVA_HOME`, `ANDROID_HOME`, `ANDROID_SDK_ROOT`, and Android platform-tools for that command. It targets a physical ADB-authorized phone and avoids a broken emulator being selected accidentally.
+
+Build a release APK locally and install it on the connected phone (no Metro server, no EAS cloud):
+
+```powershell
+npm run android:release
+```
+
+`android:release` runs `eas build --local` against the `preview` profile, writes `build-preview.apk` in the project root, and installs it on the ADB device with `adb install -r`. Use it to validate a packaged build on a real phone.
+
+Build a development-client APK in the EAS cloud (so a tester can install a pre-built dev client and connect to your Metro):
+
+```powershell
+npm run android:build-dev
+```
+
+`android:build-dev` uses the `development` profile from `eas.json` (`developmentClient: true`, `distribution: "internal"`, `android.buildType: "apk"`). Download the resulting artifact from the EAS dashboard and install it with `adb install -r`.
 
 Start Metro for an already installed development build:
 
