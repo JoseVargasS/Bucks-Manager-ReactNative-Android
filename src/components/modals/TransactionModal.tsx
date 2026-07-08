@@ -1,5 +1,6 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 import { Alert, Animated, BackHandler, Keyboard, ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
+import type { TextInput as RNTextInput } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { isValidTransactionDraft, TRANSACTION_TYPES } from "@/domain/bucksLogic";
 import { computeLineItemsTotal, getBlankDraft } from "@/utils/transactions";
@@ -18,6 +19,8 @@ import { useModalTransition } from "@/components/ui/useModalTransition";
 import { useKeyboardOffset } from "@/components/ui/useKeyboardOffset";
 import { findTagById, saveTags, slugifyTagLabel, tagTextColor, DEFAULT_TAG_COLOR } from "@/utils/tags";
 import { ColorPicker } from "@/components/ui/ColorPicker";
+import { NumericKeypad } from "@/components/ui/NumericKeypad";
+import { AmountInput } from "@/components/ui/AmountInput";
 import { Text, TextInput } from "@/components/ui/AppText";
 
 export type TransactionModalHandle = {
@@ -45,6 +48,12 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
   const [createTagLabel, setCreateTagLabel] = useState("");
   const [createTagColor, setCreateTagColor] = useState(DEFAULT_TAG_COLOR);
   const [creatingTagFor, setCreatingTagFor] = useState<string | null>(null);
+  const [activeAmountId, setActiveAmountId] = useState<string | null>(null);
+  // UI-only cursor position per line item. Not persisted to Sheets.
+  // Survives switching between line items, cleared on modal close.
+  const [cursors, setCursors] = useState<Record<string, number>>({});
+  const activeAmountIdRef = useRef<string | null>(null);
+  useEffect(() => { activeAmountIdRef.current = activeAmountId; }, [activeAmountId]);
   const kbHeight = useKeyboardOffset(visible);
   const [validationError, setValidationError] = useState("");
   const modalRef = useRef<View>(null);
@@ -52,6 +61,7 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
   const scrollHostRef = useRef<View>(null);
   const tagAddRefs = useRef<Record<string, View | null>>({});
   const inputRefs = useRef<Record<string, View | null>>({});
+  const amountInputRefs = useRef<Record<string, RNTextInput | null>>({});
   const focusedKey = useRef<string | null>(null);
   const focusHandledRef = useRef(false);
 
@@ -94,6 +104,11 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
 
   const lineItems = useMemo(() => formDraft.lineItems || [], [formDraft.lineItems]);
   const singleLine = lineItems.length === 1;
+  useEffect(() => {
+    if (activeAmountId && !lineItems.some((li) => li.id === activeAmountId)) {
+      setActiveAmountId(null);
+    }
+  }, [lineItems, activeAmountId]);
   const totalState = useMemo(() => {
     const { total, error } = computeLineItemsTotal(lineItems);
     const sign = total > 0 ? "+ " : total < 0 ? "- " : "";
@@ -118,6 +133,8 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
     setTagsReady(false);
     setShowCreateTag(false);
     setCreateTagLabel("");
+    setActiveAmountId(null);
+    setCursors({});
   }, []);
 
   useImperativeHandle(ref, () => ({
@@ -129,6 +146,7 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
       setTagsReady(false);
       setShowCreateTag(false);
       setCreateTagLabel("");
+      setActiveAmountId(null);
       setValidationError("");
       submittingRef.current = false;
       setVisible(true);
@@ -138,6 +156,10 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
   useEffect(() => {
     if (!visible) return;
     const subscription = BackHandler.addEventListener("hardwareBackPress", () => {
+      if (activeAmountIdRef.current !== null) {
+        setActiveAmountId(null);
+        return true;
+      }
       close();
       return true;
     });
@@ -208,13 +230,10 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
         lineItems: [...nextLineItems, { id: newId, amount: "", description: "", tags: [] }],
       };
     });
+    setActiveAmountId(newId);
     requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        const target = inputRefs.current[`amount-${newId}`];
-        if (target && typeof (target as unknown as { focus?: () => void }).focus === "function") {
-          (target as unknown as { focus: () => void }).focus();
-        }
-      });
+      amountInputRefs.current[newId]?.focus();
+      Keyboard.dismiss();
     });
   }
 
@@ -232,6 +251,12 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
       return { ...current, lineItems: next };
     });
     if (tagsOpenFor === id) { setTagsOpenFor(null); setTagsReady(false); }
+    setActiveAmountId((current) => (current === id ? null : current));
+    setCursors((prev) => {
+      if (!(id in prev)) return prev;
+      const { [id]: _drop, ...rest } = prev;
+      return rest;
+    });
   }
 
   function toggleTag(lineItemId: string, tagId: string) {
@@ -372,7 +397,7 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
               ref={(r) => { inputRefs.current["concepto"] = r; }}
               value={formDraft.concepto}
               onChangeText={(concepto: string) => setFormDraft((current) => ({ ...current, concepto }))}
-              onFocus={() => { dismissTags(); focusedKey.current = "concepto"; }}
+              onFocus={() => { dismissTags(); focusedKey.current = "concepto"; setActiveAmountId(null); }}
               placeholder={copy.conceptoPlaceholder || "Ej: Supermercado, Almuerzo, Taxi"}
               placeholderTextColor={colors.muted}
               style={[styles.conceptoInput, { backgroundColor: colors.input, color: colors.text, borderColor: colors.border }]}
@@ -400,16 +425,16 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
                 <View key={item.id} style={[styles.lineItemCard, { backgroundColor: colors.input, borderColor: cardBorder }]}>
                   <View style={styles.lineItemAmountRow}>
                     <Text style={[styles.lineItemPrefix, { color: colors.text }]}>{currencySymbol}</Text>
-                    <TextInput
-                      ref={(r) => { inputRefs.current[`amount-${item.id}`] = r; }}
+                    <AmountInput
+                      ref={(r) => { amountInputRefs.current[item.id] = r; }}
                       value={item.amount}
-                      onChangeText={(amount: string) => setLineItem(item.id, { amount })}
-                      onFocus={() => { dismissTags(); focusedKey.current = `amount-${item.id}`; }}
                       placeholder={isExpense ? "-0.00" : "0.00"}
-                      placeholderTextColor={colors.muted}
-                      keyboardType="decimal-pad"
-                      inputMode="decimal"
-                      style={[styles.lineItemAmountInput, { color: colors.text }]}
+                      colors={colors}
+                      cursor={cursors[item.id] ?? item.amount.length}
+                      onValueChange={(v) => setLineItem(item.id, { amount: v })}
+                      onCursorChange={(pos) => setCursors((prev) => ({ ...prev, [item.id]: pos }))}
+                      onFocus={() => { dismissTags(); setActiveAmountId(item.id); }}
+                      style={styles.lineItemAmountInput}
                     />
                     {isExpense && tags.length > 0 && (
                       itemTags.length > 0 ? (
@@ -453,6 +478,7 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
                           onFocus={() => {
                     dismissTags();
                     focusedKey.current = `desc-${item.id}`;
+                    setActiveAmountId(null);
                     focusHandledRef.current = false;
                     requestAnimationFrame(() => {
                       const target = inputRefs.current[`desc-${item.id}`];
@@ -545,6 +571,20 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
             </View>
           </ScrollView>
           </View>
+
+          <NumericKeypad
+            visible={activeAmountId !== null}
+            value={activeAmountId ? (lineItems.find((li) => li.id === activeAmountId)?.amount ?? "") : ""}
+            cursor={activeAmountId ? (cursors[activeAmountId] ?? 0) : 0}
+            onChange={(v, c) => {
+              if (activeAmountId) {
+                setLineItem(activeAmountId, { amount: v });
+                setCursors((prev) => ({ ...prev, [activeAmountId]: c }));
+              }
+            }}
+            onDone={() => setActiveAmountId(null)}
+            colors={colors}
+          />
 
           {tagsOpenFor && tagsReady && isExpense && (
             <View key={`tags-${tags.length}`} style={[styles.tagsOverlay, { left: tagsFrame.left, top: tagsFrame.top, width: tagsFrame.width, maxHeight: tagsFrame.maxHeight, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: 10, overflow: "hidden" }]}>
