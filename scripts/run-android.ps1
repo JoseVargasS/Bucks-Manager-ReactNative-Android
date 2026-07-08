@@ -25,10 +25,7 @@ if ($physicalLines.Count -gt 1) {
 
 $env:ANDROID_SERIAL = $physicalSerial
 if ($variant -eq "release") {
-  $apkPath = Join-Path (Get-Location) "build-preview.apk"
-  npx eas build -p android --profile preview --local --output $apkPath
-  if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-  adb install -r $apkPath
+  npx expo run:android --variant release --device $deviceName
 } else {
   expo run:android --device $deviceName
 }
