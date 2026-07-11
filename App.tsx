@@ -4,7 +4,7 @@ import {
   setOptions as setSplashOptions,
   hideAsync,
 } from "expo-splash-screen";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Animated,
   Easing,
@@ -42,23 +42,32 @@ import {
   DetailModal,
   type DetailModalHandle,
 } from "@/components/modals/DetailModal";
-import { ExportModal } from "@/components/modals/ExportModal";
-import {
-  ConfirmModal,
-  type ConfirmConfig,
-} from "@/components/modals/ConfirmModal";
-import { HistoryModal } from "@/components/modals/HistoryModal";
-import { PinSetupModal } from "@/components/modals/PinSetupModal";
 import {
   SearchModal,
   type SearchModalHandle,
   emptySearchFilters,
 } from "@/components/modals/SearchModal";
-import { TagEditorModal } from "@/components/modals/TagEditorModal";
 import {
   OptionSheet,
   type OptionSheetHandle,
 } from "@/components/modals/OptionSheet";
+import { type ConfirmConfig } from "@/components/modals/ConfirmModal";
+
+const ExportModal = lazy(
+  () => import("@/components/modals/ExportModal").then((m) => ({ default: m.ExportModal })),
+);
+const ConfirmModal = lazy(
+  () => import("@/components/modals/ConfirmModal").then((m) => ({ default: m.ConfirmModal })),
+);
+const HistoryModal = lazy(
+  () => import("@/components/modals/HistoryModal").then((m) => ({ default: m.HistoryModal })),
+);
+const PinSetupModal = lazy(
+  () => import("@/components/modals/PinSetupModal").then((m) => ({ default: m.PinSetupModal })),
+);
+const TagEditorModal = lazy(
+  () => import("@/components/modals/TagEditorModal").then((m) => ({ default: m.TagEditorModal })),
+);
 import {
   type HistoryEntry,
   type SearchFilters,
@@ -942,40 +951,50 @@ function AppContent() {
         onDelete={requestDelete}
       />
       <OptionSheet ref={optionSheetRef} colors={colors} />
-      <ConfirmModal
-        config={confirmConfig}
-        colors={colors}
-        currencySymbol={currencySymbol}
-        copy={copy}
-        onClose={closeConfirm}
-        onConfirm={handleConfirm}
-      />
-      <HistoryModal
-        visible={historyVisible}
-        entries={historyEntries}
-        colors={colors}
-        currencySymbol={currencySymbol}
-        copy={copy}
-        onClose={closeHistory}
-        onUndo={mutations.undoDeleteEntry}
-      />
-      <PinSetupModal
-        visible={pinSetupVisible}
-        colors={colors}
-        copy={copy}
-        onClose={closePinSetup}
-        onSave={handlePinSave}
-      />
-      <ExportModal
-        visible={exportVisible}
-        colors={colors}
-        copy={copy}
-        config={exportConfig}
-        setConfig={setExportConfig}
-        minDate={exportMinDate}
-        onClose={closeExport}
-        onExport={startExport}
-      />
+      <Suspense fallback={null}>
+        <ConfirmModal
+          config={confirmConfig}
+          colors={colors}
+          currencySymbol={currencySymbol}
+          copy={copy}
+          onClose={closeConfirm}
+          onConfirm={handleConfirm}
+        />
+        <HistoryModal
+          visible={historyVisible}
+          entries={historyEntries}
+          colors={colors}
+          currencySymbol={currencySymbol}
+          copy={copy}
+          onClose={closeHistory}
+          onUndo={mutations.undoDeleteEntry}
+        />
+        <PinSetupModal
+          visible={pinSetupVisible}
+          colors={colors}
+          copy={copy}
+          onClose={closePinSetup}
+          onSave={handlePinSave}
+        />
+        <ExportModal
+          visible={exportVisible}
+          colors={colors}
+          copy={copy}
+          config={exportConfig}
+          setConfig={setExportConfig}
+          minDate={exportMinDate}
+          onClose={closeExport}
+          onExport={startExport}
+        />
+        <TagEditorModal
+          visible={tagEditorVisible}
+          colors={colors}
+          copy={copy}
+          tags={tagsList}
+          setTags={setTagsList}
+          onClose={closeTagEditor}
+        />
+      </Suspense>
       <SearchModal
         ref={searchModalRef}
         colors={colors}
@@ -984,14 +1003,6 @@ function AppContent() {
         tags={tagsList}
         onClear={clearSearchFilters}
         onSubmit={applySearchFilters}
-      />
-      <TagEditorModal
-        visible={tagEditorVisible}
-        colors={colors}
-        copy={copy}
-        tags={tagsList}
-        setTags={setTagsList}
-        onClose={closeTagEditor}
       />
     </Animated.View>
   );
