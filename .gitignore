@@ -41,8 +41,9 @@ expo*.log
 # codegraph knowledge graph (regenerable)
 .codegraph/
 
-# commandcode excluded
+# agents excluded
 .commandcode/
+.mimocode/
 
 # typescript
 *.tsbuildinfo
