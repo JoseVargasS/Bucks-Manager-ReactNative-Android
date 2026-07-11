@@ -23,6 +23,19 @@ if ($physicalLines.Count -gt 1) {
   Write-Warning "Hay varios celulares conectados. Usando $deviceName ($physicalSerial)."
 }
 
+# Patch Expo adb.js to remove --user flag that breaks Android 16 streamed install
+$adbJs = Join-Path $PSScriptRoot "..\node_modules\@expo\cli\build\src\start\platforms\android\adb.js"
+if (Test-Path $adbJs) {
+  $content = Get-Content $adbJs -Raw
+  $patched = "adbArgs(device.pid, 'install', '-r', '-d', filePath)"
+  $unpatched = "adbArgs(device.pid, 'install', '-r', '-d', '--user', _env.env.EXPO_ADB_USER, filePath)"
+  if ($content -match [regex]::Escape($unpatched)) {
+    $content = $content.Replace($unpatched, $patched)
+    Set-Content $adbJs $content -NoNewline
+    Write-Host "Patched expo adb.js: removed --user flag (Android 16 fix)"
+  }
+}
+
 $env:ANDROID_SERIAL = $physicalSerial
 if ($variant -eq "release") {
   npx expo run:android --variant release --device $deviceName
