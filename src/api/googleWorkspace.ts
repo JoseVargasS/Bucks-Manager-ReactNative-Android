@@ -23,3 +23,9 @@ export {
   UI_PREFERENCES_INIT_JSON,
   type UiPreferences,
 } from "./preferencesOps";
+export {
+  readHistory,
+  writeHistory,
+  HISTORY_HEADER,
+  HISTORY_INIT_JSON,
+} from "./historyOps";

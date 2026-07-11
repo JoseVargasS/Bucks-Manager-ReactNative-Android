@@ -46,6 +46,22 @@ export async function removeHistoryEntry(id: string): Promise<void> {
   await saveHistory(existing.filter((e) => e.id !== id));
 }
 
+export async function loadCurrentHistory(): Promise<HistoryEntry[]> {
+  return loadHistory();
+}
+
+export function mergeHistoryFromSheet(
+  localEntries: HistoryEntry[],
+  sheetEntries: HistoryEntry[],
+): HistoryEntry[] {
+  if (!sheetEntries.length) return localEntries;
+  if (!localEntries.length) return pruneExpired(sheetEntries);
+  const byId = new Map<string, HistoryEntry>();
+  for (const e of localEntries) byId.set(e.id, e);
+  for (const e of sheetEntries) byId.set(e.id, e);
+  return pruneExpired(Array.from(byId.values()));
+}
+
 function isHistoryEntry(value: unknown): value is HistoryEntry {
   if (!value || typeof value !== "object") return false;
   const entry = value as Partial<HistoryEntry>;

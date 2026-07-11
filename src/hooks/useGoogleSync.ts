@@ -14,11 +14,12 @@ import {
   writeUiPreferences as writeUiPreferencesApi,
   buildUiPreferences,
 } from "@/api/googleWorkspace";
+import { readHistory, writeHistory as writeHistoryApi } from "@/api/historyOps";
 import { calculateSummaries, SHEET_NAMES } from "@/domain/bucksLogic";
 import { loadFinancialCache, deleteFinancialCache } from "@/data/localCache";
 import { mergeTagsFromSheet, saveTags } from "@/utils/tags";
 import { TOKEN_KEY, SHEET_KEY } from "@/theme/constants";
-import type { Tag, Transaction, SummaryRow } from "@/types";
+import type { Tag, Transaction, SummaryRow, HistoryEntry } from "@/types";
 import type { UiPreferencesSnapshot } from "@/hooks/usePreferences";
 import type { SessionApi } from "./useSession";
 
@@ -40,6 +41,10 @@ export interface GoogleSyncApi {
   // Registers a callback that applies remote UI preferences (from sheet) to
   // local state. Called once on mount; the callback itself is stable.
   wireRemoteUiPreferences: (apply: (prefs: UiPreferencesSnapshot) => void) => void;
+  // Writes deletion history to MONTHLY SUMMARY!M1:M2.
+  writeHistory: (entries: HistoryEntry[]) => void;
+  // Registers a callback that applies remote history (from sheet) to local state.
+  wireRemoteHistory: (apply: (entries: HistoryEntry[]) => void) => void;
 }
 
 export function useGoogleSync(
@@ -76,6 +81,7 @@ export function useGoogleSync(
   const { tagsList, setTagsList } = tags;
   const { errMsg, authErr, copy, tagColors } = helpers;
   const remoteUiPreferencesRef = useRef<((prefs: UiPreferencesSnapshot) => void) | null>(null);
+  const remoteHistoryRef = useRef<((entries: HistoryEntry[]) => void) | null>(null);
 
   async function restoreSession() {
     const [token, sheetId] = await Promise.all([
@@ -169,11 +175,12 @@ export function useGoogleSync(
       setSyncError("");
       if (!hasLocalDataRef.current && !txList.length)
         setIsFirstRemoteLoad(true);
-      const [tx, summary, sheetTags, sheetUiPreferences] = await Promise.all([
+      const [tx, summary, sheetTags, sheetUiPreferences, sheetHistory] = await Promise.all([
         readTransactions(token, sheetId),
         readSummaries(token, sheetId),
         readTagsCatalog(token, sheetId),
         readUiPreferences(token, sheetId),
+        readHistory(token, sheetId),
       ]);
       if (pendingSyncRef.current) {
         if (showLoader) setLoading(false);
@@ -209,6 +216,11 @@ export function useGoogleSync(
             colorScheme: sheetUiPreferences.colorScheme,
           });
         }
+      }
+      // Merge deletion history from sheet with local entries.
+      if (sheetHistory.length) {
+        const apply = remoteHistoryRef.current;
+        if (apply) apply(sheetHistory);
       }
       persistFinancialState(
         tx,
@@ -311,6 +323,24 @@ export function useGoogleSync(
     [],
   );
 
+  const writeHistory = useCallback(
+    (entries: HistoryEntry[]) => {
+      if (!spreadsheetId) return;
+      syncGoogleInBackground(async (freshToken) => {
+        await writeHistoryApi(freshToken, spreadsheetId, entries);
+      }, copy.syncError);
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [spreadsheetId, copy.syncError],
+  );
+
+  const wireRemoteHistory = useCallback(
+    (applyRemote: (entries: HistoryEntry[]) => void) => {
+      remoteHistoryRef.current = applyRemote;
+    },
+    [],
+  );
+
   async function connectGoogleWorkspace(
     token: string,
     preferredSheetId = "",
@@ -356,5 +386,7 @@ export function useGoogleSync(
     selectSpreadsheet,
     writeUiPreferences,
     wireRemoteUiPreferences,
+    writeHistory,
+    wireRemoteHistory,
   };
 }

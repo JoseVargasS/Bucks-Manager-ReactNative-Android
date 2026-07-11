@@ -2,6 +2,7 @@ import { DEFAULT_SPREADSHEET_LOCALE, SHEET_NAMES, TRANSACTION_TYPES } from "@/do
 import { googleFetch, SHEETS } from "./googleFetch";
 import { DEFAULT_TAGS } from "@/utils/tags";
 import { UI_PREFERENCES_HEADER, UI_PREFERENCES_INIT_JSON } from "./preferencesOps";
+import { HISTORY_HEADER, HISTORY_INIT_JSON } from "./historyOps";
 
 const TRANSACTION_HEADERS = [
   "Date",
@@ -341,6 +342,10 @@ async function initializeSpreadsheet(token: string, spreadsheetId: string) {
         {
           range: `${SHEET_NAMES.summary}!L1:L2`,
           values: [[UI_PREFERENCES_HEADER], [UI_PREFERENCES_INIT_JSON]],
+        },
+        {
+          range: `${SHEET_NAMES.summary}!M1:M2`,
+          values: [[HISTORY_HEADER], [HISTORY_INIT_JSON]],
         },
       ],
     }),

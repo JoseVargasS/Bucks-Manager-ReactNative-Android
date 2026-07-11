@@ -318,6 +318,19 @@ function AppContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [applyRemotePreferences]);
 
+  // Wire remote history (sheet → local) once on mount.
+  useEffect(() => {
+    syncApi.wireRemoteHistory((sheetHistory) => {
+      setHistoryEntries((prev) => {
+        const byId = new Map<string, HistoryEntry>();
+        for (const e of prev) byId.set(e.id, e);
+        for (const e of sheetHistory) byId.set(e.id, e);
+        return Array.from(byId.values());
+      });
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Debounced sheet write whenever the user changes a preference. Same
   // shape as the tag catalogue debounce in this file: skip the first
   // render via a ref guard so we don't push a write just because the
@@ -343,6 +356,20 @@ function AppContent() {
     }, 1500);
     return () => clearTimeout(timer);
   }, [language, currencySymbol, fontPreference, colorScheme, accessToken, spreadsheetId]);
+
+  // Debounced sheet write for deletion history.
+  const writeHistoryRef = useRef(syncApi.writeHistory);
+  writeHistoryRef.current = syncApi.writeHistory;
+  const prevHistoryLenRef = useRef(0);
+  useEffect(() => {
+    if (!accessToken || !spreadsheetId) return;
+    if (historyEntries.length === prevHistoryLenRef.current) return;
+    prevHistoryLenRef.current = historyEntries.length;
+    const timer = setTimeout(() => {
+      writeHistoryRef.current(historyEntries);
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, [historyEntries, accessToken, spreadsheetId]);
 
   useEffect(() => {
     loadTags(language)
