@@ -9,18 +9,13 @@ const styles = { ...base, ...exportModalStyles };
 import { ActionRow } from "@/components/ui/ActionRow";
 import { CalendarPicker } from "@/components/ui/CalendarPicker";
 import { type Palette } from "@/theme/colors";
-import { type ExportFormat } from "@/types";
 import { type UiCopy } from "@/i18n";
 import { useModalTransition } from "@/components/ui/useModalTransition";
 import { DEFAULT_LOCALE } from "@/utils/formats";
 import { Text } from "@/components/ui/AppText";
+import { type ExportConfig } from "@/components/modals/ExportConfig";
 
-export type ExportConfig = {
-  format: ExportFormat;
-  rangeMode: "dates" | "months";
-  startDate: string;
-  endDate: string;
-};
+export type { ExportConfig } from "@/components/modals/ExportConfig";
 
 export function ExportModal({ visible, colors, copy, config, setConfig, minDate, onClose, onExport }: {
   visible: boolean; colors: Palette; config: ExportConfig; setConfig: (c: ExportConfig) => void;
