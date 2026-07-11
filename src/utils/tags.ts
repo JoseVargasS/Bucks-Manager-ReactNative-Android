@@ -145,14 +145,20 @@ export function mergeTagsFromSheet(
   transactions: Transaction[],
   tagColors: string[],
 ): Tag[] {
-  const byId = new Map(currentTags.map((t) => [t.id, t]));
-  for (const st of sheetTags) {
-    const existing = byId.get(st.id);
-    if (existing && st.id.startsWith("default-")) {
-      byId.set(st.id, { ...existing, color: st.color });
-    } else {
-      byId.set(st.id, st);
-    }
+  // When the sheet has tags, it is the source of truth for which tags exist.
+  // Start from sheetTags instead of currentTags so deleted tags stay deleted.
+  if (!sheetTags.length && !transactions.some((t) => t.tags?.length)) {
+    return currentTags;
+  }
+  const byId = new Map<string, Tag>();
+  if (sheetTags.length) {
+    for (const st of sheetTags) byId.set(st.id, st);
+  }
+  // Add local tags not in sheet — only custom tags, never defaults.
+  // Default tags are always sourced from the sheet; if the user deleted one
+  // it stays deleted. Custom tags may exist locally before the next sync.
+  for (const ct of currentTags) {
+    if (!byId.has(ct.id) && !ct.id.startsWith("default-")) byId.set(ct.id, ct);
   }
   const existingIds = new Set(Array.from(byId.keys()));
   let colorIdx = 0;
