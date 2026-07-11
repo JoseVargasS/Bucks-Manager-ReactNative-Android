@@ -1,0 +1,289 @@
+describe("nativeStorage", () => {
+  const g = globalThis as any;
+  const secureStore = g.__bucksSecureStoreMock;
+  const fileSystem = g.__bucksFileSystemMock;
+
+  let addHistoryEntry: typeof import("../src/utils/history.ts").addHistoryEntry;
+  let loadHistory: typeof import("../src/utils/history.ts").loadHistory;
+  let removeHistoryEntry: typeof import("../src/utils/history.ts").removeHistoryEntry;
+  let clearPin: typeof import("../src/utils/pin.ts").clearPin;
+  let isPinEnabled: typeof import("../src/utils/pin.ts").isPinEnabled;
+  let savePin: typeof import("../src/utils/pin.ts").savePin;
+  let verifyPin: typeof import("../src/utils/pin.ts").verifyPin;
+  let abbreviateTag: typeof import("../src/utils/tags.ts").abbreviateTag;
+  let loadTags: typeof import("../src/utils/tags.ts").loadTags;
+  let saveTags: typeof import("../src/utils/tags.ts").saveTags;
+  let tagTextColor: typeof import("../src/utils/tags.ts").tagTextColor;
+  let migrateTagReferences: typeof import("../src/utils/tags.ts").migrateTagReferences;
+  let migrateTransactionTags: typeof import("../src/utils/tags.ts").migrateTransactionTags;
+  let slugifyTagLabel: typeof import("../src/utils/tags.ts").slugifyTagLabel;
+  let labelForTagId: typeof import("../src/utils/tags.ts").labelForTagId;
+  let findTagById: typeof import("../src/utils/tags.ts").findTagById;
+  let deleteFinancialCache: typeof import("../src/data/localCache.ts").deleteFinancialCache;
+  let loadFinancialCache: typeof import("../src/data/localCache.ts").loadFinancialCache;
+  let saveFinancialCache: typeof import("../src/data/localCache.ts").saveFinancialCache;
+
+  beforeAll(async () => {
+    const hist = await import("../src/utils/history.ts");
+    addHistoryEntry = hist.addHistoryEntry;
+    loadHistory = hist.loadHistory;
+    removeHistoryEntry = hist.removeHistoryEntry;
+    const pin = await import("../src/utils/pin.ts");
+    clearPin = pin.clearPin;
+    isPinEnabled = pin.isPinEnabled;
+    savePin = pin.savePin;
+    verifyPin = pin.verifyPin;
+    const tags = await import("../src/utils/tags.ts");
+    abbreviateTag = tags.abbreviateTag;
+    loadTags = tags.loadTags;
+    saveTags = tags.saveTags;
+    tagTextColor = tags.tagTextColor;
+    migrateTagReferences = tags.migrateTagReferences;
+    migrateTransactionTags = tags.migrateTransactionTags;
+    slugifyTagLabel = tags.slugifyTagLabel;
+    labelForTagId = tags.labelForTagId;
+    findTagById = tags.findTagById;
+    const cache = await import("../src/data/localCache.ts");
+    deleteFinancialCache = cache.deleteFinancialCache;
+    loadFinancialCache = cache.loadFinancialCache;
+    saveFinancialCache = cache.saveFinancialCache;
+  });
+
+  beforeEach(() => {
+    secureStore.reset();
+    fileSystem.reset();
+  });
+
+  const transaction = {
+    rowId: 2,
+    date: "15-jan-26",
+    rawDate: "2026-01-15T05:00:00.000Z",
+    amount: -25,
+    detail: "Comida",
+    type: "GASTO NO FRECUENTE",
+    createdAt: "2026-01-15T12:00:00.000Z",
+    tags: ["Comida"],
+  } as any;
+
+  const summary = {
+    monthYear: "January 2026",
+    freqIncome: 100,
+    nonFreqIncome: 0,
+    totalIncome: 100,
+    freqExpense: 0,
+    nonFreqExpense: -25,
+    totalExpense: -25,
+    netMonthly: 75,
+    netNoFreq: -25,
+  };
+
+  test("history ignores expired or corrupt entries and persists add/remove flows", async () => {
+    secureStore.values.set("bucks_history", JSON.stringify([
+      { id: "valid", timestamp: new Date().toISOString(), action: "delete", transaction },
+      { id: "expired", timestamp: "2020-01-01T00:00:00.000Z", action: "delete", transaction },
+      { id: "corrupt", timestamp: new Date().toISOString(), action: "delete" },
+      { id: "bad-type", timestamp: new Date().toISOString(), action: "delete", transaction: { ...transaction, type: "DESCONOCIDO" } },
+    ]));
+
+    expect((await loadHistory()).map(({ id }) => id)).toEqual(["valid"]);
+    const added = await addHistoryEntry({ action: "delete", transaction });
+    expect(typeof added.id === "string" && added.id.length > 0).toBeTruthy();
+    expect((await loadHistory()).map(({ id }) => id)).toEqual([added.id, "valid"]);
+
+    await removeHistoryEntry(added.id);
+    expect((await loadHistory()).map(({ id }) => id)).toEqual(["valid"]);
+  });
+
+  test("history returns an empty list when secure storage is unreadable", async () => {
+    secureStore.getError = new Error("locked");
+    expect(await loadHistory()).toEqual([]);
+  });
+
+  test("PIN save, verify, and clear stay synchronized", async () => {
+    expect(await isPinEnabled()).toBe(false);
+    await savePin("1234");
+    expect(await isPinEnabled()).toBe(true);
+    expect(await verifyPin("1234")).toBe(true);
+    expect(await verifyPin("0000")).toBe(false);
+    await clearPin();
+    expect(await isPinEnabled()).toBe(false);
+    expect(await verifyPin("1234")).toBe(false);
+  });
+
+  test("tags merge defaults with saved values and deduplicate labels", async () => {
+    secureStore.values.set("bucks_tags", JSON.stringify([
+      { id: "custom-comida", label: "  Comida  ", color: "#ffffff" },
+      { id: "custom", label: "Casa", color: "#000000" },
+    ]));
+
+    const tags = await loadTags();
+    expect(tags.filter(({ label }) => label === "Comida").length).toBe(1);
+    expect(tags.find(({ label }) => label === "Comida")!.id).toBe("custom-comida");
+    expect(tags.some(({ label }) => label === "Casa")).toBeTruthy();
+    expect(abbreviateTag("Trabajo")).toBe("Traba.");
+    expect(tagTextColor("#ffffff")).toBe("#18202d");
+    expect(tagTextColor("#000000")).toBe("#ffffff");
+
+    await saveTags(tags);
+    expect(JSON.parse(secureStore.values.get("bucks_tags"))).toEqual(tags);
+  });
+
+  test("tags localize default labels for English", async () => {
+    secureStore.values.set("bucks_tags", JSON.stringify([
+      { id: "default-comida", label: "Comida", color: "#ffffff" },
+      { id: "custom", label: "Home", color: "#000000" },
+    ]));
+
+    const tags = await loadTags("en");
+    expect(tags.some(({ label }) => label === "Food")).toBeTruthy();
+    expect(tags.some(({ label }) => label === "Health")).toBeTruthy();
+    expect(tags.some(({ label }) => label === "Home")).toBeTruthy();
+    expect(tags.some(({ label }) => label === "Comida")).toBe(false);
+  });
+
+  test("tags fall back to defaults when saved JSON is corrupt", async () => {
+    secureStore.values.set("bucks_tags", "not json");
+    const tags = await loadTags();
+    expect(tags.length).toBeGreaterThanOrEqual(6);
+    expect(tags.some(({ label }) => label === "Salud")).toBeTruthy();
+  });
+
+  test("financial cache round-trips valid data and respects spreadsheet ownership", async () => {
+    const cache = {
+      spreadsheetId: "sheet-1",
+      lastSyncedAt: "2026-01-15T12:00:00.000Z",
+      transactions: [transaction],
+      summaries: [summary],
+      freqIncome: { "January 2026": 100 },
+    };
+    await saveFinancialCache(cache);
+    expect(await loadFinancialCache("sheet-1")).toEqual({ ...cache, schemaVersion: 3 });
+    expect(await loadFinancialCache("sheet-2")).toBeNull();
+
+    await deleteFinancialCache();
+    expect(await loadFinancialCache("sheet-1")).toBeNull();
+  });
+
+  test("financial cache rejects malformed JSON and corrupt nested records", async () => {
+    fileSystem.files.set("mock://document/bucks-finance-cache.json", "not json");
+    expect(await loadFinancialCache("sheet-1")).toBeNull();
+
+    fileSystem.files.set("mock://document/bucks-finance-cache.json", JSON.stringify({
+      schemaVersion: 1,
+      spreadsheetId: "sheet-1",
+      lastSyncedAt: null,
+      transactions: [{}],
+      summaries: [summary],
+      freqIncome: {},
+    }));
+    expect(await loadFinancialCache("sheet-1")).toBeNull();
+  });
+
+  test("financial cache rejects transaction with invalid lineItems structure", async () => {
+    fileSystem.files.set("mock://document/bucks-finance-cache.json", JSON.stringify({
+      schemaVersion: 1,
+      spreadsheetId: "sheet-1",
+      lastSyncedAt: "2026-01-15T12:00:00.000Z",
+      transactions: [{
+        rowId: 2, date: "15-jan-26", rawDate: "2026-01-15T05:00:00.000Z",
+        amount: -25, detail: "Test", type: "GASTO NO FRECUENTE",
+        lineItems: [{ id: "li-1", amount: "bad", description: "X", tags: "not-array" }],
+      }],
+      summaries: [summary],
+      freqIncome: {},
+    }));
+    expect(await loadFinancialCache("sheet-1")).toBeNull();
+  });
+
+  test("financial cache accepts transaction with valid lineItems", async () => {
+    fileSystem.files.set("mock://document/bucks-finance-cache.json", JSON.stringify({
+      schemaVersion: 1,
+      spreadsheetId: "sheet-1",
+      lastSyncedAt: "2026-01-15T12:00:00.000Z",
+      transactions: [{
+        rowId: 2, date: "15-jan-26", rawDate: "2026-01-15T05:00:00.000Z",
+        amount: -25, detail: "Test", type: "GASTO NO FRECUENTE",
+        lineItems: [{ id: "li-1", amount: 25, description: "X", tags: [] }],
+      }],
+      summaries: [summary],
+      freqIncome: {},
+    }));
+    const cache = await loadFinancialCache("sheet-1");
+    expect(cache).toBeTruthy();
+    expect(cache!.transactions.length).toBe(1);
+  });
+
+  test("financial cache exposes write failures instead of reporting a false save", async () => {
+    fileSystem.writeError = new Error("disk full");
+    await expect(
+      saveFinancialCache({ spreadsheetId: "sheet-1", lastSyncedAt: null, transactions: [], summaries: [], freqIncome: {} }),
+    ).rejects.toThrow(/disk full/);
+  });
+
+  const tagsCatalog = [
+    { id: "default-comida", label: "Comida", color: "#111111" },
+    { id: "default-salud", label: "Salud", color: "#222222" },
+    { id: "custom-vacaciones", label: "Vacaciones", color: "#333333" },
+  ];
+
+  test("slugifyTagLabel produces stable id from label", () => {
+    expect(slugifyTagLabel("Mi Tag Personal")).toBe("custom-mi-tag-personal");
+    expect(slugifyTagLabel("Café & Paseo")).toBe("custom-cafe-paseo");
+    expect(slugifyTagLabel("")).toBe("custom-");
+    expect(slugifyTagLabel("Educación")).toBe("custom-educacion");
+  });
+
+  test("migrateTagReferences resolves existing ids unchanged", () => {
+    const result = migrateTagReferences(["default-comida", "custom-vacaciones"], tagsCatalog);
+    expect(result).toEqual(["default-comida", "custom-vacaciones"]);
+  });
+
+  test("migrateTagReferences migrates legacy labels to ids keeping color via id", () => {
+    const result = migrateTagReferences(["Food", "Vacaciones"], tagsCatalog);
+    expect(result).toEqual(["default-comida", "custom-vacaciones"]);
+  });
+
+  test("migrateTagReferences creates orphan id for unknown label preserving the text", () => {
+    const result = migrateTagReferences(["Bono extra"], tagsCatalog);
+    expect(result).toEqual(["custom-bono-extra"]);
+  });
+
+  test("migrateTagReferences deduplicates when legacy and id point to the same tag", () => {
+    const result = migrateTagReferences(["Comida", "default-comida"], tagsCatalog);
+    expect(result).toEqual(["default-comida"]);
+  });
+
+  test("migrateTagReferences handles empty input safely", () => {
+    expect(migrateTagReferences([], tagsCatalog)).toEqual([]);
+    expect(migrateTagReferences(["Comida"], [])).toEqual(["Comida"]);
+  });
+
+  test("labelForTagId falls back to id when tag was deleted", () => {
+    expect(labelForTagId("default-comida", tagsCatalog)).toBe("Comida");
+    expect(labelForTagId("ghost-id", tagsCatalog)).toBe("ghost-id");
+  });
+
+  test("findTagById returns the tag or undefined", () => {
+    expect(findTagById("default-comida", tagsCatalog)).toEqual(tagsCatalog[0]);
+    expect(findTagById("ghost", tagsCatalog)).toBeUndefined();
+  });
+
+  test("migrateTransactionTags resolves legacy labels to ids without touching unrelated rows", () => {
+    const txs = [
+      { rowId: 1, date: "", rawDate: "", amount: 0, detail: "A", type: "GASTO FRECUENTE", createdAt: "", tags: ["Comida"] },
+      { rowId: 2, date: "", rawDate: "", amount: 0, detail: "B", type: "GASTO FRECUENTE", createdAt: "", tags: ["default-comida"] },
+      { rowId: 3, date: "", rawDate: "", amount: 0, detail: "C", type: "INGRESO FRECUENTE", createdAt: "" },
+    ] as any;
+    const migrated = migrateTransactionTags(txs, tagsCatalog);
+    expect(migrated[0].tags![0]).toBe("default-comida");
+    expect(migrated[1].tags![0]).toBe("default-comida");
+    expect(migrated[2].tags).toBeUndefined();
+  });
+
+  test("migrateTransactionTags returns the same array when nothing changes", () => {
+    const txs = [
+      { rowId: 1, date: "", rawDate: "", amount: 0, detail: "A", type: "GASTO FRECUENTE", createdAt: "", tags: ["default-comida"] },
+    ] as any;
+    expect(migrateTransactionTags(txs, tagsCatalog)).toBe(txs);
+  });
+});

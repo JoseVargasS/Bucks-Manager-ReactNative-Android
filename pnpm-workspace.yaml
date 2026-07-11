@@ -25,3 +25,5 @@ minimumReleaseAgeExclude:
   - '@expo/router-server@56.0.16'
   - babel-preset-expo@56.0.17
   - expo-asset@56.0.19
+allowBuilds:
+  unrs-resolver: true

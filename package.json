@@ -34,11 +34,18 @@
     "react-native-svg": "15.15.4"
   },
   "devDependencies": {
+    "@babel/core": "^7.29.7",
+    "@babel/preset-env": "^8.0.2",
     "@eslint/js": "^10.0.1",
+    "@testing-library/react-native": "^14.0.1",
+    "@types/jest": "^29.5.14",
     "@types/react": "~19.2.2",
     "eslint": "^10.6.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.3",
+    "jest": "^29.7.0",
+    "test-renderer": "^1.2.0",
+    "ts-jest": "^29.4.11",
     "typescript": "~6.0.3",
     "typescript-eslint": "^8.62.0"
   },
@@ -46,15 +53,15 @@
     "android": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/run-android.ps1",
     "android:release": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/run-android.ps1 release",
     "android:build-dev": "eas build -p android --profile development",
-    "ci": "pnpm format:check && pnpm lint && pnpm test:coverage",
+    "ci": "pnpm format:check && pnpm lint && pnpm test",
     "eslint:fix": "eslint . --fix",
     "format:check": "node scripts/check-format.mjs",
     "hooks:install": "git config core.hooksPath .githooks",
     "lint": "tsc --noEmit --noUnusedLocals --noUnusedParameters && eslint \"src/**/*.{ts,tsx}\" \"App.tsx\" \"index.ts\" --max-warnings 0",
     "start": "expo start",
-    "test": "node --no-warnings --test tests/*.test.mjs",
-    "test:coverage": "node --max-old-space-size=8192 --experimental-test-coverage --test-coverage-lines=85 --test-coverage-branches=85 --test-coverage-functions=85 --test-coverage-include=src/api/*.ts --test-coverage-include=src/data/*.ts --test-coverage-include=src/domain/*.ts --test-coverage-include=src/utils/*.ts --no-warnings --test tests/*.test.mjs",
-    "test:watch": "node --watch --no-warnings --test tests/*.test.mjs"
+    "test": "npx jest --config jest.config.mjs --no-cache",
+    "test:coverage": "npx jest --config jest.config.mjs --coverage --no-cache",
+    "test:watch": "npx jest --config jest.config.mjs --watch"
   },
   "private": true,
   "overrides": {
