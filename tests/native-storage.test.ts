@@ -179,6 +179,205 @@ describe("nativeStorage", () => {
     expect(await loadFinancialCache("sheet-1")).toBeNull();
   });
 
+  test("financial cache rejects summary with invalid numeric fields", async () => {
+    fileSystem.files.set("mock://document/bucks-finance-cache.json", JSON.stringify({
+      schemaVersion: 1,
+      spreadsheetId: "sheet-1",
+      lastSyncedAt: null,
+      transactions: [],
+      summaries: [{ monthYear: "Jan 2026", freqIncome: NaN, nonFreqIncome: 0, totalIncome: 0, freqExpense: 0, nonFreqExpense: 0, totalExpense: 0, netMonthly: 0, netNoFreq: 0 }],
+      freqIncome: {},
+    }));
+    expect(await loadFinancialCache("sheet-1")).toBeNull();
+  });
+
+  test("financial cache rejects summary with missing monthYear", async () => {
+    fileSystem.files.set("mock://document/bucks-finance-cache.json", JSON.stringify({
+      schemaVersion: 1,
+      spreadsheetId: "sheet-1",
+      lastSyncedAt: null,
+      transactions: [],
+      summaries: [{ freqIncome: 0, nonFreqIncome: 0, totalIncome: 0, freqExpense: 0, nonFreqExpense: 0, totalExpense: 0, netMonthly: 0, netNoFreq: 0 }],
+      freqIncome: {},
+    }));
+    expect(await loadFinancialCache("sheet-1")).toBeNull();
+  });
+
+  test("financial cache rejects non-object summary", async () => {
+    fileSystem.files.set("mock://document/bucks-finance-cache.json", JSON.stringify({
+      schemaVersion: 1,
+      spreadsheetId: "sheet-1",
+      lastSyncedAt: null,
+      transactions: [],
+      summaries: ["invalid"],
+      freqIncome: {},
+    }));
+    expect(await loadFinancialCache("sheet-1")).toBeNull();
+  });
+
+  test("financial cache rejects transaction with invalid createdAt type", async () => {
+    fileSystem.files.set("mock://document/bucks-finance-cache.json", JSON.stringify({
+      schemaVersion: 1,
+      spreadsheetId: "sheet-1",
+      lastSyncedAt: null,
+      transactions: [{
+        rowId: 2, date: "15-jan-26", rawDate: "2026-01-15T05:00:00.000Z",
+        amount: -25, detail: "Test", type: "GASTO NO FRECUENTE",
+        createdAt: 12345,
+      }],
+      summaries: [summary],
+      freqIncome: {},
+    }));
+    expect(await loadFinancialCache("sheet-1")).toBeNull();
+  });
+
+  test("financial cache rejects transaction with invalid tags type", async () => {
+    fileSystem.files.set("mock://document/bucks-finance-cache.json", JSON.stringify({
+      schemaVersion: 1,
+      spreadsheetId: "sheet-1",
+      lastSyncedAt: null,
+      transactions: [{
+        rowId: 2, date: "15-jan-26", rawDate: "2026-01-15T05:00:00.000Z",
+        amount: -25, detail: "Test", type: "GASTO NO FRECUENTE",
+        tags: "not-an-array",
+      }],
+      summaries: [summary],
+      freqIncome: {},
+    }));
+    expect(await loadFinancialCache("sheet-1")).toBeNull();
+  });
+
+  test("financial cache rejects transaction with invalid formula type", async () => {
+    fileSystem.files.set("mock://document/bucks-finance-cache.json", JSON.stringify({
+      schemaVersion: 1,
+      spreadsheetId: "sheet-1",
+      lastSyncedAt: null,
+      transactions: [{
+        rowId: 2, date: "15-jan-26", rawDate: "2026-01-15T05:00:00.000Z",
+        amount: -25, detail: "Test", type: "GASTO NO FRECUENTE",
+        formula: 123,
+      }],
+      summaries: [summary],
+      freqIncome: {},
+    }));
+    expect(await loadFinancialCache("sheet-1")).toBeNull();
+  });
+
+  test("financial cache rejects freqIncome with non-number values", async () => {
+    fileSystem.files.set("mock://document/bucks-finance-cache.json", JSON.stringify({
+      schemaVersion: 1,
+      spreadsheetId: "sheet-1",
+      lastSyncedAt: null,
+      transactions: [],
+      summaries: [],
+      freqIncome: { "Jan 2026": "not-a-number" },
+    }));
+    expect(await loadFinancialCache("sheet-1")).toBeNull();
+  });
+
+  test("financial cache rejects freqIncome with Infinity", async () => {
+    fileSystem.files.set("mock://document/bucks-finance-cache.json", JSON.stringify({
+      schemaVersion: 1,
+      spreadsheetId: "sheet-1",
+      lastSyncedAt: null,
+      transactions: [],
+      summaries: [],
+      freqIncome: { "Jan 2026": Infinity },
+    }));
+    expect(await loadFinancialCache("sheet-1")).toBeNull();
+  });
+
+  test("financial cache accepts valid empty cache shape", async () => {
+    fileSystem.files.set("mock://document/bucks-finance-cache.json", JSON.stringify({
+      schemaVersion: 3,
+      spreadsheetId: "sheet-1",
+      lastSyncedAt: null,
+      transactions: [],
+      summaries: [],
+      freqIncome: {},
+    }));
+    const result = await loadFinancialCache("sheet-1");
+    expect(result).toBeTruthy();
+    expect(result!.schemaVersion).toBe(3);
+  });
+
+  test("financial cache accepts transaction with valid formula", async () => {
+    fileSystem.files.set("mock://document/bucks-finance-cache.json", JSON.stringify({
+      schemaVersion: 1,
+      spreadsheetId: "sheet-1",
+      lastSyncedAt: null,
+      transactions: [{
+        rowId: 2, date: "15-jan-26", rawDate: "2026-01-15T05:00:00.000Z",
+        amount: -25, detail: "Test", type: "GASTO NO FRECUENTE",
+        formula: "10+15",
+      }],
+      summaries: [],
+      freqIncome: {},
+    }));
+    const result = await loadFinancialCache("sheet-1");
+    expect(result).toBeTruthy();
+  });
+
+  test("financial cache rejects cache with non-array transactions", async () => {
+    fileSystem.files.set("mock://document/bucks-finance-cache.json", JSON.stringify({
+      schemaVersion: 1,
+      spreadsheetId: "sheet-1",
+      lastSyncedAt: null,
+      transactions: "not-an-array",
+      summaries: [],
+      freqIncome: {},
+    }));
+    expect(await loadFinancialCache("sheet-1")).toBeNull();
+  });
+
+  test("financial cache rejects cache with non-array summaries", async () => {
+    fileSystem.files.set("mock://document/bucks-finance-cache.json", JSON.stringify({
+      schemaVersion: 1,
+      spreadsheetId: "sheet-1",
+      lastSyncedAt: null,
+      transactions: [],
+      summaries: "not-an-array",
+      freqIncome: {},
+    }));
+    expect(await loadFinancialCache("sheet-1")).toBeNull();
+  });
+
+  test("financial cache rejects cache with non-string spreadsheetId", async () => {
+    fileSystem.files.set("mock://document/bucks-finance-cache.json", JSON.stringify({
+      schemaVersion: 1,
+      spreadsheetId: 123,
+      lastSyncedAt: null,
+      transactions: [],
+      summaries: [],
+      freqIncome: {},
+    }));
+    expect(await loadFinancialCache("sheet-1")).toBeNull();
+  });
+
+  test("financial cache rejects cache with non-string lastSyncedAt", async () => {
+    fileSystem.files.set("mock://document/bucks-finance-cache.json", JSON.stringify({
+      schemaVersion: 1,
+      spreadsheetId: "sheet-1",
+      lastSyncedAt: 123,
+      transactions: [],
+      summaries: [],
+      freqIncome: {},
+    }));
+    expect(await loadFinancialCache("sheet-1")).toBeNull();
+  });
+
+  test("financial cache rejects cache with non-object freqIncome", async () => {
+    fileSystem.files.set("mock://document/bucks-finance-cache.json", JSON.stringify({
+      schemaVersion: 1,
+      spreadsheetId: "sheet-1",
+      lastSyncedAt: null,
+      transactions: [],
+      summaries: [],
+      freqIncome: "not-an-object",
+    }));
+    expect(await loadFinancialCache("sheet-1")).toBeNull();
+  });
+
   test("financial cache rejects transaction with invalid lineItems structure", async () => {
     fileSystem.files.set("mock://document/bucks-finance-cache.json", JSON.stringify({
       schemaVersion: 1,

@@ -380,4 +380,163 @@ describe("useTransactionMutations", () => {
     expect(restored).toBeTruthy();
     expect(restored.lineItems).toBeTruthy();
   });
+
+  // ─── sync callback paths (syncGoogleInBackground executes callback) ───
+
+  describe("sync callbacks", () => {
+    test("submitDraft calls saveTransaction via sync callback", async () => {
+      const sync = makeSync({
+        syncGoogleInBackground: (task: any) => { task("fresh-tok"); },
+      });
+      // Mock the Google API modules that the callback imports
+      jest.resetModules();
+      const mockSave = jest.fn().mockResolvedValue(undefined);
+      const mockReload = jest.fn().mockResolvedValue(undefined);
+      jest.doMock("@/api/googleWorkspace", () => ({
+        saveTransaction: (...args: any[]) => mockSave(...args),
+        updateTransaction: jest.fn(),
+        deleteTransaction: jest.fn(),
+        moveTransaction: jest.fn(),
+        insertTransactionAtRow: jest.fn(),
+      }));
+      const mod = await import("../src/hooks/useTransactionMutations.ts");
+      const fin = makeFinState({ transactions: [], accessToken: "tok", spreadsheetId: "sheet-1" } as any);
+      const api = mod.useTransactionMutations(
+        fin,
+        { accessToken: "tok", spreadsheetId: "sheet-1" },
+        { ...sync, reloadFromGoogle: mockReload },
+        makeHistory(),
+        emptyCopy,
+      );
+
+      api.submitDraft({ date: "2026-01-15", amount: "100", detail: "Test", type: "INGRESO FRECUENTE" } as any, null);
+      // The sync callback is fire-and-forget, so we need to flush
+      await new Promise((r) => setTimeout(r, 50));
+      expect(mockReload).toHaveBeenCalled();
+    });
+
+    test("submitDraft calls updateGoogleTransaction on edit via sync callback", async () => {
+      const sync = makeSync({
+        syncGoogleInBackground: (task: any) => { task("fresh-tok"); },
+      });
+      jest.resetModules();
+      const mockUpdate = jest.fn().mockResolvedValue(undefined);
+      const mockReload = jest.fn().mockResolvedValue(undefined);
+      jest.doMock("@/api/googleWorkspace", () => ({
+        saveTransaction: jest.fn(),
+        updateTransaction: (...args: any[]) => { return mockUpdate(...args); },
+        deleteTransaction: jest.fn(),
+        moveTransaction: jest.fn(),
+        insertTransactionAtRow: jest.fn(),
+      }));
+      const mod = await import("../src/hooks/useTransactionMutations.ts");
+      const edit = { ...tx1 };
+      const fin = makeFinState({ transactions: [edit] });
+      const api = mod.useTransactionMutations(
+        fin,
+        { accessToken: "tok", spreadsheetId: "sheet-1" },
+        { ...sync, reloadFromGoogle: mockReload },
+        makeHistory(),
+        emptyCopy,
+      );
+
+      api.submitDraft({ date: "2026-01-15", amount: "-999", detail: "Edited", type: "GASTO NO FRECUENTE" } as any, edit);
+      await new Promise((r) => setTimeout(r, 50));
+      expect(mockReload).toHaveBeenCalled();
+    });
+
+    test("deleteTx calls deleteGoogleTransaction via sync callback", async () => {
+      let deletedRowId = 0;
+      const sync = makeSync({
+        syncGoogleInBackground: (task: any) => { task("fresh-tok"); },
+      });
+      jest.resetModules();
+      const mockDelete = jest.fn().mockResolvedValue(undefined);
+      const mockReload = jest.fn().mockResolvedValue(undefined);
+      jest.doMock("@/api/googleWorkspace", () => ({
+        saveTransaction: jest.fn(),
+        updateTransaction: jest.fn(),
+        deleteTransaction: (...args: any[]) => { deletedRowId = args[2]; return mockDelete(...args); },
+        moveTransaction: jest.fn(),
+        insertTransactionAtRow: jest.fn(),
+      }));
+      const mod = await import("../src/hooks/useTransactionMutations.ts");
+      const fin = makeFinState({ transactions: [tx1] });
+      const api = mod.useTransactionMutations(
+        fin,
+        { accessToken: "tok", spreadsheetId: "sheet-1" },
+        { ...sync, reloadFromGoogle: mockReload },
+        makeHistory(),
+        emptyCopy,
+      );
+
+      await api.deleteTx(tx1);
+      await new Promise((r) => setTimeout(r, 50));
+      expect(deletedRowId).toBe(tx1.rowId);
+      expect(mockReload).toHaveBeenCalled();
+    });
+
+    test("moveTx calls moveGoogleTransaction via sync callback", async () => {
+      let movedRowId = 0;
+      let movedDir = "";
+      const sync = makeSync({
+        syncGoogleInBackground: (task: any) => { task("fresh-tok"); },
+      });
+      jest.resetModules();
+      const mockMove = jest.fn().mockResolvedValue(undefined);
+      const mockReload = jest.fn().mockResolvedValue(undefined);
+      jest.doMock("@/api/googleWorkspace", () => ({
+        saveTransaction: jest.fn(),
+        updateTransaction: jest.fn(),
+        deleteTransaction: jest.fn(),
+        moveTransaction: (...args: any[]) => { movedRowId = args[2]; movedDir = args[3]; return mockMove(...args); },
+        insertTransactionAtRow: jest.fn(),
+      }));
+      const mod = await import("../src/hooks/useTransactionMutations.ts");
+      const fin = makeFinState({ transactions: [tx1, tx2] });
+      const api = mod.useTransactionMutations(
+        fin,
+        { accessToken: "tok", spreadsheetId: "sheet-1" },
+        { ...sync, reloadFromGoogle: mockReload },
+        makeHistory(),
+        emptyCopy,
+      );
+
+      await api.moveTx(tx1, "down");
+      await new Promise((r) => setTimeout(r, 50));
+      expect(movedRowId).toBe(tx1.rowId);
+      expect(movedDir).toBe("down");
+      expect(mockReload).toHaveBeenCalled();
+    });
+
+    test("undoDeleteEntry calls insertTransactionAtRow via sync callback", async () => {
+      const sync = makeSync({
+        syncGoogleInBackground: (task: any) => { task("fresh-tok"); },
+      });
+      jest.resetModules();
+      const mockInsert = jest.fn().mockResolvedValue(undefined);
+      const mockReload = jest.fn().mockResolvedValue(undefined);
+      jest.doMock("@/api/googleWorkspace", () => ({
+        saveTransaction: jest.fn(),
+        updateTransaction: jest.fn(),
+        deleteTransaction: jest.fn(),
+        moveTransaction: jest.fn(),
+        insertTransactionAtRow: (...args: any[]) => { return mockInsert(...args); },
+      }));
+      const mod = await import("../src/hooks/useTransactionMutations.ts");
+      const entry = { id: "e1", action: "delete" as const, transaction: tx1, timestamp: "2026-01-15T12:00:00.000Z" };
+      const fin = makeFinState({ transactions: [] });
+      const api = mod.useTransactionMutations(
+        fin,
+        { accessToken: "tok", spreadsheetId: "sheet-1" },
+        { ...sync, reloadFromGoogle: mockReload },
+        makeHistory(),
+        emptyCopy,
+      );
+
+      await api.undoDeleteEntry(entry as any);
+      await new Promise((r) => setTimeout(r, 50));
+      expect(mockReload).toHaveBeenCalled();
+    });
+  });
 });

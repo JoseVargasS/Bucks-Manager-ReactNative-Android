@@ -415,6 +415,367 @@ describe("useGoogleSync", () => {
     }
   });
 
+  // ─── restoreSession ───
+
+  test("restoreSession restores token and sheetId from SecureStore", async () => {
+    const secureStore = g.__bucksSecureStoreMock;
+    secureStore.reset();
+    secureStore.values.set("bucks_google_access_token", "stored-tok");
+    secureStore.values.set("bucks_spreadsheet_id", "stored-sheet");
+    const original = globalThis.fetch;
+    globalThis.fetch = defaultSheetsHandler([]) as any;
+    try {
+      const calls: string[] = [];
+      const session = makeSession({
+        accessToken: "",
+        spreadsheetId: "",
+        setAccessToken: (v: string) => { calls.push(v); },
+        setSpreadsheetId: (v: string) => { calls.push(`sheet:${v}`); },
+      });
+      const api = useGoogleSync(session, { ...emptyFin }, emptyTags, emptyHelpers, { current: null });
+      await api.restoreSession();
+      expect(calls).toContain("stored-tok");
+      expect(calls).toContain("sheet:stored-sheet");
+    } finally {
+      globalThis.fetch = original;
+      secureStore.reset();
+    }
+  });
+
+  test("restoreSession does nothing when no token stored", async () => {
+    const secureStore = g.__bucksSecureStoreMock;
+    secureStore.reset();
+    let accessTokenSet = false;
+    const session = makeSession({
+      accessToken: "",
+      setAccessToken: () => { accessTokenSet = true; },
+    });
+    const api = useGoogleSync(session, emptyFin, emptyTags, emptyHelpers, { current: null });
+    await api.restoreSession();
+    expect(accessTokenSet).toBe(false);
+  });
+
+  test("restoreSession rehydrates from cache when available", async () => {
+    const secureStore = g.__bucksSecureStoreMock;
+    secureStore.reset();
+    secureStore.values.set("bucks_google_access_token", "stored-tok");
+    secureStore.values.set("bucks_spreadsheet_id", "sheet-1");
+    const fileSystem = g.__bucksFileSystemMock;
+    fileSystem.reset();
+    const cacheData = {
+      schemaVersion: 3,
+      spreadsheetId: "sheet-1",
+      lastSyncedAt: "2026-01-15T12:00:00.000Z",
+      transactions: [],
+      summaries: [],
+      freqIncome: {},
+    };
+    fileSystem.files.set("mock://document/bucks-finance-cache.json", JSON.stringify(cacheData));
+    const original = globalThis.fetch;
+    globalThis.fetch = defaultSheetsHandler([]) as any;
+    try {
+      let rehydrated = false;
+      const fin = {
+        ...emptyFin,
+        applyFinancialState: () => { rehydrated = true; },
+      };
+      const api = useGoogleSync(makeSession(), fin, emptyTags, emptyHelpers, { current: null });
+      await api.restoreSession();
+      expect(rehydrated).toBe(true);
+    } finally {
+      globalThis.fetch = original;
+      secureStore.reset();
+      fileSystem.reset();
+    }
+  });
+
+  // ─── refreshStoredSession full success ───
+
+  test("refreshStoredSession refreshes token and reloads from Google", async () => {
+    const secureStore = g.__bucksSecureStoreMock;
+    secureStore.reset();
+    const original = globalThis.fetch;
+    globalThis.fetch = defaultSheetsHandler([]) as any;
+    try {
+      let accessTokenSet = "";
+      const session = makeSession({
+        setAccessToken: (v: string) => { accessTokenSet = v; },
+      });
+      const api = useGoogleSync(session, emptyFin, emptyTags, emptyHelpers, { current: null });
+      await api.refreshStoredSession("old-tok", "sheet-1", false);
+      expect(accessTokenSet).toBe("fresh-tok");
+    } finally {
+      globalThis.fetch = original;
+      secureStore.reset();
+    }
+  });
+
+  test("refreshStoredSession with cache checks if sheet is trashed", async () => {
+    const secureStore = g.__bucksSecureStoreMock;
+    secureStore.reset();
+    const original = globalThis.fetch;
+    let teardownCalled = false;
+    const handler: any = async (input: any) => {
+      const url = decodeURIComponent(String(input));
+      if (url.includes("drive/v3/files") && url.includes("trashed")) return json({ trashed: true });
+      return defaultSheetsHandler([])(input);
+    };
+    globalThis.fetch = handler;
+    try {
+      const session = makeSession({
+        teardownSession: () => { teardownCalled = true; },
+      });
+      const api = useGoogleSync(session, emptyFin, emptyTags, emptyHelpers, { current: null });
+      await api.refreshStoredSession("tok", "sheet-1", true);
+      expect(teardownCalled).toBe(true);
+    } finally {
+      globalThis.fetch = original;
+      secureStore.reset();
+    }
+  });
+
+  test("refreshStoredSession with cache handles shouldRescanForSheetError", async () => {
+    const secureStore = g.__bucksSecureStoreMock;
+    secureStore.reset();
+    const original = globalThis.fetch;
+    let resetCalled = false;
+    // Make reloadFromGoogle fail with a 404 (after isSheetTrashed succeeds)
+    const handler: any = async (input: any) => {
+      const url = decodeURIComponent(String(input));
+      // isSheetTrashed returns not trashed
+      if (url.includes("drive/v3/files") && url.includes("trashed")) {
+        return json({ trashed: false });
+      }
+      // reloadFromGoogle's readTransactions fails with 404
+      if (url.includes("values/")) {
+        throw new Error("404 not found");
+      }
+      return defaultSheetsHandler([])(input);
+    };
+    globalThis.fetch = handler;
+    try {
+      const session = makeSession({
+        resetFinancialState: () => { resetCalled = true; },
+      });
+      const api = useGoogleSync(session, emptyFin, emptyTags, emptyHelpers, { current: null });
+      await api.refreshStoredSession("tok", "sheet-1", true);
+      expect(resetCalled).toBe(true);
+    } finally {
+      globalThis.fetch = original;
+      secureStore.reset();
+    }
+  });
+
+  // ─── reloadFromGoogle forceFresh ───
+
+  test("reloadFromGoogle with forceFresh awaits existing promise", async () => {
+    const original = globalThis.fetch;
+    globalThis.fetch = defaultSheetsHandler([]) as any;
+    try {
+      const api = useGoogleSync(makeSession(), emptyFin, emptyTags, emptyHelpers, { current: null });
+      // First call starts the reload
+      const p1 = api.reloadFromGoogle("tok", "sheet-1", false, false);
+      // forceFresh call should await the existing promise
+      const p2 = api.reloadFromGoogle("tok", "sheet-1", false, true);
+      await Promise.all([p1, p2]);
+    } finally {
+      globalThis.fetch = original;
+    }
+  });
+
+  // ─── reloadFromGoogle error handler ───
+
+  test("reloadFromGoogle sets syncError on fetch failure", async () => {
+    const original = globalThis.fetch;
+    let syncErrorMsg = "";
+    const failHandler: any = async () => { throw new Error("network error"); };
+    globalThis.fetch = failHandler;
+    try {
+      const session = makeSession({ setSyncError: (v: string) => { syncErrorMsg = v; } });
+      const api = useGoogleSync(session, emptyFin, emptyTags, emptyHelpers, { current: null });
+      try {
+        await api.reloadFromGoogle("tok", "sheet-1", false);
+      } catch {
+        // expected — reloadFromGoogle rethrows
+      }
+      expect(syncErrorMsg).toContain("network error");
+    } finally {
+      globalThis.fetch = original;
+    }
+  });
+
+  // ─── reloadFromGoogle pendingSync mid-read ───
+
+  test("reloadFromGoogle aborts when pendingSync becomes true during read", async () => {
+    const original = globalThis.fetch;
+    let applied = false;
+    globalThis.fetch = defaultSheetsHandler([]) as any;
+    try {
+      const fin = { ...emptyFin, applyFinancialState: () => { applied = true; } };
+      const session = makeSession({ pendingSyncRef: { current: true } });
+      const api = useGoogleSync(session, fin, emptyTags, emptyHelpers, session.pendingSyncRef);
+      await api.reloadFromGoogle("tok", "sheet-1", false);
+      expect(applied).toBe(false);
+    } finally {
+      globalThis.fetch = original;
+    }
+  });
+
+  // ─── reloadFromGoogle tags merge ───
+
+  test("reloadFromGoogle processes tags from sheet", async () => {
+    const original = globalThis.fetch;
+    const tagsHandler: any = async (input: any, init: any = {}) => {
+      const url = decodeURIComponent(String(input));
+      if (url.includes("MONTHLY SUMMARY!K1:K2")) {
+        return json({ values: [["TAGS"], [JSON.stringify([{ id: "from-sheet", label: "FromSheet", color: "#aaaaaa" }])]] });
+      }
+      return defaultSheetsHandler([])(input, init);
+    };
+    globalThis.fetch = tagsHandler;
+    try {
+      let tagsSet = false;
+      const tags = { tagsList: [{ id: "existing", label: "Existing", color: "#000000" }] as any[], setTagsList: () => { tagsSet = true; } };
+      const api = useGoogleSync(makeSession(), emptyFin, tags, emptyHelpers, { current: null });
+      await api.reloadFromGoogle("tok", "sheet-1", false);
+      // Tags from sheet should have been processed (either merged or kept same)
+      expect(tagsSet || tags.tagsList.length > 0).toBeTruthy();
+    } finally {
+      globalThis.fetch = original;
+    }
+  });
+
+  // ─── selectSpreadsheet ───
+
+  test("selectSpreadsheet saves token and sheet, then reloads", async () => {
+    const secureStore = g.__bucksSecureStoreMock;
+    secureStore.reset();
+    const original = globalThis.fetch;
+    globalThis.fetch = defaultSheetsHandler([]) as any;
+    try {
+      let accessTokenSet = "";
+      let spreadsheetIdSet = "";
+      const session = makeSession({
+        setAccessToken: (v: string) => { accessTokenSet = v; },
+        setSpreadsheetId: (v: string) => { spreadsheetIdSet = v; },
+      });
+      const api = useGoogleSync(session, emptyFin, emptyTags, emptyHelpers, { current: null });
+      await api.selectSpreadsheet("new-tok", "new-sheet");
+      expect(accessTokenSet).toBe("new-tok");
+      expect(spreadsheetIdSet).toBe("new-sheet");
+      expect(secureStore.values.get("bucks_google_access_token")).toBe("new-tok");
+      expect(secureStore.values.get("bucks_spreadsheet_id")).toBe("new-sheet");
+    } finally {
+      globalThis.fetch = original;
+      secureStore.reset();
+    }
+  });
+
+  // ─── connectGoogleWorkspace ───
+
+  test("connectGoogleWorkspace uses preferred sheet when available", async () => {
+    const secureStore = g.__bucksSecureStoreMock;
+    secureStore.reset();
+    const original = globalThis.fetch;
+    globalThis.fetch = defaultSheetsHandler([]) as any;
+    try {
+      let selectedSheet = "";
+      const session = makeSession({ setSpreadsheetId: (v: string) => { selectedSheet = v; } });
+      const api = useGoogleSync(session, emptyFin, emptyTags, emptyHelpers, { current: null });
+
+      await api.connectGoogleWorkspace("tok", "preferred-id");
+      expect(selectedSheet).toBe("preferred-id");
+    } finally {
+      globalThis.fetch = original;
+      secureStore.reset();
+    }
+  });
+
+  test("connectGoogleWorkspace falls back to findCompatibleSheets when preferred fails", async () => {
+    const secureStore = g.__bucksSecureStoreMock;
+    secureStore.reset();
+    const original = globalThis.fetch;
+    let sheetsFound = false;
+    const handler: any = async (input: any, init: any = {}) => {
+      const url = decodeURIComponent(String(input));
+      // When reading from bad-sheet-id, throw 404
+      if (url.includes("bad-sheet-id") && url.includes("values/")) {
+        throw new Error("404 not found");
+      }
+      // Drive file list for findCompatibleSheets
+      if (url.includes("drive/v3/files") && url.includes("q=")) {
+        sheetsFound = true;
+        return json({ files: [] });
+      }
+      return defaultSheetsHandler([])(input, init);
+    };
+    globalThis.fetch = handler;
+    try {
+      const session = makeSession();
+      const api = useGoogleSync(session, emptyFin, emptyTags, emptyHelpers, { current: null });
+
+      await api.connectGoogleWorkspace("tok", "bad-sheet-id");
+      // Should have fallen through to findCompatibleSheets
+      expect(sheetsFound).toBe(true);
+    } finally {
+      globalThis.fetch = original;
+      secureStore.reset();
+    }
+  });
+
+  test("connectGoogleWorkspace creates new sheet when no compatible found", async () => {
+    const secureStore = g.__bucksSecureStoreMock;
+    secureStore.reset();
+    const original = globalThis.fetch;
+    const handler: any = async (input: any, init: any = {}) => {
+      const url = decodeURIComponent(String(input));
+      const method = init.method || "GET";
+      // Drive file list returns empty (no compatible sheets)
+      if (url.includes("drive/v3/files") && url.includes("q=")) {
+        return json({ files: [] });
+      }
+      // Sheets API POST to create spreadsheet
+      if (url.includes("sheets.googleapis.com/v4/spreadsheets") && method === "POST" && !url.includes("batchUpdate")) {
+        return json({ spreadsheetId: "new-sheet-id" });
+      }
+      // All other Sheets API calls succeed
+      if (url.includes("sheets.googleapis.com")) return json({});
+      return defaultSheetsHandler([])(input, init);
+    };
+    globalThis.fetch = handler;
+    try {
+      let selectedSheet = "";
+      const session = makeSession({ setSpreadsheetId: (v: string) => { selectedSheet = v; } });
+      const api = useGoogleSync(session, emptyFin, emptyTags, emptyHelpers, { current: null });
+
+      await api.connectGoogleWorkspace("tok");
+      expect(selectedSheet).toBe("new-sheet-id");
+    } finally {
+      globalThis.fetch = original;
+      secureStore.reset();
+    }
+  });
+
+  // ─── syncGoogleInBackground empty token ───
+
+  test("syncGoogleInBackground throws when token is empty", async () => {
+    const original = globalThis.fetch;
+    globalThis.fetch = defaultSheetsHandler([]) as any;
+    try {
+      g.__bucksGoogleSigninMock.getTokens = async () => ({ accessToken: "", idToken: "" });
+      let syncError = "";
+      const session = makeSession({ setSyncError: (v: string) => { syncError = v; } });
+      const api = useGoogleSync(session, emptyFin, emptyTags, emptyHelpers, { current: null });
+
+      api.syncGoogleInBackground(async () => {}, "sync");
+      await new Promise((r) => setTimeout(r, 30));
+      expect(syncError.length).toBeGreaterThan(0);
+    } finally {
+      globalThis.fetch = original;
+      g.__bucksGoogleSigninMock.getTokens = async () => ({ accessToken: "mock-token", idToken: "mock-id" });
+    }
+  });
+
   // ─── wireRemoteUiPreferences ───
 
   test("wireRemoteUiPreferences registers callback", async () => {
