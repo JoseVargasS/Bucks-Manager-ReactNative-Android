@@ -103,7 +103,7 @@ export const SavingsLineChart = memo(function SavingsLineChart({
         const showValue = isSelected;
         const tooltipValue = mode === "income"
           ? formatMoney(displayRows[i].totalIncome, currencySymbol ?? "", 0)
-          : formatMoney(Math.abs(displayRows[i].totalExpense), currencySymbol ?? "", 0);
+          : formatMoney(displayRows[i].totalExpense, currencySymbol ?? "", 0);
         const isRightEdge = i === points.length - 1 || i === points.length - 2;
         const isLeftEdge = i === 0 || i === 1;
         const textAnchor = isRightEdge ? "end" : isLeftEdge ? "start" : "middle";
