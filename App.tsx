@@ -271,7 +271,7 @@ function AppContent() {
     session,
     fin,
     { tagsList, setTagsList },
-    { errMsg, authErr, copy: copy as unknown as { syncError: string; sessionExpired: string; showingSavedData: string; pendingSyncStatus: string; syncing: string; deleteRecord: string; deleteSelection: string; moveRecord: string; moveRecordError: string; undoAction: string }, tagColors: colors.tagColors },
+    { errMsg, authErr, copy: copy as unknown as { syncError: string; sessionExpired: string; showingSavedData: string; pendingSyncStatus: string; syncing: string; deleteRecord: string; deleteSelection: string; moveRecord: string; moveRecordError: string; undoAction: string }, tagColors: colors.tagColors, language },
     reloadPromiseRef,
   );
   connectRef.current = syncApi.connectGoogleWorkspace;

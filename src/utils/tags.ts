@@ -15,8 +15,6 @@ export const DEFAULT_TAGS = [
   { id: "default-educacion", es: "Educación", en: "Education", color: "#84cc16" },
 ];
 
-const DEFAULT_TAG_IDS = new Set(DEFAULT_TAGS.map((tag) => tag.id));
-
 export function slugifyTagLabel(label: string): string {
   const slug = label
     .normalize("NFD")
@@ -27,37 +25,40 @@ export function slugifyTagLabel(label: string): string {
   return `custom-${slug}`;
 }
 
-function getDefaultTags(language: LanguageMode): Tag[] {
-  return DEFAULT_TAGS.map((tag) => ({
-    id: tag.id,
-    label: tag[language],
-    color: tag.color,
-  }));
-}
-
-function normalizeTags(tags: Tag[], language: LanguageMode): Tag[] {
+function normalizeTags(tags: Tag[]): Tag[] {
   const byLabel = new Map<string, Tag>();
-  const otherDefaultLabels = new Set(
-    DEFAULT_TAGS.map((tag) => tag[language === "en" ? "es" : "en"].toLowerCase()),
-  );
-  getDefaultTags(language).forEach((tag) => byLabel.set(tag.label.toLowerCase(), tag));
   tags.forEach((tag) => {
     const label = tag.label.trim();
-    if (!label || DEFAULT_TAG_IDS.has(tag.id) || otherDefaultLabels.has(label.toLowerCase())) return;
+    if (!label) return;
     byLabel.set(label.toLowerCase(), { ...tag, label });
   });
   return Array.from(byLabel.values());
 }
 
+function translateDefaults(tags: Tag[], language: LanguageMode): Tag[] {
+  const lookup = new Map(DEFAULT_TAGS.map((d) => [d.id, d[language]]));
+  let changed = false;
+  const result = tags.map((tag) => {
+    const localized = lookup.get(tag.id);
+    if (localized && tag.label !== localized) {
+      changed = true;
+      return { ...tag, label: localized };
+    }
+    return tag;
+  });
+  return changed ? result : tags;
+}
+
 export async function loadTags(language: LanguageMode = "es"): Promise<Tag[]> {
   try {
     const raw = await SecureStore.getItemAsync(TAGS_KEY);
-    const tags = normalizeTags(raw ? JSON.parse(raw) : [], language);
-    await saveTags(tags);
-    return tags;
+    const tags = normalizeTags(raw ? JSON.parse(raw) : []);
+    const translated = translateDefaults(tags, language);
+    if (translated !== tags) await saveTags(translated);
+    return translated;
   } catch (e) {
     logError(e, "tags:loadTags");
-    return normalizeTags([], language);
+    return normalizeTags([]);
   }
 }
 
@@ -144,6 +145,7 @@ export function mergeTagsFromSheet(
   sheetTags: Tag[],
   transactions: Transaction[],
   tagColors: string[],
+  language: LanguageMode = "es",
 ): Tag[] {
   // When the sheet has tags, it is the source of truth for which tags exist.
   // Start from sheetTags instead of currentTags so deleted tags stay deleted.
@@ -177,7 +179,25 @@ export function mergeTagsFromSheet(
       }
     }
   }
-  const result = added.length ? [...Array.from(byId.values()), ...added] : Array.from(byId.values());
+  let result = added.length ? [...Array.from(byId.values()), ...added] : Array.from(byId.values());
+  // Translate default tag labels to the current language. The sheet stores
+  // them in the language that was active when they were written, but the UI
+  // must show the labels matching the current language setting.
+  const defaultLookup = new Map(DEFAULT_TAGS.map((d) => [d.id, d[language]]));
+  let translated = false;
+  result = result.map((tag) => {
+    const localized = defaultLookup.get(tag.id);
+    if (localized && tag.label !== localized) {
+      translated = true;
+      return { ...tag, label: localized };
+    }
+    return tag;
+  });
+  if (translated) {
+    return result.length === currentTags.length && result.every((t, i) => t === currentTags[i])
+      ? currentTags
+      : result;
+  }
   return result.length === currentTags.length && result.every((t, i) => t === currentTags[i])
     ? currentTags
     : result;

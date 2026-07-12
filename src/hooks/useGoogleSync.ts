@@ -19,7 +19,7 @@ import { calculateSummaries, SHEET_NAMES } from "@/domain/bucksLogic";
 import { loadFinancialCache, deleteFinancialCache } from "@/data/localCache";
 import { mergeTagsFromSheet, saveTags } from "@/utils/tags";
 import { TOKEN_KEY, SHEET_KEY } from "@/theme/constants";
-import type { Tag, Transaction, SummaryRow, HistoryEntry } from "@/types";
+import type { LanguageMode, Tag, Transaction, SummaryRow, HistoryEntry } from "@/types";
 import type { UiPreferencesSnapshot } from "@/hooks/usePreferences";
 import type { SessionApi } from "./useSession";
 
@@ -65,6 +65,7 @@ export function useGoogleSync(
     authErr: (error: unknown) => boolean;
     copy: { syncError: string; sessionExpired: string; showingSavedData: string; pendingSyncStatus: string; syncing: string; deleteRecord: string; deleteSelection: string; moveRecord: string; moveRecordError: string; undoAction: string };
     tagColors: string[];
+    language: LanguageMode;
   },
   reloadPromiseRef: React.MutableRefObject<Promise<void> | null>,
 ): GoogleSyncApi {
@@ -79,7 +80,7 @@ export function useGoogleSync(
   } = session;
   const { applyFinancialState, persistFinancialState, hasLocalDataRef, freqIncomeRef, transactions: txList } = fin;
   const { tagsList, setTagsList } = tags;
-  const { errMsg, authErr, copy, tagColors } = helpers;
+  const { errMsg, authErr, copy, tagColors, language } = helpers;
   const remoteUiPreferencesRef = useRef<((prefs: UiPreferencesSnapshot) => void) | null>(null);
   const remoteHistoryRef = useRef<((entries: HistoryEntry[]) => void) | null>(null);
 
@@ -199,7 +200,7 @@ export function useGoogleSync(
         : calculateSummaries(tx, nextFreqIncome);
       const syncedAt = new Date().toISOString();
       applyFinancialState(tx, nextSummaries, nextFreqIncome, syncedAt);
-      const mergedTags = mergeTagsFromSheet(tagsList, sheetTags, tx, tagColors);
+      const mergedTags = mergeTagsFromSheet(tagsList, sheetTags, tx, tagColors, language);
       if (mergedTags !== tagsList) {
         saveTags(mergedTags).catch(() => undefined);
         setTagsList(mergedTags);

@@ -75,6 +75,7 @@ describe("useGoogleSync", () => {
       deleteRecord: "", deleteSelection: "", moveRecord: "", moveRecordError: "", undoAction: "",
     },
     tagColors: ["#f43f5e"],
+    language: "es" as const,
   };
 
   function defaultSheetsHandler(requests: { url: string; method: string; body: any }[]) {

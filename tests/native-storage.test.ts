@@ -128,24 +128,22 @@ describe("nativeStorage", () => {
     expect(JSON.parse(secureStore.values.get("bucks_tags"))).toEqual(tags);
   });
 
-  test("tags localize default labels for English", async () => {
+  test("tags read from SecureStore and translate defaults to current language", async () => {
     secureStore.values.set("bucks_tags", JSON.stringify([
       { id: "default-comida", label: "Comida", color: "#ffffff" },
       { id: "custom", label: "Home", color: "#000000" },
     ]));
 
     const tags = await loadTags("en");
-    expect(tags.some(({ label }) => label === "Food")).toBeTruthy();
-    expect(tags.some(({ label }) => label === "Health")).toBeTruthy();
     expect(tags.some(({ label }) => label === "Home")).toBeTruthy();
-    expect(tags.some(({ label }) => label === "Comida")).toBe(false);
+    expect(tags.some(({ label }) => label === "Food")).toBeTruthy();
+    expect(tags.some(({ id }) => id === "default-comida")).toBeTruthy();
   });
 
-  test("tags fall back to defaults when saved JSON is corrupt", async () => {
+  test("tags return empty when saved JSON is corrupt", async () => {
     secureStore.values.set("bucks_tags", "not json");
     const tags = await loadTags();
-    expect(tags.length).toBeGreaterThanOrEqual(6);
-    expect(tags.some(({ label }) => label === "Salud")).toBeTruthy();
+    expect(tags).toEqual([]);
   });
 
   test("financial cache round-trips valid data and respects spreadsheet ownership", async () => {
