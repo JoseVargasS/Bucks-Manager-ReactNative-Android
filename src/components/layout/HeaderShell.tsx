@@ -1,5 +1,6 @@
 import { memo } from "react";
 import { Animated, View } from "react-native";
+import { BlurView } from "expo-blur";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { appShellStyles } from "@/components/AppShell.styles";
 import { type Palette } from "@/theme/colors";
@@ -54,6 +55,7 @@ function HeaderShellImpl(
         ? copy.summarySubtitle
         : copy.settingsSubtitle;
   const showHeaderFade = tab === "dashboard" || tab === "expenses" || tab === "summary";
+  const blurTint = isDark ? "dark" : "light";
   return (
     <Animated.View
       style={{
@@ -119,26 +121,23 @@ function HeaderShellImpl(
               )}
             </View>
           </View>
-          <View style={{ flexDirection: "row", gap: 8 }}>
+          <BlurView intensity={110} tint={blurTint} style={appShellStyles.headerActionsGroup}>
             <HeaderActionButton
-              colors={colors}
               icon={isDark ? "weather-night" : "white-balance-sunny"}
               iconColor={colors.warn}
               onPress={onToggleTheme}
             />
             <HeaderActionButton
-              colors={colors}
               icon="magnify"
               iconColor={colors.primary}
               onPress={onOpenSearch}
             />
             <HeaderActionButton
-              colors={colors}
               icon="history"
               iconColor={historyTint}
               onPress={onOpenHistory}
             />
-          </View>
+          </BlurView>
         </View>
       </View>
     </Animated.View>

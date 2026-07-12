@@ -96,7 +96,6 @@ import { getErrorMessage, isAuthError } from "@/utils/errorHandler";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import {
   StartupSplash,
-  BottomFade,
   TabPage,
   HeaderShell,
 } from "@/components/AppShell";
@@ -246,7 +245,6 @@ function AppContent() {
   const statusBarInset = NativeStatusBar.currentHeight || 0;
   const headerTopInset = statusBarInset + 6;
   const headerFadeHeight = Math.max(headerTopInset + 28, 56);
-  const bottomFadeHeight = 128;
 
   const changeTab = useCallback(
     (next: Tab) => {
@@ -667,6 +665,7 @@ function AppContent() {
       dashboard: {
         contentTopInset: headerTopInset + 62,
         colors,
+        theme,
         copy,
         allTransactions: transactions,
         tagsList,
@@ -684,6 +683,7 @@ function AppContent() {
       expenses: {
         contentTopInset: headerTopInset + 62,
         colors,
+        theme,
         transactions: fin.visibleTransactions,
         searchActive,
         searchText: searchFilters.text,
@@ -754,6 +754,7 @@ function AppContent() {
       tabWidth,
       headerTopInset,
       colors,
+      theme,
       fin.visibleTransactions,
       searchActive,
       searchFilters.text,
@@ -950,7 +951,6 @@ function AppContent() {
           <HeaderShell {...headerProps} colors={colors} />
         </View>
 
-        <BottomFade color={colors.bg} height={bottomFadeHeight} />
         <BottomNav
           copy={copy}
           tab={tabRef.current}

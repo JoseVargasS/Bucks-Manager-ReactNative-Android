@@ -14,6 +14,7 @@ import { FeatureBoundary } from "@/components/ErrorBoundary";
 type ExpensesTabProps = {
   contentTopInset: number;
   colors: Palette;
+  theme: "dark" | "light";
   transactions: Transaction[];
   searchActive: boolean;
   searchText: string;
@@ -53,6 +54,7 @@ type SummaryTabProps = {
 type DashboardTabProps = {
   contentTopInset: number;
   colors: Palette;
+  theme: "dark" | "light";
   copy: UiCopy;
   allTransactions: Transaction[];
   tagsList: Tag[];
@@ -162,6 +164,7 @@ function TabPageImpl(props: TabPageProps) {
           <FeatureBoundary featureName="dashboard">
             <DashboardView
               colors={tabProps.colors}
+              theme={tabProps.theme}
               copy={tabProps.copy}
               allTransactions={tabProps.allTransactions}
               tagsList={tabProps.tagsList}
@@ -182,6 +185,7 @@ function TabPageImpl(props: TabPageProps) {
           <FeatureBoundary featureName="expenses">
             <ExpensesView
               colors={tabProps.colors}
+              theme={tabProps.theme}
               transactions={tabProps.transactions}
               searchActive={tabProps.searchActive}
               searchText={tabProps.searchText}

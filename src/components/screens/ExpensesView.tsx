@@ -41,6 +41,7 @@ type TransactionSection = {
 
 export const ExpensesView = memo(function ExpensesView({
   colors,
+  theme,
   transactions,
   searchActive,
   searchText,
@@ -66,6 +67,7 @@ export const ExpensesView = memo(function ExpensesView({
   goNextMonth,
 }: {
   colors: Palette;
+  theme: "dark" | "light";
   transactions: Transaction[];
   searchActive: boolean;
   searchText: string;
@@ -95,6 +97,7 @@ export const ExpensesView = memo(function ExpensesView({
   const periodBar = useMemo(() => (
     <PeriodControls
       colors={colors}
+      theme={theme}
       copy={copy}
       year={year}
       month={month}
@@ -105,7 +108,7 @@ export const ExpensesView = memo(function ExpensesView({
       goPrevMonth={goPrevMonth}
       goNextMonth={goNextMonth}
     />
-  ), [colors, copy, year, month, availableYears, availableMonths, onSelectPeriod, goToday, goPrevMonth, goNextMonth]);
+  ), [colors, theme, copy, year, month, availableYears, availableMonths, onSelectPeriod, goToday, goPrevMonth, goNextMonth]);
   const groups = useMemo(
     () => groupTransactionsByDate(transactions, copy),
     [transactions, copy],

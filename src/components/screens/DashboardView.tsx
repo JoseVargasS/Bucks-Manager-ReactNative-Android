@@ -20,6 +20,7 @@ import { PeriodControls } from "@/components/layout/PeriodControls";
 
 export const DashboardView = memo(function DashboardView({
   colors,
+  theme,
   copy,
   currencySymbol,
   allTransactions,
@@ -36,6 +37,7 @@ export const DashboardView = memo(function DashboardView({
   topInset,
 }: {
   colors: Palette;
+  theme: "dark" | "light";
   copy: UiCopy;
   currencySymbol: string;
   allTransactions: Transaction[];
@@ -118,6 +120,7 @@ export const DashboardView = memo(function DashboardView({
     >
       <PeriodControls
         colors={colors}
+        theme={theme}
         copy={copy}
         month={month}
         year={year}

@@ -8,9 +8,9 @@ import { Text } from "./AppText";
 
 type SelectOption = { label: string; value: string; color?: string; softBg?: string };
 
-export const Select = memo(function Select({ value, options, onSelect, colors, placeholder, style, title }: {
+export const Select = memo(function Select({ value, options, onSelect, colors, placeholder, style, title, hideArrow, buttonStyle }: {
   value: string; options: SelectOption[]; onSelect: (v: string) => void; colors: Palette;
-  placeholder?: string; style?: ViewStyle; title?: string;
+  placeholder?: string; style?: ViewStyle; title?: string; hideArrow?: boolean; buttonStyle?: ViewStyle;
 }) {
   const [open, setOpen] = useState(false);
   const [menuFrame, setMenuFrame] = useState({ left: 12, menuTop: 124, width: 180, maxHeight: 240 });
@@ -57,7 +57,7 @@ export const Select = memo(function Select({ value, options, onSelect, colors, p
     <View ref={triggerRef} collapsable={false} onLayout={measureMenu} style={style}>
       <Animated.View style={{ opacity: pressed.interpolate({ inputRange: [0, 1], outputRange: [1, 0.82] }), transform: [{ scale: pressed.interpolate({ inputRange: [0, 1], outputRange: [1, 0.985] }) }] }}>
         <Pressable
-          style={[selectStyles.button, { backgroundColor: colors.input, borderColor: colors.border }]}
+          style={[selectStyles.button, { backgroundColor: colors.input, borderColor: colors.border }, buttonStyle]}
           onPress={openMenu}
           onPressIn={() => animatePress(1, 70)}
           onPressOut={() => animatePress(0, 110)}
@@ -65,7 +65,7 @@ export const Select = memo(function Select({ value, options, onSelect, colors, p
         >
           {selected?.color && <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: selected.color }} />}
           <Text numberOfLines={1} style={[selectStyles.buttonText, { color: selected?.color || (selected ? colors.text : colors.muted) }]}>{label}</Text>
-          <MaterialCommunityIcons name="chevron-down" size={18} color={colors.muted} />
+          {!hideArrow && <MaterialCommunityIcons name="chevron-down" size={18} color={colors.muted} />}
         </Pressable>
       </Animated.View>
 

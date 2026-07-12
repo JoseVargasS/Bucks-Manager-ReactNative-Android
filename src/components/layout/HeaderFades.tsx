@@ -3,17 +3,14 @@ import { Animated, Easing, Pressable } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import Svg, { Defs, LinearGradient, Mask, Rect, Stop } from "react-native-svg";
 import { appShellStyles } from "@/components/AppShell.styles";
-import { type Palette } from "@/theme/colors";
 import { ANIM_HEADER_BTN_IN, ANIM_HEADER_BTN_OUT } from "@/theme/constants";
 import { type MaterialIconName } from "@/types";
 
 export const HeaderActionButton = memo(function HeaderActionButton({
-  colors,
   icon,
   iconColor,
   onPress,
 }: {
-  colors: Palette;
   icon: MaterialIconName;
   iconColor: string;
   onPress: () => void;
@@ -53,14 +50,7 @@ export const HeaderActionButton = memo(function HeaderActionButton({
         onPressOut={() => animate(0, ANIM_HEADER_BTN_OUT)}
         accessibilityRole="button"
         hitSlop={6}
-        style={{
-          width: 40,
-          height: 40,
-          borderRadius: 12,
-          backgroundColor: colors.input,
-          alignItems: "center",
-          justifyContent: "center",
-        }}
+        style={appShellStyles.headerActionBtn}
       >
         <MaterialCommunityIcons name={icon} size={20} color={iconColor} />
       </Pressable>
@@ -84,9 +74,9 @@ export const HeaderFade = memo(function HeaderFade({
     >
       <Defs>
         <LinearGradient id="headerFade" x1="0" y1="0" x2="0" y2="1">
-          <Stop offset="0" stopColor={color} stopOpacity="0.55" />
-          <Stop offset="0.38" stopColor={color} stopOpacity="0.35" />
-          <Stop offset="0.72" stopColor={color} stopOpacity="0.10" />
+          <Stop offset="0" stopColor={color} stopOpacity="1" />
+          <Stop offset="0.38" stopColor={color} stopOpacity="0.85" />
+          <Stop offset="0.72" stopColor={color} stopOpacity="0.55" />
           <Stop offset="1" stopColor={color} stopOpacity="0" />
         </LinearGradient>
       </Defs>
@@ -115,8 +105,8 @@ export const HeaderTitleFade = memo(function HeaderTitleFade({
           x2="1"
           y2="0"
         >
-          <Stop offset="0" stopColor={color} stopOpacity="0.45" />
-          <Stop offset="0.58" stopColor={color} stopOpacity="0.30" />
+          <Stop offset="0" stopColor={color} stopOpacity="0.85" />
+          <Stop offset="0.58" stopColor={color} stopOpacity="0.80" />
           <Stop offset="1" stopColor={color} stopOpacity="0" />
         </LinearGradient>
         <LinearGradient
