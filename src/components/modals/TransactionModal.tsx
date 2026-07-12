@@ -109,6 +109,9 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
       setActiveAmountId(null);
     }
   }, [lineItems, activeAmountId]);
+  useEffect(() => {
+    if (activeAmountId !== null) Keyboard.dismiss();
+  }, [activeAmountId]);
   const totalState = useMemo(() => {
     const { total, error } = computeLineItemsTotal(lineItems);
     const sign = total > 0 ? "+ " : total < 0 ? "- " : "";
@@ -400,6 +403,7 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
               onFocus={() => { dismissTags(); focusedKey.current = "concepto"; setActiveAmountId(null); }}
               placeholder={copy.conceptoPlaceholder || "Ej: Supermercado, Almuerzo, Taxi"}
               placeholderTextColor={colors.muted}
+              keyboardType="default"
               style={[styles.conceptoInput, { backgroundColor: colors.input, color: colors.text, borderColor: colors.border }]}
             />
 
@@ -499,6 +503,7 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
                   }}
                           placeholder="Descripción"
                           placeholderTextColor={colors.muted}
+                          keyboardType="default"
                           style={[styles.lineItemDescInput, { color: colors.text }]}
                         />
                       </View>
@@ -524,6 +529,7 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
                   onChangeText={setCreateTagLabel}
                   placeholder={copy.tagsNewPlaceholder || "Nombre de etiqueta"}
                   placeholderTextColor={colors.muted}
+                  keyboardType="default"
                   style={{ borderRadius: 8, paddingHorizontal: 10, minHeight: 38, fontWeight: "600", backgroundColor: colors.card, color: colors.text }}
                   onSubmitEditing={handleCreateTag}
                   autoFocus

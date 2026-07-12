@@ -159,6 +159,7 @@ export function TagEditorModal({
                   onChangeText={setNewLabel}
                   placeholder={copy.tagsNewPlaceholder}
                   placeholderTextColor={colors.muted}
+                  keyboardType="default"
                   style={[s.input, { backgroundColor: colors.input, color: colors.text }]}
                   onSubmitEditing={handleAdd}
                 />
@@ -256,6 +257,7 @@ const TagRow = memo(function TagRow({
             <TextInput
               value={editingLabel}
               onChangeText={onChangeLabel}
+              keyboardType="default"
               style={[s.editInput, { backgroundColor: colors.input, color: colors.text }]}
               onSubmitEditing={onSave}
             />

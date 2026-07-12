@@ -34,6 +34,7 @@ export const AmountInput = memo(forwardRef<TextInput, {
       onSelectionChange={(e) => onCursorChange(e.nativeEvent.selection.start)}
       onFocus={onFocus}
       showSoftInputOnFocus={false}
+      keyboardType="numeric"
       style={[styles.input, { color: value ? colors.text : colors.muted }, style]}
     />
   );
