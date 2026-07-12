@@ -23,22 +23,35 @@ if ($physicalLines.Count -gt 1) {
   Write-Warning "Hay varios celulares conectados. Usando $deviceName ($physicalSerial)."
 }
 
-# Patch Expo adb.js to remove --user flag that breaks Android 16 streamed install
-$adbJs = Join-Path $PSScriptRoot "..\node_modules\@expo\cli\build\src\start\platforms\android\adb.js"
-if (Test-Path $adbJs) {
-  $content = Get-Content $adbJs -Raw
-  $patched = "adbArgs(device.pid, 'install', '-r', '-d', filePath)"
-  $unpatched = "adbArgs(device.pid, 'install', '-r', '-d', '--user', _env.env.EXPO_ADB_USER, filePath)"
-  if ($content -match [regex]::Escape($unpatched)) {
-    $content = $content.Replace($unpatched, $patched)
-    Set-Content $adbJs $content -NoNewline
-    Write-Host "Patched expo adb.js: removed --user flag (Android 16 fix)"
-  }
+# Build with gradle directly instead of expo run:android to avoid its broken
+# adb install that hangs on streamed install for some devices.
+$androidDir = Join-Path $PSScriptRoot "..\android"
+if ($variant -eq "release") {
+  Write-Host "Building release APK ..."
+  Push-Location $androidDir
+  try { & .\gradlew.bat assembleRelease --quiet } finally { Pop-Location }
+  $apk = Join-Path $PSScriptRoot "..\android\app\build\outputs\apk\release\app-release.apk"
+} else {
+  Write-Host "Building debug APK ..."
+  Push-Location $androidDir
+  try { & .\gradlew.bat assembleDebug --quiet } finally { Pop-Location }
+  $apk = Join-Path $PSScriptRoot "..\android\app\build\outputs\apk\debug\app-debug.apk"
 }
 
-$env:ANDROID_SERIAL = $physicalSerial
-if ($variant -eq "release") {
-  npx expo run:android --variant release --device $deviceName
+if (-not (Test-Path $apk)) {
+  Write-Error "APK not found after build: $apk"
+}
+
+# Install via push + pm install (bypasses streamed-install hang)
+Write-Host "Installing on $deviceName ($physicalSerial) ..."
+$remotePath = "/data/local/tmp/bucks-install.apk"
+adb -s $physicalSerial push $apk $remotePath
+$result = adb -s $physicalSerial shell pm install -r -d $remotePath 2>&1
+adb -s $physicalSerial shell rm $remotePath | Out-Null
+
+if ($result -match "Success") {
+  Write-Host "Installed. Starting app ..."
+  adb -s $physicalSerial shell monkey -p com.josev.bucksmanager -c android.intent.category.LAUNCHER 1 | Out-Null
 } else {
-  expo run:android --device $deviceName
+  Write-Error "Install failed: $result"
 }

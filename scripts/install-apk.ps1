@@ -1,6 +1,7 @@
 $ErrorActionPreference = "Stop"
 
 # Emergency APK installer — bypasses Expo's broken adb spawn.
+# Uses push + pm install to avoid the streamed-install hang on some devices.
 # Usage: .\scripts\install-apk.ps1 [path-to-apk]
 # Defaults to the release APK if no path is given.
 
@@ -24,4 +25,16 @@ if (-not $physicalLines) {
 
 $serial = ($physicalLines | Select-Object -First 1) -split "\s+" | Select-Object -First 1
 Write-Host "Installing on $serial ..."
-adb -s $serial install -r -d $apk
+
+# Push to device first, then install from local storage.
+# Direct "adb install" hangs on streamed install for some devices.
+$remotePath = "/data/local/tmp/bucks-install.apk"
+adb -s $serial push $apk $remotePath
+$result = adb -s $serial shell pm install -r -d $remotePath 2>&1
+adb -s $serial shell rm $remotePath | Out-Null
+
+if ($result -match "Success") {
+  Write-Host "Installed successfully."
+} else {
+  Write-Error "Install failed: $result"
+}
