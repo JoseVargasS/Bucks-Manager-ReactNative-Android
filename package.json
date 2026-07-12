@@ -55,6 +55,7 @@
     "eslint:fix": "eslint . --fix",
     "format:check": "node scripts/check-format.mjs",
     "hooks:install": "git config core.hooksPath .githooks",
+    "install:apk": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/install-apk.ps1",
     "lint": "tsc --noEmit --noUnusedLocals --noUnusedParameters && eslint \"src/**/*.{ts,tsx}\" \"App.tsx\" \"index.ts\" --max-warnings 0",
     "start": "expo start",
     "test": "npx jest --config jest.config.mjs --no-cache",
