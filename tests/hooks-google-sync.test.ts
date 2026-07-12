@@ -340,7 +340,7 @@ describe("useGoogleSync", () => {
     globalThis.fetch = handler;
     try {
       const api = useGoogleSync(makeSession({ spreadsheetId: "" }), emptyFin, emptyTags, emptyHelpers, { current: null });
-      api.writeUiPreferences({ language: "es", currencySymbol: "S/", fontPreference: "dmsans", colorScheme: "sky" });
+      api.writeUiPreferences({ language: "es", currencySymbol: "S/", fontPreference: "dmsans", colorScheme: "sky", theme: "dark" });
       await new Promise((r) => setTimeout(r, 10));
       expect(called).toBe(false);
     } finally {
@@ -360,7 +360,7 @@ describe("useGoogleSync", () => {
     globalThis.fetch = handler;
     try {
       const api = useGoogleSync(makeSession({ spreadsheetId: "sheet-xyz" }), emptyFin, emptyTags, emptyHelpers, { current: null });
-      api.writeUiPreferences({ language: "en", currencySymbol: "$", fontPreference: "inter", colorScheme: "vulcanico" });
+      api.writeUiPreferences({ language: "en", currencySymbol: "$", fontPreference: "inter", colorScheme: "vulcanico", theme: "light" });
       await new Promise((r) => setTimeout(r, 30));
       const put = requests.find(({ method }) => method === "PUT");
       expect(put).toBeTruthy();
@@ -382,11 +382,11 @@ describe("useGoogleSync", () => {
       const api1 = useGoogleSync(makeSession({ spreadsheetId: "sheet-old" }), emptyFin, emptyTags, emptyHelpers, { current: null });
       const writerFromFirstRender = api1.writeUiPreferences;
       const api2 = useGoogleSync(makeSession({ spreadsheetId: "sheet-new" }), emptyFin, emptyTags, emptyHelpers, { current: null });
-      api2.writeUiPreferences({ language: "es", currencySymbol: "S/", fontPreference: "dmsans", colorScheme: "sky" });
+      api2.writeUiPreferences({ language: "es", currencySymbol: "S/", fontPreference: "dmsans", colorScheme: "sky", theme: "dark" });
       await new Promise((r) => setTimeout(r, 30));
       const lastPut = seen.filter((u) => u.includes("MONTHLY SUMMARY!L1:L2")).pop();
       expect(lastPut && lastPut.includes("sheet-new")).toBeTruthy();
-      writerFromFirstRender({ language: "es", currencySymbol: "S/", fontPreference: "dmsans", colorScheme: "sky" });
+      writerFromFirstRender({ language: "es", currencySymbol: "S/", fontPreference: "dmsans", colorScheme: "sky", theme: "dark" });
       await new Promise((r) => setTimeout(r, 30));
       const oldPuts = seen.filter((u) => u.includes("MONTHLY SUMMARY!L1:L2") && u.includes("sheet-old"));
       expect(oldPuts.length).toBeGreaterThanOrEqual(1);

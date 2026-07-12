@@ -5,7 +5,7 @@ import {
 } from "expo-secure-store";
 import { type ColorSchemePreference } from "@/theme/colors";
 import { useTheme } from "@/theme/ThemeContext";
-import { type LanguageMode, type FontPreference, type MaterialIconName } from "@/types";
+import { type LanguageMode, type FontPreference, type MaterialIconName, type ThemeMode } from "@/types";
 import {
   detectDeviceCurrencySymbol,
   detectDeviceLanguage,
@@ -18,6 +18,7 @@ const LANGUAGE_KEY = "bucks_language";
 const CURRENCY_SYMBOL_KEY = "bucks_currency_symbol";
 const FONT_KEY = "bucks_font";
 const COLOR_SCHEME_KEY = "bucks_color_scheme";
+const THEME_KEY = "bucks_theme";
 const FONT_PREFERENCES = Object.keys(FONT_FAMILIES) as FontPreference[];
 const COLOR_SCHEME_PREFERENCES: ColorSchemePreference[] = [
   "cyprus", "ocean", "vulcanico", "tiffany", "charcoalline",
@@ -90,6 +91,7 @@ export type UiPreferencesSnapshot = {
   currencySymbol: string;
   fontPreference: FontPreference;
   colorScheme: ColorSchemePreference;
+  theme: ThemeMode;
 };
 
 type PreferencesState = {
@@ -97,21 +99,24 @@ type PreferencesState = {
   currencySymbol: string;
   fontPreference: FontPreference;
   colorScheme: ColorSchemePreference;
+  theme: ThemeMode;
   copy: UiCopy;
   saveLanguage: (next: string) => void;
   saveCurrencySymbol: (next: string) => void;
   saveFontPreference: (next: string) => void;
   saveColorScheme: (next: string) => void;
+  saveTheme: (next: ThemeMode) => void;
   restorePreferences: () => Promise<void>;
   applyRemotePreferences: (prefs: UiPreferencesSnapshot) => void;
 };
 
 export function usePreferences(): PreferencesState {
-  const { setColorScheme } = useTheme();
+  const { setColorScheme, setTheme: setThemeMode } = useTheme();
   const [language, setLanguage] = useState<LanguageMode>(detectDeviceLanguage);
   const [currencySymbol, setCurrencySymbol] = useState(detectDeviceCurrencySymbol);
   const [fontPreference, setFontPreference] = useState<FontPreference>("dmsans");
   const [colorScheme, setColorSchemeState] = useState<ColorSchemePreference>(DEFAULT_COLOR_SCHEME);
+  const [theme, setThemeState] = useState<ThemeMode>("dark");
 
   const copy: UiCopy = UI_COPY[language];
 
@@ -129,12 +134,13 @@ export function usePreferences(): PreferencesState {
     next === "en" ? "en" : "es";
 
   const restorePreferences = useCallback(async () => {
-    const [storedLanguage, storedCurrency, storedFont, storedColorScheme] =
+    const [storedLanguage, storedCurrency, storedFont, storedColorScheme, storedTheme] =
       await Promise.all([
         getItemAsync(LANGUAGE_KEY),
         getItemAsync(CURRENCY_SYMBOL_KEY),
         getItemAsync(FONT_KEY),
         getItemAsync(COLOR_SCHEME_KEY),
+        getItemAsync(THEME_KEY),
       ]);
     const nextLanguage = sanitizeLanguage(storedLanguage || detectDeviceLanguage());
     if (storedLanguage !== nextLanguage) {
@@ -166,7 +172,13 @@ export function usePreferences(): PreferencesState {
     const nextColor = sanitizeColorScheme(storedColorScheme || DEFAULT_COLOR_SCHEME);
     setColorScheme(nextColor);
     setColorSchemeState(nextColor);
-  }, [setColorScheme]);
+    const validThemes: ThemeMode[] = ["dark", "light"];
+    const nextTheme: ThemeMode = validThemes.includes(storedTheme as ThemeMode)
+      ? (storedTheme as ThemeMode)
+      : "dark";
+    setThemeMode(nextTheme);
+    setThemeState(nextTheme);
+  }, [setColorScheme, setThemeMode]);
 
   const applyRemotePreferences = useCallback(
     (prefs: UiPreferencesSnapshot) => {
@@ -174,18 +186,25 @@ export function usePreferences(): PreferencesState {
       const nextCurrency = sanitizeCurrency(prefs.currencySymbol);
       const nextFont = sanitizeFont(prefs.fontPreference);
       const nextColor = sanitizeColorScheme(prefs.colorScheme);
+      const validThemes: ThemeMode[] = ["dark", "light"];
+      const nextTheme: ThemeMode = validThemes.includes(prefs.theme as ThemeMode)
+        ? (prefs.theme as ThemeMode)
+        : "dark";
       setLanguage(nextLanguage);
       setCurrencySymbol(nextCurrency);
       setAppFontPreference(nextFont);
       setFontPreference(nextFont);
       setColorScheme(nextColor);
       setColorSchemeState(nextColor);
+      setThemeMode(nextTheme);
+      setThemeState(nextTheme);
       setItemAsync(LANGUAGE_KEY, nextLanguage).catch(() => undefined);
       setItemAsync(CURRENCY_SYMBOL_KEY, nextCurrency).catch(() => undefined);
       setItemAsync(FONT_KEY, nextFont).catch(() => undefined);
       setItemAsync(COLOR_SCHEME_KEY, nextColor).catch(() => undefined);
+      setItemAsync(THEME_KEY, nextTheme).catch(() => undefined);
     },
-    [setColorScheme],
+    [setColorScheme, setThemeMode],
   );
 
   const saveLanguage = useCallback((next: string) => {
@@ -214,16 +233,24 @@ export function usePreferences(): PreferencesState {
     setItemAsync(COLOR_SCHEME_KEY, value).catch(() => undefined);
   }, [setColorScheme]);
 
+  const saveTheme = useCallback((next: ThemeMode) => {
+    setThemeMode(next);
+    setThemeState(next);
+    setItemAsync(THEME_KEY, next).catch(() => undefined);
+  }, [setThemeMode]);
+
   return {
     language,
     currencySymbol,
     fontPreference,
     colorScheme,
+    theme,
     copy,
     saveLanguage,
     saveCurrencySymbol,
     saveFontPreference,
     saveColorScheme,
+    saveTheme,
     restorePreferences,
     applyRemotePreferences,
   };

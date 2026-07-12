@@ -1,7 +1,7 @@
 import { SHEET_NAMES } from "@/domain/bucksLogic";
 import { googleFetch, readValuesUrl, SHEETS } from "./googleFetch";
 import { type ColorSchemePreference, accents } from "@/theme/accents";
-import { type FontPreference, type LanguageMode } from "@/types";
+import { type FontPreference, type LanguageMode, type ThemeMode } from "@/types";
 
 export const UI_PREFERENCES_HEADER = "UI PREFERENCES";
 const UI_PREFERENCES_RANGE = `${SHEET_NAMES.summary}!L1:L2`;
@@ -15,15 +15,16 @@ const VALID_FONT_PREFERENCES: FontPreference[] = [
   "proggysquare", "redstarbold", "sansi", "sfscribbledsans",
 ];
 
-// Shape persisted to the sheet. v1 = original four cosmetic preferences.
+// Shape persisted to the sheet. v2 = v1 + theme (dark/light).
 // Bump the version key in code and the on-sheet value when adding fields
 // the on-disk shape changes; old data is read best-effort with fallbacks.
 export type UiPreferences = {
-  v: 1;
+  v: 2;
   language: LanguageMode;
   currencySymbol: string;
   fontPreference: FontPreference;
   colorScheme: ColorSchemePreference;
+  theme: ThemeMode;
 };
 
 export function buildUiPreferences(params: {
@@ -31,8 +32,9 @@ export function buildUiPreferences(params: {
   currencySymbol: string;
   fontPreference: FontPreference;
   colorScheme: ColorSchemePreference;
+  theme: ThemeMode;
 }): UiPreferences {
-  return { v: 1, ...params };
+  return { v: 2, ...params };
 }
 
 // Read L2 of MONTHLY SUMMARY. Returns null when the cell is empty, the
@@ -85,16 +87,22 @@ export function sanitizeUiPreferences(value: unknown): UiPreferences | null {
   const fontPreference = v.fontPreference;
   const colorScheme = v.colorScheme;
   const currencySymbol = v.currencySymbol;
+  const theme = v.theme;
   if (!VALID_LANGUAGES.includes(language as LanguageMode)) return null;
   if (!VALID_FONT_PREFERENCES.includes(fontPreference as FontPreference)) return null;
   if (!VALID_COLOR_SCHEMES.includes(colorScheme as ColorSchemePreference)) return null;
   if (typeof currencySymbol !== "string" || !currencySymbol) return null;
+  const validThemes: ThemeMode[] = ["dark", "light"];
+  const resolvedTheme: ThemeMode = validThemes.includes(theme as ThemeMode)
+    ? (theme as ThemeMode)
+    : "dark";
   return {
-    v: 1,
+    v: 2,
     language: language as LanguageMode,
     fontPreference: fontPreference as FontPreference,
     colorScheme: colorScheme as ColorSchemePreference,
     currencySymbol,
+    theme: resolvedTheme,
   };
 }
 
@@ -104,5 +112,6 @@ export const UI_PREFERENCES_INIT_JSON = JSON.stringify(
     currencySymbol: "S/",
     fontPreference: "dmsans",
     colorScheme: "sky",
+    theme: "dark",
   }),
 );

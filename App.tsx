@@ -125,6 +125,21 @@ function AppContent() {
       }),
     [themeProgress, themeBgLight, themeBgDark],
   );
+  const {
+    language,
+    currencySymbol,
+    fontPreference,
+    copy,
+    saveLanguage,
+    saveCurrencySymbol,
+    saveFontPreference,
+    saveColorScheme,
+    colorScheme,
+    theme: prefTheme,
+    saveTheme,
+    restorePreferences,
+    applyRemotePreferences,
+  } = usePreferences();
   const toggleThemeWithCrossfade = useCallback(() => {
     const goingDark = theme !== "dark";
     const target = goingDark ? 1 : 0;
@@ -137,20 +152,8 @@ function AppContent() {
     });
     themeAnimRef.current.start();
     toggleTheme();
-  }, [theme, themeProgress, toggleTheme]);
-  const {
-    language,
-    currencySymbol,
-    fontPreference,
-    copy,
-    saveLanguage,
-    saveCurrencySymbol,
-    saveFontPreference,
-    saveColorScheme,
-    colorScheme,
-    restorePreferences,
-    applyRemotePreferences,
-  } = usePreferences();
+    saveTheme(goingDark ? "dark" : "light");
+  }, [theme, themeProgress, toggleTheme, saveTheme]);
   const errMsg = useCallback((error: unknown) => getErrorMessage(error, copy.syncError), [copy.syncError]);
   const authErr = useCallback((error: unknown) => isAuthError(error, copy.syncError), [copy.syncError]);
   const [tagsList, setTagsList] = useState<Tag[]>([]);
@@ -337,15 +340,16 @@ function AppContent() {
   // session change. Instead we keep a ref to the latest writer.
   const writeUiPrefsRef = useRef(syncApi.writeUiPreferences);
   writeUiPrefsRef.current = syncApi.writeUiPreferences;
-  const prevPrefsRef = useRef<{ language: string; currencySymbol: string; fontPreference: string; colorScheme: string } | null>(null);
+  const prevPrefsRef = useRef<{ language: string; currencySymbol: string; fontPreference: string; colorScheme: string; theme: string } | null>(null);
   useEffect(() => {
     if (!accessToken || !spreadsheetId) return;
-    const snapshot = { language, currencySymbol, fontPreference, colorScheme };
+    const snapshot = { language, currencySymbol, fontPreference, colorScheme, theme: prefTheme };
     if (prevPrefsRef.current &&
         prevPrefsRef.current.language === snapshot.language &&
         prevPrefsRef.current.currencySymbol === snapshot.currencySymbol &&
         prevPrefsRef.current.fontPreference === snapshot.fontPreference &&
-        prevPrefsRef.current.colorScheme === snapshot.colorScheme) {
+        prevPrefsRef.current.colorScheme === snapshot.colorScheme &&
+        prevPrefsRef.current.theme === snapshot.theme) {
       return;
     }
     prevPrefsRef.current = snapshot;
@@ -353,7 +357,7 @@ function AppContent() {
       writeUiPrefsRef.current(snapshot);
     }, 1500);
     return () => clearTimeout(timer);
-  }, [language, currencySymbol, fontPreference, colorScheme, accessToken, spreadsheetId]);
+  }, [language, currencySymbol, fontPreference, colorScheme, prefTheme, accessToken, spreadsheetId]);
 
   // Debounced sheet write for deletion history.
   const writeHistoryRef = useRef(syncApi.writeHistory);

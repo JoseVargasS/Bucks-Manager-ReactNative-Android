@@ -64,6 +64,7 @@ describe("preferencesOps", () => {
       currencySymbol: "$",
       fontPreference: "inter",
       colorScheme: "vulcanico",
+      theme: "dark",
     });
     const restore = installFetch(async () =>
       json({ values: [[UI_PREFERENCES_HEADER], [JSON.stringify(prefs)]] }),
@@ -190,6 +191,7 @@ describe("preferencesOps", () => {
         currencySymbol: "€",
         fontPreference: "playfair",
         colorScheme: "milky",
+        theme: "light",
       });
       await writeUiPreferences("token", "sheet", prefs);
       const write = requests.find(({ method }) => method === "PUT");
@@ -204,19 +206,39 @@ describe("preferencesOps", () => {
 
   test("sanitizeUiPreferences drops unknown fields and keeps the rest", () => {
     const result = sanitizeUiPreferences({
-      v: 1,
+      v: 2,
       language: "en",
       currencySymbol: "$",
       fontPreference: "fredoka",
       colorScheme: "truepink",
+      theme: "light",
       futureFlag: "ignore-me",
     });
     expect(result).toEqual({
+      v: 2,
+      language: "en",
+      currencySymbol: "$",
+      fontPreference: "fredoka",
+      colorScheme: "truepink",
+      theme: "light",
+    });
+  });
+
+  test("sanitizeUiPreferences defaults theme to dark when missing", () => {
+    const result = sanitizeUiPreferences({
       v: 1,
       language: "en",
       currencySymbol: "$",
       fontPreference: "fredoka",
       colorScheme: "truepink",
+    });
+    expect(result).toEqual({
+      v: 2,
+      language: "en",
+      currencySymbol: "$",
+      fontPreference: "fredoka",
+      colorScheme: "truepink",
+      theme: "dark",
     });
   });
 
@@ -232,7 +254,8 @@ describe("preferencesOps", () => {
       currencySymbol: "S/",
       fontPreference: "dmsans",
       colorScheme: "sky",
+      theme: "dark",
     });
-    expect(prefs.v).toBe(1);
+    expect(prefs.v).toBe(2);
   });
 });

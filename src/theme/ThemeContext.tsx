@@ -12,6 +12,7 @@ import { type ThemeMode } from "@/types";
 const ThemeModeContext = createContext<{
   theme: ThemeMode;
   toggleTheme: () => void;
+  setTheme: (t: ThemeMode) => void;
 } | null>(null);
 
 const ColorSchemeContext = createContext<{
@@ -30,13 +31,17 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     setTheme((current) => (current === "dark" ? "light" : "dark"));
   }, []);
 
+  const setThemeMode = useCallback((t: ThemeMode) => {
+    setTheme(t);
+  }, []);
+
   const setColorScheme = useCallback((scheme: ColorSchemePreference) => {
     setColorSchemeState(scheme);
   }, []);
 
   const themeModeValue = useMemo(
-    () => ({ theme, toggleTheme }),
-    [theme, toggleTheme],
+    () => ({ theme, toggleTheme, setTheme: setThemeMode }),
+    [theme, toggleTheme, setThemeMode],
   );
 
   const colorSchemeValue = useMemo(
@@ -73,6 +78,6 @@ export function useTheme() {
   if (!theme || !colorScheme) {
     throw new Error("useTheme must be used within ThemeProvider");
   }
-  return { theme: theme.theme, colorScheme: colorScheme.colorScheme, colors, toggleTheme: theme.toggleTheme, setColorScheme: colorScheme.setColorScheme };
+  return { theme: theme.theme, colorScheme: colorScheme.colorScheme, colors, toggleTheme: theme.toggleTheme, setTheme: theme.setTheme, setColorScheme: colorScheme.setColorScheme };
 }
 

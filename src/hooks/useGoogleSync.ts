@@ -214,6 +214,7 @@ export function useGoogleSync(
             currencySymbol: sheetUiPreferences.currencySymbol,
             fontPreference: sheetUiPreferences.fontPreference,
             colorScheme: sheetUiPreferences.colorScheme,
+            theme: sheetUiPreferences.theme,
           });
         }
       }
