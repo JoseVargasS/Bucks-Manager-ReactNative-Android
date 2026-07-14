@@ -197,6 +197,8 @@ export const SummaryView = memo(function SummaryView({ colors, copy, summaries, 
             colors={colors}
             title={copy.selectYear}
             style={{ width: 124 }}
+            hideArrow
+            buttonStyle={{ borderRadius: 50, borderColor: "transparent", minHeight: 46 }}
           />
         </View>
       </Animated.View>
@@ -421,6 +423,8 @@ export const SummaryView = memo(function SummaryView({ colors, copy, summaries, 
           colors={colors}
           title={copy.selectYear}
           style={{ width: 124 }}
+          hideArrow
+          buttonStyle={{ borderRadius: 50, borderColor: "transparent", minHeight: 46 }}
         />
       </Animated.View>
     )}
