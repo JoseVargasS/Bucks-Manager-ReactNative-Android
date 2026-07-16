@@ -14,12 +14,10 @@ import {
 } from "react-native";
 import { GoogleSignin } from "@react-native-google-signin/google-signin";
 
-import { formatDateToISO } from "@/utils/dateUtils";
-import { removeTagFromAllRows, writeTagsCatalog } from "@/api/googleWorkspace";
+import { removeTagFromAllRows } from "@/api/googleWorkspace";
 
-import { getPalette } from "@/theme/colors";
 import { ThemeProvider, useTheme } from "@/theme/ThemeContext";
-import { getBlankDraft } from "@/utils/transactions";
+import { getBlankDraft, transactionToDraft } from "@/utils/transactions";
 import { loadHistory } from "@/utils/history";
 
 import { loadTags, migrateTransactionTags } from "@/utils/tags";
@@ -45,7 +43,6 @@ import {
 import {
   SearchModal,
   type SearchModalHandle,
-  emptySearchFilters,
 } from "@/components/modals/SearchModal";
 import {
   OptionSheet,
@@ -84,14 +81,15 @@ import {
   COLOR_SCHEME_OPTIONS,
 } from "@/theme/constants";
 import { useFinancialState } from "@/hooks/useFinancialState";
-import {
-  usePreferences, CURRENCY_OPTIONS, getFontPickerOptions,
-} from "@/hooks/usePreferences";
+import { usePreferences } from "@/hooks/usePreferences";
 import { useExport } from "@/hooks/useExport";
 import { usePin } from "@/hooks/usePin";
 import { useSession } from "@/hooks/useSession";
 import { useGoogleSync } from "@/hooks/useGoogleSync";
 import { useTransactionMutations } from "@/hooks/useTransactionMutations";
+import { useThemeCrossfade } from "@/hooks/useThemeCrossfade";
+import { useDebouncedSheetWrites } from "@/hooks/useDebouncedSheetWrites";
+import { usePickerCallbacks } from "@/hooks/usePickerCallbacks";
 import { getErrorMessage, isAuthError } from "@/utils/errorHandler";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import {
@@ -105,26 +103,6 @@ setSplashOptions({ duration: ANIM_SPLASH_DURATION, fade: true });
 
 function AppContent() {
   const { colors, theme, colorScheme: accentColorScheme, toggleTheme } = useTheme();
-  const themeProgress = useRef(
-    new Animated.Value(theme === "dark" ? 1 : 0),
-  ).current;
-  const themeAnimRef = useRef<Animated.CompositeAnimation | null>(null);
-  const themeBgDark = useMemo(
-    () => getPalette("dark", accentColorScheme).bg,
-    [accentColorScheme],
-  );
-  const themeBgLight = useMemo(
-    () => getPalette("light", accentColorScheme).bg,
-    [accentColorScheme],
-  );
-  const themeProgressBg = useMemo(
-    () =>
-      themeProgress.interpolate({
-        inputRange: [0, 1],
-        outputRange: [themeBgLight, themeBgDark],
-      }),
-    [themeProgress, themeBgLight, themeBgDark],
-  );
   const {
     language,
     currencySymbol,
@@ -140,20 +118,12 @@ function AppContent() {
     restorePreferences,
     applyRemotePreferences,
   } = usePreferences();
-  const toggleThemeWithCrossfade = useCallback(() => {
-    const goingDark = theme !== "dark";
-    const target = goingDark ? 1 : 0;
-    themeAnimRef.current?.stop();
-    themeAnimRef.current = Animated.timing(themeProgress, {
-      toValue: target,
-      duration: 180,
-      easing: Easing.inOut(Easing.cubic),
-      useNativeDriver: false,
-    });
-    themeAnimRef.current.start();
-    toggleTheme();
-    saveTheme(goingDark ? "dark" : "light");
-  }, [theme, themeProgress, toggleTheme, saveTheme]);
+  const { themeProgressBg, toggleThemeWithCrossfade } = useThemeCrossfade(
+    theme,
+    accentColorScheme,
+    toggleTheme,
+    saveTheme,
+  );
   const errMsg = useCallback((error: unknown) => getErrorMessage(error, copy.syncError), [copy.syncError]);
   const authErr = useCallback((error: unknown) => isAuthError(error, copy.syncError), [copy.syncError]);
   const [tagsList, setTagsList] = useState<Tag[]>([]);
@@ -169,13 +139,14 @@ function AppContent() {
     searchFilters,
     searchActive,
     selectedRows,
-    setTransactions,
-    setSummaries,
-    setMonth,
-    setYear,
-    setSearchFilters,
-    setSearchActive,
-    setSelectedRows,
+    replaceTransactions,
+    recalcAndReplaceTransactions,
+    setPeriod,
+    toggleSearchActive,
+    clearSelection,
+    removeFromSelection,
+    applySearchFilters: hookApplySearchFilters,
+    clearSearchFilters: hookClearSearchFilters,
     persistFinancialState,
     resetFinancial,
     renumberTransactions,
@@ -278,11 +249,11 @@ function AppContent() {
 
   const mutations = useTransactionMutations(
     {
-      transactions, setTransactions,
-      summaries, setSummaries,
+      transactions, recalcAndReplaceTransactions,
+      summaries,
       freqIncome,
-      month, year, setMonth, setYear,
-      selectedRows, setSelectedRows, setSearchActive,
+      month, year, setPeriod, toggleSearchActive, clearSelection, removeFromSelection,
+      selectedRows,
       renumberTransactions, persistFinancialState,
     },
     { accessToken, spreadsheetId },
@@ -332,53 +303,22 @@ function AppContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Debounced sheet write whenever the user changes a preference. Same
-  // shape as the tag catalogue debounce in this file: skip the first
-  // render via a ref guard so we don't push a write just because the
-  // effect ran. syncApi is purposefully *not* in the dependency array
-  // — it's a new object every render and would tear the timer on every
-  // session change. Instead we keep a ref to the latest writer.
-  const writeUiPrefsRef = useRef(syncApi.writeUiPreferences);
-  writeUiPrefsRef.current = syncApi.writeUiPreferences;
-  const prevPrefsRef = useRef<{ language: string; currencySymbol: string; fontPreference: string; colorScheme: string; theme: string } | null>(null);
-  useEffect(() => {
-    if (!accessToken || !spreadsheetId) return;
-    const snapshot = { language, currencySymbol, fontPreference, colorScheme, theme: prefTheme };
-    if (prevPrefsRef.current &&
-        prevPrefsRef.current.language === snapshot.language &&
-        prevPrefsRef.current.currencySymbol === snapshot.currencySymbol &&
-        prevPrefsRef.current.fontPreference === snapshot.fontPreference &&
-        prevPrefsRef.current.colorScheme === snapshot.colorScheme &&
-        prevPrefsRef.current.theme === snapshot.theme) {
-      return;
-    }
-    prevPrefsRef.current = snapshot;
-    const timer = setTimeout(() => {
-      writeUiPrefsRef.current(snapshot);
-    }, 1500);
-    return () => clearTimeout(timer);
-  }, [language, currencySymbol, fontPreference, colorScheme, prefTheme, accessToken, spreadsheetId]);
-
-  // Debounced sheet write for deletion history.
-  const writeHistoryRef = useRef(syncApi.writeHistory);
-  writeHistoryRef.current = syncApi.writeHistory;
-  const prevHistoryLenRef = useRef(0);
-  useEffect(() => {
-    if (!accessToken || !spreadsheetId) return;
-    if (historyEntries.length === prevHistoryLenRef.current) return;
-    prevHistoryLenRef.current = historyEntries.length;
-    const timer = setTimeout(() => {
-      writeHistoryRef.current(historyEntries);
-    }, 1500);
-    return () => clearTimeout(timer);
-  }, [historyEntries, accessToken, spreadsheetId]);
+  useDebouncedSheetWrites(
+    accessToken,
+    spreadsheetId,
+    { language, currencySymbol, fontPreference, colorScheme, theme: prefTheme },
+    syncApi.writeUiPreferences,
+    historyEntries,
+    syncApi.writeHistory,
+    tagsList,
+  );
 
   useEffect(() => {
     loadTags(language)
       .then((loaded) => {
         setTagsList(loaded);
         const validIds = new Set(loaded.map((t) => t.id));
-        setTransactions((current) => {
+        replaceTransactions((current) => {
           const migrated = migrateTransactionTags(current, loaded);
           return migrated.map((tx) => {
             if (!tx.tags?.length) return tx;
@@ -388,10 +328,9 @@ function AppContent() {
               : { ...tx, tags: cleaned };
           });
         });
-        setSummaries((current) => current);
       })
       .catch(() => undefined);
-  }, [language, setTransactions, setSummaries]);
+  }, [language, replaceTransactions]);
 
   const prevTagsListRef = useRef<Tag[]>([]);
   useEffect(() => {
@@ -400,7 +339,7 @@ function AppContent() {
     const prevIds = new Set(prevTagsListRef.current.map((t) => t.id));
     const removedIds = [...prevIds].filter((id) => !validIds.has(id));
     prevTagsListRef.current = tagsList;
-    setTransactions((current) => {
+    replaceTransactions((current) => {
       let changed = false;
       const next = current.map((tx) => {
         if (!tx.tags?.length) return tx;
@@ -418,22 +357,11 @@ function AppContent() {
         );
       }
     }
-  }, [tagsList, accessToken, spreadsheetId, setTransactions]);
+  }, [tagsList, accessToken, spreadsheetId, replaceTransactions]);
 
   useEffect(() => {
     if (!bootstrapping) hideAsync().catch(() => undefined);
   }, [bootstrapping]);
-
-  const prevTagsRef = useRef(tagsList);
-  useEffect(() => {
-    if (!accessToken || !spreadsheetId) return;
-    if (prevTagsRef.current === tagsList) return;
-    prevTagsRef.current = tagsList;
-    const timer = setTimeout(() => {
-      writeTagsCatalog(accessToken, spreadsheetId, tagsList).catch(() => undefined);
-    }, 1500);
-    return () => clearTimeout(timer);
-  }, [tagsList, accessToken, spreadsheetId]);
 
   const lastTabWidthRef = useRef(tabWidth);
   useEffect(() => {
@@ -461,79 +389,28 @@ function AppContent() {
     return "";
   })();
 
-  const openLanguagePicker = useCallback(() => {
-    optionSheetRef.current?.open({
-      title: copy.language,
-      selectedValue: language,
-      options: [
-        { label: copy.spanish, value: "es", icon: "translate" },
-        { label: copy.english, value: "en", icon: "translate" },
-      ],
-      onSelect: saveLanguage,
-    });
-  }, [copy, language, saveLanguage]);
-
-  const openCurrencyPicker = useCallback(() => {
-    optionSheetRef.current?.open({
-      title: copy.currencySymbol,
-      selectedValue: currencySymbol,
-      options: CURRENCY_OPTIONS.map((option) => ({
-        label: language === "en" ? option.labelEn : option.labelEs,
-        value: option.value,
-        icon: option.icon,
-      })),
-      onSelect: saveCurrencySymbol,
-    });
-  }, [copy.currencySymbol, currencySymbol, language, saveCurrencySymbol]);
-
-  const fontPickerOptions = useMemo(
-    () => getFontPickerOptions(copy),
-    [copy],
-  );
-
-  const openFontPicker = useCallback(() => {
-    optionSheetRef.current?.open({
-      title: copy.fontStyle,
-      selectedValue: fontPreference,
-      options: fontPickerOptions,
-      onSelect: saveFontPreference,
-    });
-  }, [copy.fontStyle, fontPreference, fontPickerOptions, saveFontPreference]);
-
-  const openColorSchemePicker = useCallback(() => {
-    optionSheetRef.current?.open({
-      title: copy.colorPalette,
-      selectedValue: colorScheme,
-      options: COLOR_SCHEME_OPTIONS.map((option) => ({
-        label: language === "en" ? option.labelEn : option.labelEs,
-        value: option.value,
-        icon: option.icon,
-        tone: getPalette(theme, option.value).primary,
-      })),
-      onSelect: saveColorScheme,
-    });
-  }, [colorScheme, copy.colorPalette, language, saveColorScheme, theme]);
-
-  const openAccountManager = useCallback(() => {
-    optionSheetRef.current?.open({
-      title: copy.googleAccounts,
-      selectedValue: "",
-      options: [
-        { label: copy.switchAccount, value: "switch", icon: "account-switch" },
-        {
-          label: copy.removeCurrentAccount,
-          value: "remove",
-          icon: "account-remove",
-          tone: colors.expense,
-        },
-      ],
-      onSelect: (value) => {
-        if (value === "switch") void runGoogleSignIn(true);
-        if (value === "remove") setConfirmConfig({ kind: "removeAccount" });
-      },
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [colors.expense, copy]);
+  const {
+    openLanguagePicker,
+    openCurrencyPicker,
+    openFontPicker,
+    openColorSchemePicker,
+    openAccountManager,
+  } = usePickerCallbacks({
+    optionSheetRef,
+    copy,
+    language,
+    currencySymbol,
+    fontPreference,
+    saveLanguage,
+    saveCurrencySymbol,
+    saveFontPreference,
+    saveColorScheme,
+    colorScheme,
+    theme,
+    colors,
+    runGoogleSignIn,
+    setConfirmConfig,
+  });
 
   const requestDisconnectGoogle = useCallback(() => {
     setConfirmConfig({ kind: "disconnect" });
@@ -545,49 +422,25 @@ function AppContent() {
 
   const openEdit = useCallback((tx: Transaction) => {
     detailModalRef.current?.close();
-    const concepto = tx.lineItems ? (tx.detail.split(":")[0] || "") : tx.detail;
-    const lineItems = tx.lineItems
-      ? tx.lineItems.map((li) => ({
-          id: li.id,
-          amount: li.formula ? `=${li.formula}` : String(li.amount),
-          description: li.description,
-          tags: li.tags,
-        }))
-      : [{ id: "li-1", amount: tx.formula ? `=${tx.formula}` : String(tx.amount), description: "", tags: tx.tags || [] }];
-    transactionModalRef.current?.open(
-      {
-        date: formatDateToISO(tx.rawDate),
-        amount: tx.formula ? `=${tx.formula}` : String(tx.amount),
-        detail: tx.detail,
-        type: tx.type,
-        createdAt: tx.createdAt,
-        tags: tx.tags || [],
-        concepto,
-        lineItems,
-      },
-      tx,
-    );
-    requestAnimationFrame(() => setSelectedRows([]));
-  }, [setSelectedRows]);
+    transactionModalRef.current?.open(transactionToDraft(tx), tx);
+    requestAnimationFrame(() => clearSelection());
+  }, [clearSelection]);
 
   const applySearchFilters = useCallback(
     (nextFilters: SearchFilters) => {
       requestAnimationFrame(() => {
-        setSearchFilters(nextFilters);
-        setSearchActive(true);
+        hookApplySearchFilters(nextFilters);
         changeTab("expenses");
-        setSelectedRows([]);
+        clearSelection();
       });
     },
-    [changeTab, setSearchActive, setSearchFilters, setSelectedRows],
+    [changeTab, clearSelection, hookApplySearchFilters],
   );
 
-  const clearSearchFilters = useCallback(() => {
-    requestAnimationFrame(() => {
-      setSearchFilters(emptySearchFilters);
-      setSearchActive(false);
+  const clearSearchFilters = useCallback(() => {      requestAnimationFrame(() => {
+      hookClearSearchFilters();
     });
-  }, [setSearchFilters, setSearchActive]);
+  }, [hookClearSearchFilters]);
 
   const selectedRowsRef = useRef(selectedRows);
   selectedRowsRef.current = selectedRows;
@@ -651,8 +504,8 @@ function AppContent() {
   }
 
   const exitSearch = useCallback(
-    () => setSearchActive(false),
-    [setSearchActive],
+    () => toggleSearchActive(false),
+    [toggleSearchActive],
   );
   const openTagEditor = useCallback(() => setTagEditorVisible(true), []);
   const openSearch = useCallback(
