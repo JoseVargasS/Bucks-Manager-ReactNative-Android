@@ -9,6 +9,12 @@ Bucks Manager is an Expo/React Native client with no custom backend. Google Sign
 - **`useThemeCrossfade`** — manages the theme-toggle animation `Animated.Value` and synchronises with persisted preferences.
 - **`useDebouncedSheetWrites`** — debounces UI preferences, deletion history, and tag catalogue writes at 1500ms through `syncQueue`.
 - **`usePickerCallbacks`** — consolidates `OptionSheet` openers for language, currency, font, color scheme, and Google account settings.
+- **`useTabNavigation`** — owns tab state, `tabRef` mirror, pager `Animated.Value`, layout constants, and `changeTab` animation.
+- **`useBootstrap`** — orchestrates `GoogleSignin.configure`, concurrent preference/session/PIN restore, and splash-screen hide.
+- **`useHistoryPanel`** — owns history-entries state, loads history from SecureStore on mount, and exposes open/close callbacks.
+- **`useTagSyncEffects`** — tag-load and tag-cleanup effects: loads tags, migrates legacy label refs, prunes orphaned tag ids from transactions, and syncs removals to the sheet.
+- **`useConfirmCallbacks`** — typed confirm-dialog dispatcher (`delete`, `deleteSelected`, `removeAccount`, `disconnect`) and open/close helpers.
+- **`useTransactionActions`** — bridges modal refs into action callbacks: `openAdd`, `openEdit`, `applySearchFilters`, `handleTransactionPress`, `openMoveMenu`, `exitSearch`, `openSearch`.
 
 The three main pages stay mounted inside one animated pager. Primary interaction modals open through refs so opening them does not require a root visibility-state round trip.
 

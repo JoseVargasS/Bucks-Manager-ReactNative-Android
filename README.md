@@ -187,12 +187,18 @@ src/api/googleWorkspace.ts      Google Drive and Sheets integration
 src/api/sheetFormats.ts         Sheet date/number/header parsing
 src/domain/bucksLogic.ts        Sheet contract, summaries, dates, and transaction rules
 src/data/localCache.ts          Local-first financial cache
-src/hooks/useFinancialState.ts  Aggregated financial state + wrapper methods
-src/hooks/usePreferences.ts     Local preference persistence helpers
+src/hooks/useFinancialState.ts      Aggregated financial state + wrapper methods
+src/hooks/usePreferences.ts         Local preference persistence helpers
 src/hooks/useTransactionMutations.ts  Optimistic transaction CRUD
 src/hooks/useDebouncedSheetWrites.ts  Debounced sheet writes (1500ms)
-/src/hooks/usePickerCallbacks.ts       OptionSheet openers for settings
-src/hooks/useThemeCrossfade.ts          Theme toggle animation state
+src/hooks/usePickerCallbacks.ts     OptionSheet openers for settings
+src/hooks/useThemeCrossfade.ts      Theme toggle animation state
+src/hooks/useTabNavigation.ts       Tab state, pager animation, layout constants
+src/hooks/useBootstrap.ts           Startup orchestration (GoogleSignin, restore, splash)
+src/hooks/useHistoryPanel.ts        History entries state + SecureStore load
+src/hooks/useTagSync.ts             Tag lifecycle effects (load, migrate, cleanup)
+src/hooks/useConfirmDialog.ts       Typed confirm-dialog callbacks
+src/hooks/useTransactionActions.ts  Modal-ref → action callback bridge
 src/utils/transactions.ts       Transaction filtering, sorting, and date grouping
 src/utils/tags.ts               Tag catalogue, migration, and resolution
 src/utils/history.ts            Transaction history tracking

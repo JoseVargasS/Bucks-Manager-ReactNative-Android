@@ -2,25 +2,15 @@ import { BlurView } from "expo-blur";
 import {
   preventAutoHideAsync,
   setOptions as setSplashOptions,
-  hideAsync,
 } from "expo-splash-screen";
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Animated,
-  Easing,
-  useWindowDimensions,
   View,
   StatusBar as NativeStatusBar,
 } from "react-native";
-import { GoogleSignin } from "@react-native-google-signin/google-signin";
-
-import { removeTagFromAllRows } from "@/api/googleWorkspace";
 
 import { ThemeProvider, useTheme } from "@/theme/ThemeContext";
-import { getBlankDraft, transactionToDraft } from "@/utils/transactions";
-import { loadHistory } from "@/utils/history";
-
-import { loadTags, migrateTransactionTags } from "@/utils/tags";
 import { StyleSheet } from "react-native";
 
 const styles = StyleSheet.create({
@@ -67,16 +57,11 @@ const TagEditorModal = lazy(
 );
 import {
   type HistoryEntry,
-  type SearchFilters,
-  type Tab,
-
   type Tag,
-  type Transaction,
 } from "@/types";
 
 import {
   ANIM_SPLASH_DURATION,
-  ANIM_TAB_PAGER,
   TAB_ORDER,
   COLOR_SCHEME_OPTIONS,
 } from "@/theme/constants";
@@ -90,6 +75,12 @@ import { useTransactionMutations } from "@/hooks/useTransactionMutations";
 import { useThemeCrossfade } from "@/hooks/useThemeCrossfade";
 import { useDebouncedSheetWrites } from "@/hooks/useDebouncedSheetWrites";
 import { usePickerCallbacks } from "@/hooks/usePickerCallbacks";
+import { useTabNavigation } from "@/hooks/useTabNavigation";
+import { useBootstrap } from "@/hooks/useBootstrap";
+import { useConfirmCallbacks } from "@/hooks/useConfirmDialog";
+import { useTagSyncEffects } from "@/hooks/useTagSync";
+import { useHistoryPanel } from "@/hooks/useHistoryPanel";
+import { useTransactionActions } from "@/hooks/useTransactionActions";
 import { getErrorMessage, isAuthError } from "@/utils/errorHandler";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import {
@@ -126,8 +117,25 @@ function AppContent() {
   );
   const errMsg = useCallback((error: unknown) => getErrorMessage(error, copy.syncError), [copy.syncError]);
   const authErr = useCallback((error: unknown) => isAuthError(error, copy.syncError), [copy.syncError]);
+
+  // ─── Pin (called early so restorePinState is available for bootstrap) ──
+  const {
+    pinEnabled,
+    pinVerified,
+    pinLoading,
+    pinSetupVisible,
+    setPinSetupVisible,
+    pinWrong,
+    pinLockedRef,
+    restorePinState,
+    handlePinOpen,
+    handlePinSave,
+    handlePinVerify,
+  } = usePin(copy, errMsg);
+  const closePinSetup = useCallback(() => setPinSetupVisible(false), [setPinSetupVisible]);
+
+  // ─── Core state: tags, finance, session, sync ────────────────────
   const [tagsList, setTagsList] = useState<Tag[]>([]);
-  const [tagEditorVisible, setTagEditorVisible] = useState(false);
   const fin = useFinancialState(tagsList);
   const {
     transactions,
@@ -178,66 +186,9 @@ function AppContent() {
     runGoogleSignIn,
     disconnectGoogle, removeGoogleAccount,
   } = session;
-  const [bootstrapping, setBootstrapping] = useState(true);
-  const [historyEntries, setHistoryEntries] = useState<HistoryEntry[]>([]);
-  const [historyVisible, setHistoryVisible] = useState(false);
-  const {
-    exportVisible,
-    exportConfig,
-    exportMinDate,
-    setExportConfig,
-    openExport,
-    closeExport,
-    startExport,
-  } = useExport(transactions, currencySymbol, copy, errMsg);
-  const [confirmConfig, setConfirmConfig] = useState<ConfirmConfig | null>(
-    null,
-  );
-  const {
-    pinEnabled,
-    pinVerified,
-    pinLoading,
-    pinSetupVisible,
-    setPinSetupVisible,
-    pinWrong,
-    pinLockedRef,
-    restorePinState,
-    handlePinOpen,
-    handlePinSave,
-    handlePinVerify,
-  } = usePin(copy, errMsg);
-  const closePinSetup = useCallback(() => setPinSetupVisible(false), [setPinSetupVisible]);
-  const [tab, setTab] = useState<Tab>("dashboard");
-  const transactionModalRef = useRef<TransactionModalHandle>(null);
-  const detailModalRef = useRef<DetailModalHandle>(null);
-  const searchModalRef = useRef<SearchModalHandle>(null);
-  const optionSheetRef = useRef<OptionSheetHandle>(null);
+
+  // ─── Google sync & mutations ─────────────────────────────────────
   const reloadPromiseRef = useRef<Promise<void> | null>(null);
-  const tabRef = useRef<Tab>(tab);
-  const pagerTranslateX = useRef(new Animated.Value(0)).current;
-  const { width: tabWidth } = useWindowDimensions();
-  const statusBarInset = NativeStatusBar.currentHeight || 0;
-  const headerTopInset = statusBarInset + 6;
-  const headerFadeHeight = Math.max(headerTopInset + 28, 56);
-
-  const changeTab = useCallback(
-    (next: Tab) => {
-      if (next === tabRef.current) return;
-      tabRef.current = next;
-      pagerTranslateX.stopAnimation();
-      Animated.timing(pagerTranslateX, {
-        toValue: -TAB_ORDER.indexOf(next) * tabWidth,
-        duration: ANIM_TAB_PAGER,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }).start(({ finished }) => {
-        if (finished && tabRef.current === next) setTab(next);
-      });
-    },
-    [pagerTranslateX, tabWidth],
-  );
-  const openHistory = useCallback(() => setHistoryVisible(true), []);
-
   const syncApi = useGoogleSync(
     session,
     fin,
@@ -247,6 +198,74 @@ function AppContent() {
   );
   connectRef.current = syncApi.connectGoogleWorkspace;
 
+  // ─── Tag lifecycle effects ───────────────────────────────────────
+  const { tagEditorVisible, openTagEditor, closeTagEditor } = useTagSyncEffects(
+    language,
+    replaceTransactions,
+    accessToken,
+    spreadsheetId,
+    tagsList,
+    setTagsList,
+  );
+
+  // ─── Bootstrap ───────────────────────────────────────────────────
+  const bootstrapping = useBootstrap(
+    restorePreferences,
+    syncApi.restoreSession,
+    restorePinState,
+  );
+
+  // ─── History panel ───────────────────────────────────────────────
+  const {
+    historyEntries,
+    setHistoryEntries,
+    historyVisible,
+    openHistory,
+    closeHistory,
+  } = useHistoryPanel();
+
+  // Wire remote history (sheet → local) once on mount.
+  useEffect(() => {
+    syncApi.wireRemoteHistory((sheetHistory) => {
+      setHistoryEntries((prev) => {
+        const byId = new Map<string, HistoryEntry>();
+        for (const e of prev) byId.set(e.id, e);
+        for (const e of sheetHistory) byId.set(e.id, e);
+        return Array.from(byId.values());
+      });
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Wire the remote-applier (sheet → local) once on mount.
+  useEffect(() => {
+    syncApi.wireRemoteUiPreferences(applyRemotePreferences);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [applyRemotePreferences]);
+
+  // ─── Export ──────────────────────────────────────────────────────
+  const {
+    exportVisible,
+    exportConfig,
+    exportMinDate,
+    setExportConfig,
+    openExport,
+    closeExport,
+    startExport,
+  } = useExport(transactions, currencySymbol, copy, errMsg);
+
+  // ─── Debounced sheet writes ──────────────────────────────────────
+  useDebouncedSheetWrites(
+    accessToken,
+    spreadsheetId,
+    { language, currencySymbol, fontPreference, colorScheme, theme: prefTheme },
+    syncApi.writeUiPreferences,
+    historyEntries,
+    syncApi.writeHistory,
+    tagsList,
+  );
+
+  // ─── Mutations ───────────────────────────────────────────────────
   const mutations = useTransactionMutations(
     {
       transactions, recalcAndReplaceTransactions,
@@ -266,111 +285,24 @@ function AppContent() {
     copy as unknown as { incompleteData: string; completeRequired: string; editRecord: string; newRecord: string; deleteRecord: string; deleteSelection: string; moveRecord: string; moveRecordError: string; undoAction: string },
   );
 
-  useEffect(() => {
-    GoogleSignin.configure();
-    void Promise.all([
-      restorePreferences(),
-      syncApi.restoreSession(),
-      restorePinState(),
-    ])
-      .catch(() => undefined)
-      .finally(() => setBootstrapping(false));
-    loadHistory()
-      .then(setHistoryEntries)
-      .catch(() => undefined);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // ─── Confirm dialog ──────────────────────────────────────────────
+  const [confirmConfig, setConfirmConfig] = useState<ConfirmConfig | null>(null);
+  const {
+    requestDisconnectGoogle,
+    requestDelete,
+    requestDeleteSelected,
+    handleConfirm,
+    closeConfirm,
+  } = useConfirmCallbacks({
+    deleteTx: mutations.deleteTx,
+    deleteSelectedRows: mutations.deleteSelectedRows,
+    removeGoogleAccount,
+    disconnectGoogle,
+    selectedRowsLength: selectedRows.length,
+    setConfirmConfig,
+  });
 
-  // Wire the remote-applier (sheet → local) once on mount. The
-  // local → sheet direction is handled by the useEffect below, which
-  // mirrors the tag catalogue pattern: it observes the prefs snapshot
-  // and debounces a single write per change.
-  useEffect(() => {
-    syncApi.wireRemoteUiPreferences(applyRemotePreferences);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [applyRemotePreferences]);
-
-  // Wire remote history (sheet → local) once on mount.
-  useEffect(() => {
-    syncApi.wireRemoteHistory((sheetHistory) => {
-      setHistoryEntries((prev) => {
-        const byId = new Map<string, HistoryEntry>();
-        for (const e of prev) byId.set(e.id, e);
-        for (const e of sheetHistory) byId.set(e.id, e);
-        return Array.from(byId.values());
-      });
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useDebouncedSheetWrites(
-    accessToken,
-    spreadsheetId,
-    { language, currencySymbol, fontPreference, colorScheme, theme: prefTheme },
-    syncApi.writeUiPreferences,
-    historyEntries,
-    syncApi.writeHistory,
-    tagsList,
-  );
-
-  useEffect(() => {
-    loadTags(language)
-      .then((loaded) => {
-        setTagsList(loaded);
-        const validIds = new Set(loaded.map((t) => t.id));
-        replaceTransactions((current) => {
-          const migrated = migrateTransactionTags(current, loaded);
-          return migrated.map((tx) => {
-            if (!tx.tags?.length) return tx;
-            const cleaned = tx.tags.filter((t) => validIds.has(t));
-            return cleaned.length === tx.tags.length
-              ? tx
-              : { ...tx, tags: cleaned };
-          });
-        });
-      })
-      .catch(() => undefined);
-  }, [language, replaceTransactions]);
-
-  const prevTagsListRef = useRef<Tag[]>([]);
-  useEffect(() => {
-    if (!tagsList.length) return;
-    const validIds = new Set(tagsList.map((t) => t.id));
-    const prevIds = new Set(prevTagsListRef.current.map((t) => t.id));
-    const removedIds = [...prevIds].filter((id) => !validIds.has(id));
-    prevTagsListRef.current = tagsList;
-    replaceTransactions((current) => {
-      let changed = false;
-      const next = current.map((tx) => {
-        if (!tx.tags?.length) return tx;
-        const cleaned = tx.tags.filter((t) => validIds.has(t));
-        if (cleaned.length === tx.tags.length) return tx;
-        changed = true;
-        return { ...tx, tags: cleaned };
-      });
-      return changed ? next : current;
-    });
-    if (removedIds.length && accessToken && spreadsheetId) {
-      for (const tagId of removedIds) {
-        removeTagFromAllRows(accessToken, spreadsheetId, tagId).catch(
-          () => undefined,
-        );
-      }
-    }
-  }, [tagsList, accessToken, spreadsheetId, replaceTransactions]);
-
-  useEffect(() => {
-    if (!bootstrapping) hideAsync().catch(() => undefined);
-  }, [bootstrapping]);
-
-  const lastTabWidthRef = useRef(tabWidth);
-  useEffect(() => {
-    if (lastTabWidthRef.current === tabWidth) return;
-    lastTabWidthRef.current = tabWidth;
-    pagerTranslateX.stopAnimation();
-    pagerTranslateX.setValue(-TAB_ORDER.indexOf(tabRef.current) * tabWidth);
-  }, [pagerTranslateX, tabWidth]);
-
+  // ─── Derived values ──────────────────────────────────────────────
   const selectedColorScheme =
     COLOR_SCHEME_OPTIONS.find((option) => option.value === colorScheme) ||
     COLOR_SCHEME_OPTIONS[0];
@@ -389,6 +321,13 @@ function AppContent() {
     return "";
   })();
 
+  // ─── Modal refs (before pickers which consume optionSheetRef) ─────
+  const transactionModalRef = useRef<TransactionModalHandle>(null);
+  const detailModalRef = useRef<DetailModalHandle>(null);
+  const searchModalRef = useRef<SearchModalHandle>(null);
+  const optionSheetRef = useRef<OptionSheetHandle>(null);
+
+  // ─── Picker callbacks ────────────────────────────────────────────
   const {
     openLanguagePicker,
     openCurrencyPicker,
@@ -412,110 +351,47 @@ function AppContent() {
     setConfirmConfig,
   });
 
-  const requestDisconnectGoogle = useCallback(() => {
-    setConfirmConfig({ kind: "disconnect" });
-  }, []);
+  // ─── Tab navigation ──────────────────────────────────────────────
+  const tabNav = useTabNavigation();
+  const {
+    tab,
+    tabRef,
+    pagerTranslateX,
+    tabWidth,
+    headerTopInset,
+    headerFadeHeight,
+    changeTab,
+  } = tabNav;
 
-  const openAdd = useCallback(() => {
-    transactionModalRef.current?.open(getBlankDraft());
-  }, []);
+  // ─── Transaction actions ─────────────────────────────────────────
+  const {
+    openAdd,
+    openEdit,
+    applySearchFilters,
+    clearSearchFilters,
+    handleTransactionPress,
+    openMoveMenu,
+    exitSearch,
+    openSearch,
+  } = useTransactionActions({
+    transactionModalRef,
+    detailModalRef,
+    searchModalRef,
+    optionSheetRef,
+    clearSelection,
+    toggleSelection,
+    changeTab,
+    hookApplySearchFilters,
+    hookClearSearchFilters,
+    toggleSearchActive,
+    searchFilters,
+    moveTx: mutations.moveTx,
+    copy: copy as { moveRecord: string; moveUpOnePosition: string; moveDownOnePosition: string },
+    colors: { info: colors.info, warn: colors.warn },
+    selectedRows,
+  });
 
-  const openEdit = useCallback((tx: Transaction) => {
-    detailModalRef.current?.close();
-    transactionModalRef.current?.open(transactionToDraft(tx), tx);
-    requestAnimationFrame(() => clearSelection());
-  }, [clearSelection]);
-
-  const applySearchFilters = useCallback(
-    (nextFilters: SearchFilters) => {
-      requestAnimationFrame(() => {
-        hookApplySearchFilters(nextFilters);
-        changeTab("expenses");
-        clearSelection();
-      });
-    },
-    [changeTab, clearSelection, hookApplySearchFilters],
-  );
-
-  const clearSearchFilters = useCallback(() => {      requestAnimationFrame(() => {
-      hookClearSearchFilters();
-    });
-  }, [hookClearSearchFilters]);
-
-  const selectedRowsRef = useRef(selectedRows);
-  selectedRowsRef.current = selectedRows;
-  const handleTransactionPress = useCallback(
-    (tx: Transaction) => {
-      if (selectedRowsRef.current.length) {
-        toggleSelection(tx);
-        return;
-      }
-      detailModalRef.current?.open(tx);
-    },
-    [toggleSelection],
-  );
-
-  const openMoveMenu = useCallback(
-    (tx: Transaction) => {
-      optionSheetRef.current?.open({
-        title: copy.moveRecord,
-        selectedValue: "",
-        options: [
-          {
-            label: copy.moveUpOnePosition,
-            value: "up",
-            icon: "arrow-up",
-            tone: colors.info,
-          },
-          {
-            label: copy.moveDownOnePosition,
-            value: "down",
-            icon: "arrow-down",
-            tone: colors.warn,
-          },
-        ],
-        onSelect: (direction: string) => mutations.moveTx(tx, direction as "up" | "down"),
-      });
-    },
-    [
-      colors.info,
-      colors.warn,
-      copy.moveDownOnePosition,
-      copy.moveRecord,
-      copy.moveUpOnePosition,
-      mutations,
-    ],
-  );
-
-  const requestDelete = useCallback((tx: Transaction) => {
-    setConfirmConfig({ kind: "delete", tx });
-  }, []);
-
-  const requestDeleteSelected = useCallback(() => {
-    if (!selectedRows.length) return;
-    setConfirmConfig({ kind: "deleteSelected", count: selectedRows.length });
-  }, [selectedRows.length]);
-
-  function handleConfirm(cfg: ConfirmConfig) {
-    if (cfg.kind === "delete" && cfg.tx) mutations.deleteTx(cfg.tx);
-    else if (cfg.kind === "deleteSelected") mutations.deleteSelectedRows();
-    else if (cfg.kind === "removeAccount") void removeGoogleAccount();
-    else if (cfg.kind === "disconnect") void disconnectGoogle();
-  }
-
-  const exitSearch = useCallback(
-    () => toggleSearchActive(false),
-    [toggleSearchActive],
-  );
-  const openTagEditor = useCallback(() => setTagEditorVisible(true), []);
-  const openSearch = useCallback(
-    () => searchModalRef.current?.open(searchFilters),
-    [searchFilters],
-  );
-  const closeConfirm = useCallback(() => setConfirmConfig(null), []);
-  const closeHistory = useCallback(() => setHistoryVisible(false), []);
-  const closeTagEditor = useCallback(() => setTagEditorVisible(false), []);
-
+  // ─── Memoised page props ─────────────────────────────────────────
   const tabPageProps = useMemo(
     () => ({
       tabWidth,
@@ -685,7 +561,7 @@ function AppContent() {
     ],
   );
 
-  // --- Render ---
+  // ─── Render ──────────────────────────────────────────────────────
   if (!accessToken) {
     return (
       <View style={[styles.safe, { backgroundColor: colors.bg }]}>
