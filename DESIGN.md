@@ -20,6 +20,7 @@
 - **Card surfaces**: Soft, minimal outer borders.
 - **Borders**: Only on inputs, selects, destructive/secondary buttons, and internal row separators. Avoid border-heavy cards.
 - **Tabular numbers**: For finance values where React Native supports `fontVariant: ["tabular-nums"]`.
+- **OptionSheet (bottom sheet)**: 16px top radius, header with title and minimal close X (no background), rows without hairline dividers. Selected row uses a shaded background (softBg → tone+20alpha → primarySoft) instead of a checkmark. Options with an explicit `tone` (transaction types, color schemes) show coloured text for all items; unselected items with no tone use neutral `colors.text`.
 
 ## Layout
 

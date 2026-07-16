@@ -1,5 +1,18 @@
 # AGENTS.md - Bucks Manager Android
 
+## ⚠️ LÉEME PRIMERO — Instrucciones para el agente
+
+Antes de comenzar cualquier tarea, el agente DEBE:
+
+1. **Leer este archivo completo** antes de ejecutar cualquier comando o modificar archivos.
+2. **Cargar los skills relevantes** según la tarea (git-commit, design-taste-frontend, impeccable, etc.)
+3. **Leer CONTEXT.md** antes de cambiar startup, sync, navegación o modales.
+4. **Leer los tests existentes** antes de modificar lógica.
+5. **Ejecutar `npm run ci`** antes de commitear.
+6. **Seguir las reglas de commits** al pie de la letra (abajo).
+
+---
+
 ## Project Overview
 
 Bucks Manager Android is the React Native/Expo Android version of the Bucks Manager Google Apps Script app. It must preserve the mobile GAS workflow and use each user's private Google Sheet as the database. There is no custom backend.

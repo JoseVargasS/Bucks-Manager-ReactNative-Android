@@ -187,13 +187,19 @@ src/api/googleWorkspace.ts      Google Drive and Sheets integration
 src/api/sheetFormats.ts         Sheet date/number/header parsing
 src/domain/bucksLogic.ts        Sheet contract, summaries, dates, and transaction rules
 src/data/localCache.ts          Local-first financial cache
+src/hooks/useFinancialState.ts  Aggregated financial state + wrapper methods
+src/hooks/usePreferences.ts     Local preference persistence helpers
+src/hooks/useTransactionMutations.ts  Optimistic transaction CRUD
+src/hooks/useDebouncedSheetWrites.ts  Debounced sheet writes (1500ms)
+/src/hooks/usePickerCallbacks.ts       OptionSheet openers for settings
+src/hooks/useThemeCrossfade.ts          Theme toggle animation state
 src/utils/transactions.ts       Transaction filtering, sorting, and date grouping
 src/utils/tags.ts               Tag catalogue, migration, and resolution
 src/utils/history.ts            Transaction history tracking
 src/utils/pin.ts                PIN storage and verification
 src/utils/errorHandler.ts       Logging and error normalization
 src/components/screens/         Dashboard, Expenses, Settings, Login, PIN, Search, Summary
-src/components/modals/          Detail, Export, History, Search, TagEditor, Transaction
+src/components/modals/          Detail, Export, History, Search, TagEditor, Transaction, OptionSheet
 src/components/layout/          BottomNav, Header, PeriodControls
 src/components/ui/              StatCard, Kpi, BarChart, PieChart, Select, CalendarPicker
 src/theme/                      ThemeContext, colors, constants
@@ -202,7 +208,9 @@ tests/                          Unit tests (bucksLogic, error-handler, google-wo
 .github/workflows/ci.yml        Push and pull-request validation
 scripts/run-android.ps1         Physical-device Android run helper
 scripts/check-format.mjs        Dependency-free source whitespace check
+pnpm-workspace.yaml             pnpm hoisted linker config for Expo
 CONTEXT.md                      Runtime map and performance invariants
+AGENTS.md                       Agent instructions and project rules
 .codebase-memory/               Optional shared knowledge-graph artifact
 .codegraph/                     Local codegraph index (regenerable)
 ```
@@ -242,8 +250,9 @@ Both servers are configured as MCP entries in Claude Code, Codex CLI, Gemini CLI
 - Import `MaterialCommunityIcons` from its direct module so Metro does not bundle unused icon-font families.
 - Preserve the mounted pager and ref-driven primary modals unless device evidence justifies a different architecture.
 - The theme is split into three contexts (`ThemeModeContext`, `ColorSchemeContext`, `PaletteContext`); a toggle of one does not rerender the others' subscribers. Do not re-merge them.
-- The shell background and `HeaderShell` overlay animate from light to dark over 180ms when the theme toggles. The two SVG header fades snap because they accept a string colour prop.
+- The shell background and `HeaderShell` overlay animate from light to dark over 180ms when the theme toggles. The theme crossfade logic lives in `useThemeCrossfade` hook. The two SVG header fades snap because they accept a string colour prop.
 - `getPalette` memoizes the result for each `(theme, scheme)` pair in a small LRU. Do not remove that cache.
+- Dropdown selection components (`Select`) open an `OptionSheet` (bottom sheet via Modal) instead of an inline dropdown or portal. This avoids Android z-index issues with nested ScrollViews.
 - Transaction tags store stable ids, not labels. Custom tags keep the label the user typed; default tags are translated through the catalogue and keep their colour. `migrateTagReferences` rewrites legacy label refs to ids once when the tag catalogue finishes loading.
 - Tag catalogue (including colours) is persisted in sheet cell `MONTHLY SUMMARY!K2` so custom tag colours survive app data clear and device changes.
 - Every reusable UI primitive is `React.memo`-wrapped. New UI primitives must be memoized at creation time.

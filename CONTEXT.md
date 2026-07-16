@@ -4,7 +4,13 @@
 
 Bucks Manager is an Expo/React Native client with no custom backend. Google Sign-In supplies an access token; one private Google spreadsheet remains the remote source of truth. A local JSON cache makes startup and finance interactions immediate while Sheets revalidation runs in the background.
 
-`App.tsx` intentionally owns the cross-cutting runtime state: session restore, preferences, cache hydration, Google synchronization, optimistic writes, pager state, and modal refs. The three main pages stay mounted inside one animated pager. Primary interaction modals open through refs so opening them does not require a root visibility-state round trip.
+`App.tsx` intentionally owns the cross-cutting runtime state: session restore, preferences, cache hydration, Google synchronization, optimistic writes, pager state, and modal refs. Cross-cutting logic has been extracted into dedicated hooks:
+
+- **`useThemeCrossfade`** — manages the theme-toggle animation `Animated.Value` and synchronises with persisted preferences.
+- **`useDebouncedSheetWrites`** — debounces UI preferences, deletion history, and tag catalogue writes at 1500ms through `syncQueue`.
+- **`usePickerCallbacks`** — consolidates `OptionSheet` openers for language, currency, font, color scheme, and Google account settings.
+
+The three main pages stay mounted inside one animated pager. Primary interaction modals open through refs so opening them does not require a root visibility-state round trip.
 
 Deployment-specific Expo values, including `EAS_PROJECT_ID`, come from `.env` or the build environment.
 
@@ -61,7 +67,8 @@ The toggle animates the shell and `HeaderShell` background through an `Animated.
 - `src/api/googleWorkspace.ts`: tag readiness inferred from the transaction read, bounded Drive validation, batched reads, row mutations, and tag catalogue read/write to `MONTHLY SUMMARY!K1:K2`.
 - `src/data/localCache.ts`: stale-while-revalidate snapshot for transactions, summaries, frequent income, and last sync time. `CACHE_VERSION = 2`.
 - `src/components/screens/ExpensesView.tsx`: virtualized `SectionList`; clipping stays disabled because Android previously rendered blank rows after edits.
-- `src/components/modals/TransactionModal.tsx`, `DetailModal.tsx`, and `SearchModal.tsx`: ref-driven open path for immediate presentation.
+- `src/components/modals/TransactionModal.tsx`, `DetailModal.tsx`, `SearchModal.tsx`, and `OptionSheet.tsx`: ref-driven open path for immediate presentation.
+- `src/components/ui/Select.tsx`: opens an `OptionSheet` (bottom sheet via Modal) instead of an inline dropdown or portal. This avoids Android z-index issues with nested ScrollViews.
 - UI files import the direct `MaterialCommunityIcons` entry so Android exports include only that icon font.
 - `src/theme/ThemeContext.tsx`: three contexts as described above. Do not re-merge them.
 - `App.tsx`: mutation pipeline with `pendingSyncRef.current = true` guards, `rehydratingCache` state for splash visibility during cache restore, `isSheetTrashed` check on cached sessions.
