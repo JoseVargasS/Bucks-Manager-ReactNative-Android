@@ -3,6 +3,7 @@ describe("transactions", () => {
   let sortTransactionsDesc: typeof import("../src/utils/transactions").sortTransactionsDesc;
   let filterTransactionsByRollingPeriod: typeof import("../src/utils/transactions").filterTransactionsByRollingPeriod;
   let groupTransactionsByDate: typeof import("../src/utils/transactions").groupTransactionsByDate;
+  let transactionToDraft: typeof import("../src/utils/transactions").transactionToDraft;
   let computeLineItemsTotal: typeof import("../src/utils/transactions").computeLineItemsTotal;
 
   beforeAll(async () => {
@@ -11,6 +12,7 @@ describe("transactions", () => {
     sortTransactionsDesc = mod.sortTransactionsDesc;
     filterTransactionsByRollingPeriod = mod.filterTransactionsByRollingPeriod;
     groupTransactionsByDate = mod.groupTransactionsByDate;
+    transactionToDraft = mod.transactionToDraft;
     computeLineItemsTotal = mod.computeLineItemsTotal;
   });
 
@@ -278,6 +280,54 @@ describe("transactions", () => {
     expect(
       groups[0].label.includes("HOY") || groups[0].label.includes("TODAY"),
     ).toBeTruthy();
+  });
+
+  // --- transactionToDraft ---
+
+  test("transactionToDraft converts simple transaction to draft", () => {
+    const tx = {
+      rowId: 2, date: "15-jan-26", rawDate: "2026-01-15T05:00:00.000Z",
+      amount: -25, detail: "Comida del día", type: "GASTO NO FRECUENTE",
+      createdAt: "2026-01-15T12:00:00.000Z", tags: [],
+    };
+    const draft: any = transactionToDraft(tx as any);
+    expect(draft.date).toBe("2026-01-15");
+    expect(draft.amount).toBe("-25");
+    expect(draft.detail).toBe("Comida del día");
+    expect(draft.type).toBe("GASTO NO FRECUENTE");
+    expect(draft.concepto).toBe("Comida del día");
+    expect(draft.lineItems?.length).toBe(1);
+    expect(draft.lineItems[0].amount).toBe("-25");
+    expect(draft.lineItems[0].description).toBe("");
+  });
+
+  test("transactionToDraft with lineItems extracts concepto", () => {
+    const tx: any = {
+      rowId: 2, date: "15-jan-26", rawDate: "2026-01-15T05:00:00.000Z",
+      amount: -50, detail: "Supermercado: frutas, verduras",
+      type: "GASTO NO FRECUENTE", createdAt: "", tags: [],
+      lineItems: [
+        { id: "li-1", amount: -30, description: "Frutas", tags: [], formula: "10+20" },
+        { id: "li-2", amount: -20, description: "Verduras", tags: ["default-comida"] },
+      ],
+    };
+    const draft: any = transactionToDraft(tx);
+    expect(draft.concepto).toBe("Supermercado");
+    expect(draft.lineItems.length).toBe(2);
+    expect(draft.lineItems[0].amount).toBe("=10+20");
+    expect(draft.lineItems[0].description).toBe("Frutas");
+    expect(draft.lineItems[1].amount).toBe("-20");
+  });
+
+  test("transactionToDraft handles formula in amount", () => {
+    const tx = {
+      rowId: 3, date: "20-feb-26", rawDate: "2026-02-20T05:00:00.000Z",
+      amount: 100, detail: "Venta", type: "INGRESO FRECUENTE",
+      createdAt: "", tags: [], formula: "50+50",
+    };
+    const draft: any = transactionToDraft(tx as any);
+    expect(draft.amount).toBe("=50+50");
+    expect(draft.lineItems[0].amount).toBe("=50+50");
   });
 
   // --- computeLineItemsTotal ---

@@ -35,7 +35,11 @@ function normalizeTags(tags: Tag[]): Tag[] {
   return Array.from(byLabel.values());
 }
 
-function translateDefaults(tags: Tag[], language: LanguageMode): Tag[] {
+/**
+ * Translates default tag labels to match the given language.
+ * Returns the same array reference when no tags changed.
+ */
+export function translateDefaultTagLabels(tags: Tag[], language: LanguageMode): Tag[] {
   const lookup = new Map(DEFAULT_TAGS.map((d) => [d.id, d[language]]));
   let changed = false;
   const result = tags.map((tag) => {
@@ -47,6 +51,10 @@ function translateDefaults(tags: Tag[], language: LanguageMode): Tag[] {
     return tag;
   });
   return changed ? result : tags;
+}
+
+function translateDefaults(tags: Tag[], language: LanguageMode): Tag[] {
+  return translateDefaultTagLabels(tags, language);
 }
 
 export async function loadTags(language: LanguageMode = "es"): Promise<Tag[]> {
@@ -180,27 +188,13 @@ export function mergeTagsFromSheet(
     }
   }
   let result = added.length ? [...Array.from(byId.values()), ...added] : Array.from(byId.values());
-  // Translate default tag labels to the current language. The sheet stores
-  // them in the language that was active when they were written, but the UI
-  // must show the labels matching the current language setting.
-  const defaultLookup = new Map(DEFAULT_TAGS.map((d) => [d.id, d[language]]));
-  let translated = false;
-  result = result.map((tag) => {
-    const localized = defaultLookup.get(tag.id);
-    if (localized && tag.label !== localized) {
-      translated = true;
-      return { ...tag, label: localized };
-    }
-    return tag;
-  });
-  if (translated) {
-    return result.length === currentTags.length && result.every((t, i) => t === currentTags[i])
-      ? currentTags
-      : result;
+  // Translate default tag labels to the current language.
+  result = translateDefaultTagLabels(result, language);
+  // Preserve referential stability when nothing changed.
+  if (result.length === currentTags.length && result.every((t, i) => t === currentTags[i])) {
+    return currentTags;
   }
-  return result.length === currentTags.length && result.every((t, i) => t === currentTags[i])
-    ? currentTags
-    : result;
+  return result;
 }
 
 export function migrateTransactionTags(transactions: Transaction[], tagsList: Tag[]): Transaction[] {

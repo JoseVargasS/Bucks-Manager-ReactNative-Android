@@ -46,17 +46,18 @@ describe("useTransactionMutations", () => {
     return {
       _state: state,
       get transactions() { return state.transactions; },
-      setTransactions: (v: any) => { state.transactions = typeof v === "function" ? v(state.transactions) : v; },
       get summaries() { return state.summaries; },
-      setSummaries: (v: any) => { state.summaries = typeof v === "function" ? v(state.summaries) : v; },
       get freqIncome() { return state.freqIncome; },
       get month() { return state.month; },
       get year() { return state.year; },
-      setMonth: (v: any) => { state.month = v; },
-      setYear: (v: any) => { state.year = v; },
       get selectedRows() { return state.selectedRows; },
-      setSelectedRows: (v: any) => { state.selectedRows = typeof v === "function" ? v(state.selectedRows) : v; },
-      setSearchActive: (v: any) => { state.searchActive = v; },
+      recalcAndReplaceTransactions: (next: any[], _affectedMonths: string[]) => {
+        state.transactions = next;
+      },
+      setPeriod: (m: number, y: number) => { state.month = m; state.year = y; },
+      toggleSearchActive: (active: boolean) => { state.searchActive = active; },
+      clearSelection: () => { state.selectedRows = []; },
+      removeFromSelection: (rowId: number) => { state.selectedRows = state.selectedRows.filter((r: number) => r !== rowId); },
       renumberTransactions: state.renumberTransactions,
       persistFinancialState: state.persistFinancialState,
     };

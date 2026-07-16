@@ -110,6 +110,10 @@ type PreferencesState = {
   applyRemotePreferences: (prefs: UiPreferencesSnapshot) => void;
 };
 
+function persistPreference(key: string, value: string) {
+  setItemAsync(key, value).catch(() => undefined);
+}
+
 export function usePreferences(): PreferencesState {
   const { setColorScheme, setTheme: setThemeMode } = useTheme();
   const [language, setLanguage] = useState<LanguageMode>(detectDeviceLanguage);
@@ -198,11 +202,11 @@ export function usePreferences(): PreferencesState {
       setColorSchemeState(nextColor);
       setThemeMode(nextTheme);
       setThemeState(nextTheme);
-      setItemAsync(LANGUAGE_KEY, nextLanguage).catch(() => undefined);
-      setItemAsync(CURRENCY_SYMBOL_KEY, nextCurrency).catch(() => undefined);
-      setItemAsync(FONT_KEY, nextFont).catch(() => undefined);
-      setItemAsync(COLOR_SCHEME_KEY, nextColor).catch(() => undefined);
-      setItemAsync(THEME_KEY, nextTheme).catch(() => undefined);
+      persistPreference(LANGUAGE_KEY, nextLanguage);
+      persistPreference(CURRENCY_SYMBOL_KEY, nextCurrency);
+      persistPreference(FONT_KEY, nextFont);
+      persistPreference(COLOR_SCHEME_KEY, nextColor);
+      persistPreference(THEME_KEY, nextTheme);
     },
     [setColorScheme, setThemeMode],
   );
@@ -210,33 +214,33 @@ export function usePreferences(): PreferencesState {
   const saveLanguage = useCallback((next: string) => {
     const value = sanitizeLanguage(next);
     setLanguage(value);
-    setItemAsync(LANGUAGE_KEY, value).catch(() => undefined);
+    persistPreference(LANGUAGE_KEY, value);
   }, []);
 
   const saveCurrencySymbol = useCallback((next: string) => {
     const value = sanitizeCurrency(next);
     setCurrencySymbol(value);
-    setItemAsync(CURRENCY_SYMBOL_KEY, value).catch(() => undefined);
+    persistPreference(CURRENCY_SYMBOL_KEY, value);
   }, []);
 
   const saveFontPreference = useCallback((next: string) => {
     const value = sanitizeFont(next);
     setAppFontPreference(value);
     setFontPreference(value);
-    setItemAsync(FONT_KEY, value).catch(() => undefined);
+    persistPreference(FONT_KEY, value);
   }, []);
 
   const saveColorScheme = useCallback((next: string) => {
     const value = sanitizeColorScheme(next);
     setColorScheme(value);
     setColorSchemeState(value);
-    setItemAsync(COLOR_SCHEME_KEY, value).catch(() => undefined);
+    persistPreference(COLOR_SCHEME_KEY, value);
   }, [setColorScheme]);
 
   const saveTheme = useCallback((next: ThemeMode) => {
     setThemeMode(next);
     setThemeState(next);
-    setItemAsync(THEME_KEY, next).catch(() => undefined);
+    persistPreference(THEME_KEY, next);
   }, [setThemeMode]);
 
   return {

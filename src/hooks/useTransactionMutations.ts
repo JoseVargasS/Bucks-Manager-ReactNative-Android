@@ -2,10 +2,9 @@ import { Alert } from "react-native";
 import {
   buildTransactionFromDraft,
   insertChronologically,
-  recalculateSummariesForMonths,
   uniqueMonthKeys,
 } from "@/domain/bucksLogic";
-import { formatDateToISO } from "@/utils/dateUtils";
+import { transactionToDraft } from "@/utils/transactions";
 import { addHistoryEntry, removeHistoryEntry } from "@/utils/history";
 import {
   saveTransaction,
@@ -23,17 +22,16 @@ import type {
 
 interface FinState {
   transactions: Transaction[];
-  setTransactions: React.Dispatch<React.SetStateAction<Transaction[]>>;
   summaries: SummaryRow[];
-  setSummaries: React.Dispatch<React.SetStateAction<SummaryRow[]>>;
   freqIncome: Record<string, number>;
   month: number;
   year: number;
-  setMonth: React.Dispatch<React.SetStateAction<number>>;
-  setYear: React.Dispatch<React.SetStateAction<number>>;
   selectedRows: number[];
-  setSelectedRows: React.Dispatch<React.SetStateAction<number[]>>;
-  setSearchActive: React.Dispatch<React.SetStateAction<boolean>>;
+  recalcAndReplaceTransactions: (next: Transaction[], affectedMonths: string[]) => void;
+  setPeriod: (month: number, year: number) => void;
+  toggleSearchActive: (active: boolean) => void;
+  clearSelection: () => void;
+  removeFromSelection: (rowId: number) => void;
   renumberTransactions: (items: Transaction[]) => Transaction[];
   persistFinancialState: (tx: Transaction[], summaries: SummaryRow[], freqIncome: Record<string, number>, syncedAt?: string | null, sheetId?: string) => void;
 }
@@ -68,16 +66,30 @@ export function useTransactionMutations(
   copy: { incompleteData: string; completeRequired: string; editRecord: string; newRecord: string; deleteRecord: string; deleteSelection: string; moveRecord: string; moveRecordError: string; undoAction: string },
 ): TransactionMutationsApi {
   const {
-    transactions, setTransactions,
-    summaries, setSummaries,
+    transactions, recalcAndReplaceTransactions,
     freqIncome,
-    month, year, setMonth, setYear,
-    selectedRows, setSelectedRows, setSearchActive,
+    month, year, setPeriod, toggleSearchActive, clearSelection, removeFromSelection,
+    selectedRows,
     renumberTransactions, persistFinancialState,
   } = fin;
   const { accessToken, spreadsheetId } = session;
   const { reloadFromGoogle, syncGoogleInBackground, pendingSyncRef } = sync;
   const { setHistoryEntries } = history;
+
+  /** Updates local state and persists cache after a transaction mutation. */
+  function applyTransactionUpdate(next: Transaction[], affectedMonths: string[]) {
+    recalcAndReplaceTransactions(next, affectedMonths);
+    persistFinancialState(next, [], freqIncome, undefined, spreadsheetId);
+  }
+
+  /** Queues a Google Sheets write via the sync queue, then reconciles state. */
+  function syncWithReload(apiCall: (freshToken: string) => Promise<void>, title: string) {
+    pendingSyncRef.current = true;
+    syncGoogleInBackground(async (freshToken) => {
+      await apiCall(freshToken);
+      await reloadFromGoogle(freshToken, spreadsheetId, false, true);
+    }, title);
+  }
 
   function reconcilePeriod(
     nextTransactions: Transaction[],
@@ -96,14 +108,12 @@ export function useTransactionMutations(
     }
     if (bestTs > 0) {
       const d = new Date(bestTs);
-      setMonth(d.getMonth());
-      setYear(d.getFullYear());
+      setPeriod(d.getMonth(), d.getFullYear());
     } else {
-      setMonth(new Date().getMonth());
-      setYear(new Date().getFullYear());
+      setPeriod(new Date().getMonth(), new Date().getFullYear());
     }
-    setSearchActive(false);
-    setSelectedRows([]);
+    toggleSearchActive(false);
+    clearSelection();
   }
 
   function submitDraft(
@@ -124,64 +134,42 @@ export function useTransactionMutations(
       Alert.alert(copy.incompleteData, copy.completeRequired);
       return false;
     }
-    const currentTransactions = transactions;
-    const currentFreqIncome = freqIncome;
-
     const optimistic = buildTransactionFromDraft(
       currentDraft,
-      currentEdit?.rowId || currentTransactions.length + 2,
+      currentEdit?.rowId || transactions.length + 2,
     );
     const next = currentEdit
       ? renumberTransactions(
           insertChronologically(
-            currentTransactions.filter(
+            transactions.filter(
               (tx) => tx.rowId !== currentEdit.rowId,
             ),
             optimistic,
           ),
         )
       : renumberTransactions(
-          insertChronologically(currentTransactions, optimistic),
+          insertChronologically(transactions, optimistic),
         );
     const affectedMonths = currentEdit
       ? uniqueMonthKeys([currentEdit, optimistic])
       : uniqueMonthKeys([optimistic]);
-    const nextSummaries = recalculateSummariesForMonths(
-      next,
-      currentFreqIncome,
-      affectedMonths,
-      summaries,
-    );
-    setTransactions(next);
-    setSummaries(nextSummaries);
+    applyTransactionUpdate(next, affectedMonths);
     if (!currentEdit) {
       const txDate = new Date(optimistic.rawDate);
       if (!Number.isNaN(txDate.getTime())) {
-        setMonth(txDate.getMonth());
-        setYear(txDate.getFullYear());
-        setSearchActive(false);
-        setSelectedRows([]);
+        setPeriod(txDate.getMonth(), txDate.getFullYear());
+        toggleSearchActive(false);
+        clearSelection();
       }
     }
-    persistFinancialState(next, nextSummaries, currentFreqIncome, undefined, spreadsheetId);
-
-    const token = accessToken;
-    const sheetId = spreadsheetId;
-    if (token && sheetId) {
-      pendingSyncRef.current = true;
-      syncGoogleInBackground(
+    if (accessToken && spreadsheetId) {
+      syncWithReload(
         async (freshToken) => {
           if (currentEdit) {
-            await updateGoogleTransaction(
-              freshToken,
-              sheetId,
-              currentEdit.rowId,
-              currentDraft,
-            );
+            await updateGoogleTransaction(freshToken, spreadsheetId, currentEdit.rowId, currentDraft);
           } else {
-            await saveTransaction(freshToken, sheetId, currentDraft);
+            await saveTransaction(freshToken, spreadsheetId, currentDraft);
           }
-          await reloadFromGoogle(freshToken, sheetId, false, true);
         },
         currentEdit ? copy.editRecord : copy.newRecord,
       );
@@ -190,32 +178,17 @@ export function useTransactionMutations(
   }
 
   async function deleteTx(tx: Transaction) {
-    setSelectedRows((current) => current.filter((rowId) => rowId !== tx.rowId));
+    removeFromSelection(tx.rowId);
     const next = renumberTransactions(
       transactions.filter((item) => item.rowId !== tx.rowId),
     );
-    const affectedMonths = uniqueMonthKeys([tx]);
-    const nextSummaries = recalculateSummariesForMonths(
-      next,
-      freqIncome,
-      affectedMonths,
-      summaries,
-    );
-    setTransactions(next);
-    setSummaries(nextSummaries);
+    applyTransactionUpdate(next, uniqueMonthKeys([tx]));
     reconcilePeriod(next, month, year);
-    persistFinancialState(next, nextSummaries, freqIncome, undefined, spreadsheetId);
     addHistoryEntry({ action: "delete", transaction: tx })
-      .then((entry) => {
-        setHistoryEntries((prev) => [entry, ...prev]);
-      })
+      .then((entry) => setHistoryEntries((prev) => [entry, ...prev]))
       .catch(() => undefined);
     if (accessToken && spreadsheetId) {
-      pendingSyncRef.current = true;
-      syncGoogleInBackground(async (freshToken) => {
-        await deleteGoogleTransaction(freshToken, spreadsheetId, tx.rowId);
-        await reloadFromGoogle(freshToken, spreadsheetId, false, true);
-      }, copy.deleteRecord);
+      syncWithReload((t) => deleteGoogleTransaction(t, spreadsheetId, tx.rowId), copy.deleteRecord);
     }
   }
 
@@ -228,48 +201,32 @@ export function useTransactionMutations(
     const next = renumberTransactions(
       transactions.filter((item) => !selectedIds.has(item.rowId)),
     );
-    const affectedMonths = uniqueMonthKeys(selected);
-    const nextSummaries = recalculateSummariesForMonths(
-      next,
-      freqIncome,
-      affectedMonths,
-      summaries,
-    );
-    setTransactions(next);
-    setSummaries(nextSummaries);
+    applyTransactionUpdate(next, uniqueMonthKeys(selected));
     reconcilePeriod(next, month, year);
-    persistFinancialState(next, nextSummaries, freqIncome, undefined, spreadsheetId);
-    setSelectedRows([]);
+    clearSelection();
     for (const tx of selected) {
       addHistoryEntry({ action: "delete", transaction: tx })
-        .then((entry) => {
-          setHistoryEntries((prev) => [entry, ...prev]);
-        })
+        .then((entry) => setHistoryEntries((prev) => [entry, ...prev]))
         .catch(() => undefined);
     }
     if (accessToken && spreadsheetId) {
-      pendingSyncRef.current = true;
-      syncGoogleInBackground(async (freshToken) => {
-        for (const tx of selected)
-          await deleteGoogleTransaction(freshToken, spreadsheetId, tx.rowId);
-        await reloadFromGoogle(freshToken, spreadsheetId, false, true);
-      }, copy.deleteSelection);
+      syncWithReload(
+        async (t) => {
+          for (const tx of selected)
+            await deleteGoogleTransaction(t, spreadsheetId, tx.rowId);
+        },
+        copy.deleteSelection,
+      );
     }
   }
 
   async function moveTx(tx: Transaction, direction: "up" | "down") {
     try {
       if (accessToken && spreadsheetId) {
-        pendingSyncRef.current = true;
-        syncGoogleInBackground(async (freshToken) => {
-          await moveGoogleTransaction(
-            freshToken,
-            spreadsheetId,
-            tx.rowId,
-            direction,
-          );
-          await reloadFromGoogle(freshToken, spreadsheetId, false, true);
-        }, copy.moveRecord);
+        syncWithReload(
+          async (t) => moveGoogleTransaction(t, spreadsheetId, tx.rowId, direction),
+          copy.moveRecord,
+        );
         return;
       }
       const index = transactions.findIndex((item) => item.rowId === tx.rowId);
@@ -279,15 +236,7 @@ export function useTransactionMutations(
       const next = [...transactions];
       [next[index], next[targetIndex]] = [next[targetIndex], next[index]];
       const moved = next.map((item, idx) => ({ ...item, rowId: idx + 2 }));
-      const nextSummaries = recalculateSummariesForMonths(
-        moved,
-        freqIncome,
-        [],
-        summaries,
-      );
-      setTransactions(moved);
-      setSummaries(nextSummaries);
-      persistFinancialState(moved, nextSummaries, freqIncome, undefined, spreadsheetId);
+      applyTransactionUpdate(moved, []);
     } catch (error) {
       Alert.alert(
         copy.moveRecord,
@@ -302,52 +251,15 @@ export function useTransactionMutations(
     removeHistoryEntry(entryId).catch(() => undefined);
 
     const restored = insertChronologically(transactions, entry.transaction);
-    const affectedMonths = uniqueMonthKeys([entry.transaction]);
-    const nextSummaries = recalculateSummariesForMonths(
-      restored,
-      freqIncome,
-      affectedMonths,
-      summaries,
-    );
-    setTransactions(restored);
-    setSummaries(nextSummaries);
-    persistFinancialState(restored, nextSummaries, freqIncome, undefined, spreadsheetId);
+    applyTransactionUpdate(restored, uniqueMonthKeys([entry.transaction]));
     if (accessToken && spreadsheetId) {
-      pendingSyncRef.current = true;
-      const concepto = entry.transaction.lineItems
-        ? (entry.transaction.detail.split(":")[0] || "")
-        : "";
-      const lineItems = entry.transaction.lineItems
-        ? entry.transaction.lineItems.map((li) => ({
-            id: li.id,
-            amount: li.formula ? `=${li.formula}` : String(li.amount),
-            description: li.description,
-            tags: li.tags,
-          }))
-        : [{ id: "li-1", amount: entry.transaction.formula
-            ? `=${entry.transaction.formula}`
-            : String(Math.abs(entry.transaction.amount)), description: entry.transaction.detail, tags: entry.transaction.tags || [] }];
-      const draft: TransactionDraft = {
-        date: formatDateToISO(entry.transaction.rawDate),
-        amount: entry.transaction.formula
-          ? `=${entry.transaction.formula}`
-          : String(Math.abs(entry.transaction.amount)),
-        detail: entry.transaction.detail,
-        type: entry.transaction.type,
-        createdAt: entry.transaction.createdAt,
-        tags: entry.transaction.tags || [],
-        concepto,
-        lineItems,
-      };
-      syncGoogleInBackground(async (freshToken) => {
-        await insertTransactionAtRow(
-          freshToken,
-          spreadsheetId,
-          draft,
-          entry.transaction.rowId,
-        );
-        await reloadFromGoogle(freshToken, spreadsheetId, false, true);
-      }, copy.undoAction);
+      const draft = transactionToDraft(entry.transaction);
+      syncWithReload(
+        async (freshToken) => {
+          await insertTransactionAtRow(freshToken, spreadsheetId, draft, entry.transaction.rowId);
+        },
+        copy.undoAction,
+      );
     }
   }
 

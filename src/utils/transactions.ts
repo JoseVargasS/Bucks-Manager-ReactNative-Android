@@ -3,6 +3,29 @@ import { calculateExpression, formatDateToISO } from "@/domain/bucksLogic";
 import { UI_COPY, type UiCopy } from "@/i18n";
 import { formatDateGroupLabel } from "./formats";
 
+/** Convierte un Transaction en un TransactionDraft para edición o restauración */
+export function transactionToDraft(tx: Transaction): TransactionDraft {
+  const concepto = tx.lineItems ? (tx.detail.split(":")[0] || "") : tx.detail;
+  const lineItems = tx.lineItems
+    ? tx.lineItems.map((li) => ({
+        id: li.id,
+        amount: li.formula ? `=${li.formula}` : String(li.amount),
+        description: li.description,
+        tags: li.tags,
+      }))
+    : [{ id: "li-1", amount: tx.formula ? `=${tx.formula}` : String(tx.amount), description: "", tags: tx.tags || [] }];
+  return {
+    date: formatDateToISO(tx.rawDate),
+    amount: tx.formula ? `=${tx.formula}` : String(tx.amount),
+    detail: tx.detail,
+    type: tx.type,
+    createdAt: tx.createdAt,
+    tags: tx.tags || [],
+    concepto,
+    lineItems,
+  };
+}
+
 /** Crea un TransactionDraft vacío con tipo por defecto "GASTO NO FRECUENTE" y fecha actual */
 export function getBlankDraft(
   type: TransactionType = "GASTO NO FRECUENTE",

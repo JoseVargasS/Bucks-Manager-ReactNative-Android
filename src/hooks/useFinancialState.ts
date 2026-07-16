@@ -4,6 +4,7 @@ import {
   applySearch,
   calculateSummaries,
   MONTH_NAMES,
+  recalculateSummariesForMonths,
 } from "@/domain/bucksLogic";
 import {
   sortTransactionsDesc,
@@ -30,14 +31,12 @@ type FinancialState = {
   searchFilters: SearchFilters;
   searchActive: boolean;
   selectedRows: number[];
-  setTransactions: React.Dispatch<React.SetStateAction<Transaction[]>>;
-  setSummaries: React.Dispatch<React.SetStateAction<SummaryRow[]>>;
-  setFreqIncome: React.Dispatch<React.SetStateAction<Record<string, number>>>;
-  setMonth: React.Dispatch<React.SetStateAction<number>>;
-  setYear: React.Dispatch<React.SetStateAction<number>>;
-  setSearchFilters: React.Dispatch<React.SetStateAction<SearchFilters>>;
-  setSearchActive: React.Dispatch<React.SetStateAction<boolean>>;
-  setSelectedRows: React.Dispatch<React.SetStateAction<number[]>>;
+  replaceTransactions: React.Dispatch<React.SetStateAction<Transaction[]>>;
+  recalcAndReplaceTransactions: (next: Transaction[], affectedMonths: string[]) => void;
+  removeFromSelection: (rowId: number) => void;
+  setPeriod: (month: number, year: number) => void;
+  toggleSearchActive: (active: boolean) => void;
+  clearSelection: () => void;
   periodRange: { minYear: number; maxYear: number };
   availableYears: number[];
   availableMonths: number[];
@@ -300,6 +299,38 @@ export function useFinancialState(tagsList: Tag[]): FinancialState {
     );
   }, []);
 
+  const setPeriod = useCallback(
+    (nextMonth: number, nextYear: number) => {
+      setMonth(nextMonth);
+      setYear(nextYear);
+    },
+    [],
+  );
+
+  const toggleSearchActive = useCallback(
+    (active: boolean) => setSearchActive(active),
+    [],
+  );
+
+  const clearSelection = useCallback(
+    () => setSelectedRows([]),
+    [],
+  );
+
+  const removeFromSelection = useCallback(
+    (rowId: number) => setSelectedRows((current) => current.filter((r) => r !== rowId)),
+    [],
+  );
+
+  const recalcAndReplaceTransactions = useCallback(
+    (next: Transaction[], affectedMonths: string[]) => {
+      const nextSummaries = recalculateSummariesForMonths(next, freqIncome, affectedMonths, summaries);
+      setTransactions(next);
+      setSummaries(nextSummaries);
+    },
+    [freqIncome, summaries],
+  );
+
   return {
     transactions,
     summaries,
@@ -314,14 +345,12 @@ export function useFinancialState(tagsList: Tag[]): FinancialState {
     searchFilters,
     searchActive,
     selectedRows,
-    setTransactions,
-    setSummaries,
-    setFreqIncome,
-    setMonth,
-    setYear,
-    setSearchFilters,
-    setSearchActive,
-    setSelectedRows,
+    replaceTransactions: setTransactions,
+    recalcAndReplaceTransactions,
+    removeFromSelection,
+    setPeriod,
+    toggleSearchActive,
+    clearSelection,
     periodRange,
     availableYears,
     availableMonths,
