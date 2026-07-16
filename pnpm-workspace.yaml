@@ -1,29 +1,30 @@
 nodeLinker: hoisted
 minimumReleaseAgeExclude:
-  - '@expo/cli@56.1.18 || 56.1.19'
-  - '@expo/config-plugins@56.0.11 || 56.0.12'
-  - '@expo/config@56.0.11'
+  - '@expo/cli@56.1.18 || 56.1.19 || 56.1.20'
+  - '@expo/config-plugins@56.0.11 || 56.0.12 || 56.0.13'
+  - '@expo/config@56.0.11 || 56.0.12'
   - '@expo/env@2.3.1'
-  - '@expo/fingerprint@0.19.6 || 0.19.7'
-  - '@expo/image-utils@0.10.2'
-  - '@expo/inline-modules@0.0.13'
-  - '@expo/local-build-cache-provider@56.0.9'
-  - '@expo/metro-config@56.0.16'
-  - '@expo/prebuild-config@56.0.18 || 56.0.19'
-  - '@expo/require-utils@56.1.4'
+  - '@expo/fingerprint@0.19.6 || 0.19.7 || 0.19.8'
+  - '@expo/image-utils@0.10.2 || 0.10.3'
+  - '@expo/inline-modules@0.0.13 || 0.0.14'
+  - '@expo/local-build-cache-provider@56.0.9 || 56.0.10'
+  - '@expo/metro-config@56.0.16 || 56.0.17'
+  - '@expo/prebuild-config@56.0.18 || 56.0.19 || 56.0.20'
+  - '@expo/require-utils@56.1.4 || 56.1.5'
   - '@expo/schema-utils@56.0.2'
-  - expo-constants@56.0.20
-  - expo-dev-client@56.0.22
-  - expo-dev-launcher@56.0.23
-  - expo-dev-menu@56.0.19
-  - expo-modules-autolinking@56.0.18 || 56.0.19
-  - expo-modules-core@56.0.19 || 56.0.20
+  - expo-constants@56.0.20 || 56.0.21
+  - expo-dev-client@56.0.22 || 56.0.23
+  - expo-dev-launcher@56.0.23 || 56.0.24
+  - expo-dev-menu@56.0.19 || 56.0.20
+  - expo-modules-autolinking@56.0.18 || 56.0.19 || 56.0.20
+  - expo-modules-core@56.0.19 || 56.0.20 || 56.0.21
   - expo-modules-jsi@56.0.11 || 56.0.12
-  - expo-sharing@56.0.20 || 56.0.21
-  - expo-splash-screen@56.0.12
-  - expo@56.0.14 || 56.0.15
+  - expo-sharing@56.0.20 || 56.0.21 || 56.0.22
+  - expo-splash-screen@56.0.12 || 56.0.13
+  - expo@56.0.14 || 56.0.15 || 56.0.16
   - '@expo/router-server@56.0.16'
   - babel-preset-expo@56.0.17
-  - expo-asset@56.0.19
+  - expo-asset@56.0.19 || 56.0.20
+  - expo-blur@56.0.4
 allowBuilds:
   unrs-resolver: true
