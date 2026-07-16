@@ -10,7 +10,7 @@ import { type MaterialIconName } from "@/types";
 import { useModalTransition } from "@/components/ui/useModalTransition";
 import { Text } from "@/components/ui/AppText";
 
-type PickerOption = { label: string; value: string; icon?: MaterialIconName; tone?: string; fontFamily?: string };
+type PickerOption = { label: string; value: string; icon?: MaterialIconName; tone?: string; fontFamily?: string; softBg?: string };
 type PickerConfig = { title: string; options: PickerOption[]; selectedValue: string; onSelect: (value: string) => void };
 export type OptionSheetHandle = { open: (config: PickerConfig) => void };
 
@@ -37,34 +37,79 @@ export const OptionSheet = forwardRef<OptionSheetHandle, { colors: Palette }>(fu
     <Modal visible={transition.modalVisible} transparent animationType="none" onRequestClose={close}>
       <Animated.View style={[styles.optionOverlay, { backgroundColor: colors.overlay }, transition.containerStyle]}>
         <TouchableOpacity style={styles.optionBackdrop} activeOpacity={1} onPress={close} />
-        <Animated.View style={[optionStyles.sheet, { backgroundColor: colors.card }, transition.panelStyle]}>
-          <View style={[styles.optionHeader, { borderColor: colors.border }]}>
-            <Text style={[styles.optionTitle, { color: colors.text }]}>{config.title}</Text>
-            <TouchableOpacity style={[styles.optionClose, { backgroundColor: colors.input }]} onPress={close}>
-              <MaterialCommunityIcons name="close" size={20} color={colors.text} />
+        <Animated.View
+          style={[
+            optionSheetStylesMini.sheet,
+            { backgroundColor: colors.card },
+            transition.panelStyle,
+          ]}
+        >
+          {/* Header — title + minimal close button (no background) */}
+          <View style={styles.optionHeader}>
+            <Text
+              style={[styles.optionTitle, { color: colors.text }]}
+              numberOfLines={1}
+            >
+              {config.title || ""}
+            </Text>
+            <TouchableOpacity
+              onPress={close}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              style={styles.optionClose}
+            >
+              <MaterialCommunityIcons name="close" size={18} color={colors.muted} />
             </TouchableOpacity>
           </View>
-          <ScrollView style={styles.optionList} contentContainerStyle={styles.optionListContent} showsVerticalScrollIndicator={false}>
+
+          <ScrollView
+            style={styles.optionList}
+            contentContainerStyle={styles.optionListContent}
+            showsVerticalScrollIndicator={false}
+          >
             {config.options.map((option) => {
               const selected = option.value === config.selectedValue;
-              const tone = option.tone || colors.primary;
+              const hasIcon = Boolean(option.icon);
               return (
                 <TouchableOpacity
                   key={option.value}
                   style={[
                     styles.optionRow,
-                    { backgroundColor: selected ? colors.primarySoft : colors.input },
+                    selected && {
+                      backgroundColor:
+                        option.softBg ||
+                        (option.tone ? `${option.tone}20` : colors.primarySoft),
+                    },
                   ]}
                   onPress={() => {
                     pendingSelection.current = { value: option.value, onSelect: config.onSelect };
                     close();
                   }}
                 >
-                  <View style={[styles.optionIcon, { backgroundColor: selected ? colors.primarySoft : colors.card }]}>
-                    <MaterialCommunityIcons name={option.icon || "chevron-right"} size={19} color={tone} />
-                  </View>
-                  <Text numberOfLines={1} style={[styles.optionLabel, { color: selected ? colors.primary : colors.text, fontFamily: option.fontFamily, fontWeight: option.value === "light" ? "400" : "600" }]}>{option.label}</Text>
-                  {selected && <MaterialCommunityIcons name="check" size={20} color={colors.primary} />}
+                  {/* Icon — only when explicitly provided */}
+                  {hasIcon && (
+                    <View style={styles.optionIcon}>
+                      <MaterialCommunityIcons
+                        name={option.icon!}
+                        size={20}
+                        color={option.tone || (selected ? colors.primary : colors.text)}
+                      />
+                    </View>
+                  )}
+
+                  {/* Label */}
+                  <Text
+                    numberOfLines={1}
+                    style={[
+                      styles.optionLabel,
+                      {
+                        color: option.tone || (selected ? colors.primary : colors.text),
+                        fontFamily: option.fontFamily,
+                        fontWeight: selected ? "600" : "500",
+                      },
+                    ]}
+                  >
+                    {option.label}
+                  </Text>
                 </TouchableOpacity>
               );
             })}
@@ -75,6 +120,13 @@ export const OptionSheet = forwardRef<OptionSheetHandle, { colors: Palette }>(fu
   );
 });
 
-const optionStyles = StyleSheet.create({
-  sheet: { width: "100%", maxHeight: "70%", borderTopWidth: 0, borderTopLeftRadius: 20, borderTopRightRadius: 20, overflow: "hidden" },
+const optionSheetStylesMini = StyleSheet.create({
+  sheet: {
+    width: "100%",
+    maxHeight: "70%",
+    borderTopWidth: 0,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    overflow: "hidden",
+  },
 });
