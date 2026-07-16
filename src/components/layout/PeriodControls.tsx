@@ -39,11 +39,12 @@ export const PeriodControls = memo(function PeriodControls({
   return (
     <View style={styles.periodControls}>
       <View style={styles.periodActions}>
-        <BlurView
-          intensity={110}
-          tint={blurTint}
-          style={[styles.periodDropdownGroup, styles.blurContainer]}
-        >
+        <View style={styles.selectsWrapper}>
+          <BlurView
+            intensity={110}
+            tint={blurTint}
+            style={styles.selectsBlurBg}
+          />
           <Select
             value={String(year)}
             options={availableYears.map((item) => ({
@@ -58,6 +59,7 @@ export const PeriodControls = memo(function PeriodControls({
             buttonStyle={{
               backgroundColor: "transparent",
               borderColor: "transparent",
+              borderRadius: 50,
             }}
           />
           <Select
@@ -74,9 +76,10 @@ export const PeriodControls = memo(function PeriodControls({
             buttonStyle={{
               backgroundColor: "transparent",
               borderColor: "transparent",
+              borderRadius: 50,
             }}
           />
-        </BlurView>
+        </View>
         <BlurView
           intensity={110}
           tint={blurTint}
@@ -118,12 +121,17 @@ const styles = StyleSheet.create({
   },
   periodActions: { flexDirection: "row", alignItems: "center", gap: 8 },
   blurContainer: { overflow: "hidden" },
-  periodDropdownGroup: {
+  selectsWrapper: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
     borderRadius: 50,
     height: 46,
+    overflow: "hidden",
+  },
+  selectsBlurBg: {
+    ...StyleSheet.absoluteFill,
+    borderRadius: 50,
   },
   periodDropdown: { flex: 1, minWidth: 0 },
   periodNavGroup: {
