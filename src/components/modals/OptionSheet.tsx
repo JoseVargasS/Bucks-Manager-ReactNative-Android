@@ -1,5 +1,5 @@
 import { forwardRef, useCallback, useImperativeHandle, useRef, useState } from "react";
-import { Animated, Modal, StyleSheet, TouchableOpacity, View, ScrollView } from "react-native";
+import { Animated, Modal, StyleSheet, Pressable, View, ScrollView } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { base } from "@/styles/baseStyles";
 import { optionSheetStyles } from "@/components/modals/OptionSheet.styles";
@@ -36,7 +36,7 @@ export const OptionSheet = forwardRef<OptionSheetHandle, { colors: Palette }>(fu
   return (
     <Modal visible={transition.modalVisible} transparent animationType="none" onRequestClose={close}>
       <Animated.View style={[styles.optionOverlay, { backgroundColor: colors.overlay }, transition.containerStyle]}>
-        <TouchableOpacity style={styles.optionBackdrop} activeOpacity={1} onPress={close} />
+        <Pressable style={styles.optionBackdrop} onPress={close} />
         <Animated.View
           style={[
             optionSheetStylesMini.sheet,
@@ -52,13 +52,13 @@ export const OptionSheet = forwardRef<OptionSheetHandle, { colors: Palette }>(fu
             >
               {config.title || ""}
             </Text>
-            <TouchableOpacity
+            <Pressable
               onPress={close}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               style={styles.optionClose}
             >
               <MaterialCommunityIcons name="close" size={18} color={colors.muted} />
-            </TouchableOpacity>
+            </Pressable>
           </View>
 
           <ScrollView
@@ -70,7 +70,7 @@ export const OptionSheet = forwardRef<OptionSheetHandle, { colors: Palette }>(fu
               const selected = option.value === config.selectedValue;
               const hasIcon = Boolean(option.icon);
               return (
-                <TouchableOpacity
+                <Pressable
                   key={option.value}
                   style={[
                     styles.optionRow,
@@ -110,7 +110,7 @@ export const OptionSheet = forwardRef<OptionSheetHandle, { colors: Palette }>(fu
                   >
                     {option.label}
                   </Text>
-                </TouchableOpacity>
+                </Pressable>
               );
             })}
           </ScrollView>

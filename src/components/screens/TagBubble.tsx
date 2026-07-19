@@ -1,5 +1,5 @@
 import { memo } from "react";
-import { Animated, Modal, TouchableOpacity, View, type ViewStyle } from "react-native";
+import { Animated, Modal, Pressable, View, type ViewStyle } from "react-native";
 import { tagTextColor } from "@/utils/tags";
 import { type Palette } from "@/theme/colors";
 import { Text } from "@/components/ui/AppText";
@@ -36,8 +36,7 @@ export const TagBubblePopup = memo(function TagBubblePopup({
         onRequestClose={onClose}
       >
         <Animated.View style={[{ flex: 1 }, containerStyle]}>
-          <TouchableOpacity
-            activeOpacity={1}
+          <Pressable
             onPress={onClose}
             style={{ flex: 1 }}
           >
@@ -93,7 +92,7 @@ export const TagBubblePopup = memo(function TagBubblePopup({
                 })}
               </View>
             </Animated.View>
-          </TouchableOpacity>
+          </Pressable>
         </Animated.View>
       </Modal>
     )

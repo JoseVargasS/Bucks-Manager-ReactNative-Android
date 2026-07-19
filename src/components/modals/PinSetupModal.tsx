@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { Animated, Modal, TouchableOpacity, View } from "react-native";
+import { Animated, Modal, Pressable, View } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { base } from "@/styles/baseStyles";
 import { recordModalStyles } from "@/components/modals/TransactionModal.styles";
@@ -59,16 +59,16 @@ export function PinSetupModal({ visible, colors, copy, onClose, onSave }: {
   return (
     <Modal visible transparent animationType="none" onRequestClose={onClose}>
       <Animated.View style={[styles.modalOverlay, { backgroundColor: colors.overlay }, transition.containerStyle]}>
-        <TouchableOpacity style={styles.optionBackdrop} activeOpacity={1} onPress={onClose} />
+        <Pressable style={styles.optionBackdrop} onPress={onClose} />
         <Animated.View style={[styles.recordModal, { backgroundColor: colors.card }, transition.panelStyle]}>
           <View style={[styles.recordHeader, { borderColor: colors.border }]}>
             <Text style={[styles.recordTitle, { color: colors.text }]}>
               <MaterialCommunityIcons name="shield-lock" size={19} color={colors.primary} />{" "}
               {copy.pinSetupTitle}
             </Text>
-            <TouchableOpacity style={[styles.closeBtn, { backgroundColor: colors.input }]} onPress={onClose}>
+            <Pressable style={[styles.closeBtn, { backgroundColor: colors.input }]} onPress={onClose}>
               <MaterialCommunityIcons name="close-thick" size={22} color={colors.text} />
-            </TouchableOpacity>
+            </Pressable>
           </View>
 
           <View style={{ height: 400 }}>

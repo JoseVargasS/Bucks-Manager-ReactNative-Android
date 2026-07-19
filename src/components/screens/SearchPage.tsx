@@ -1,5 +1,5 @@
 import { type Dispatch, type SetStateAction, useMemo } from "react";
-import { ScrollView, TouchableOpacity, View } from "react-native";
+import { ScrollView, Pressable, View } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { base } from "@/styles/baseStyles";
 import { searchPageStyles } from "@/components/screens/SearchPage.styles";
@@ -108,14 +108,14 @@ export function SearchPage({ colors, copy, currencySymbol, tags, filters, setFil
       </ScrollView>
 
       <View style={[styles.searchActions, { borderColor: colors.border }]}>
-        <TouchableOpacity style={[styles.searchActionBtn, { backgroundColor: colors.input, borderColor: colors.border }]} onPress={onClear}>
+        <Pressable style={[styles.searchActionBtn, { backgroundColor: colors.input, borderColor: colors.border }]} onPress={onClear}>
           <MaterialCommunityIcons name="filter-remove-outline" size={19} color={colors.text} />
           <Text style={[styles.searchActionText, { color: colors.text }]}>{copy.clear}</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={[styles.searchActionBtn, styles.searchActionPrimary, { backgroundColor: colors.primary }]} onPress={onSubmit}>
+        </Pressable>
+        <Pressable style={[styles.searchActionBtn, styles.searchActionPrimary, { backgroundColor: colors.primary }]} onPress={onSubmit}>
           <MaterialCommunityIcons name="magnify" size={20} color={colors.onPrimary} />
           <Text style={[styles.searchActionText, { color: colors.onPrimary }]}>{copy.search}</Text>
-        </TouchableOpacity>
+        </Pressable>
       </View>
     </View>
   );

@@ -1,5 +1,5 @@
 import { memo } from "react";
-import { TouchableOpacity, View } from "react-native";
+import { Pressable, View } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { statCardStyles as styles } from "@/components/ui/StatCard.styles";
 import { type Palette } from "@/theme/colors";
@@ -19,9 +19,9 @@ export const StatCard = memo(function StatCard({ title, value, icon, tone, color
         <Text numberOfLines={1} style={[styles.statValue, { color, fontVariant: ["tabular-nums"] }]}>{value}</Text>
       </View>
       {action && (
-        <TouchableOpacity style={styles.editStat} onPress={action}>
+        <Pressable style={styles.editStat} onPress={action}>
           <MaterialCommunityIcons name="pencil" size={15} color={colors.muted} />
-        </TouchableOpacity>
+        </Pressable>
       )}
     </View>
   );

@@ -1,5 +1,5 @@
 import { memo } from "react";
-import { StyleSheet, TouchableOpacity, View } from "react-native";
+import { StyleSheet, Pressable, View } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { withAlpha } from "@/utils/helpers";
 import { dark, type Palette } from "@/theme/colors";
@@ -62,7 +62,7 @@ export const SelectionBar = memo(function SelectionBar({
       </Text>
       <View style={[s.selectionActions, { zIndex: 1 }]}>
         {selectedCount === 1 && selectedTx && (
-          <TouchableOpacity
+          <Pressable
             style={[
               s.selectionBtn,
               {
@@ -77,9 +77,9 @@ export const SelectionBar = memo(function SelectionBar({
               size={18}
               color={colors.info}
             />
-          </TouchableOpacity>
+          </Pressable>
         )}
-        <TouchableOpacity
+        <Pressable
           style={[
             s.selectionBtn,
             {
@@ -94,7 +94,7 @@ export const SelectionBar = memo(function SelectionBar({
             size={18}
             color={colors.expense}
           />
-        </TouchableOpacity>
+        </Pressable>
       </View>
     </View>
   );

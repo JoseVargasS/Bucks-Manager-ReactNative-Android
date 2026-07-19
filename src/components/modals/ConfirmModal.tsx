@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef, useState } from "react";
-import { Animated, Modal, TouchableOpacity, View } from "react-native";
+import { Animated, Modal, Pressable, View } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { base } from "@/styles/baseStyles";
 import { recordModalStyles } from "@/components/modals/TransactionModal.styles";
@@ -88,9 +88,8 @@ export function ConfirmModal({
           transition.containerStyle,
         ]}
       >
-        <TouchableOpacity
+        <Pressable
           style={styles.optionBackdrop}
-          activeOpacity={1}
           onPress={onClose}
         />
         <Animated.View
@@ -105,7 +104,7 @@ export function ConfirmModal({
               <MaterialCommunityIcons name={icon} size={19} color={accent} />{" "}
               {title}
             </Text>
-            <TouchableOpacity
+            <Pressable
               style={[styles.closeBtn, { backgroundColor: colors.input }]}
               onPress={onClose}
             >
@@ -114,7 +113,7 @@ export function ConfirmModal({
                 size={22}
                 color={colors.text}
               />
-            </TouchableOpacity>
+            </Pressable>
           </View>
 
           <View style={s.body}>
@@ -167,7 +166,7 @@ export function ConfirmModal({
             </Text>
 
             <View style={styles.recordActions}>
-              <TouchableOpacity
+              <Pressable
                 style={[
                   styles.recordCancel,
                   { backgroundColor: colors.input, borderColor: colors.border },
@@ -182,8 +181,8 @@ export function ConfirmModal({
                 <Text style={[styles.recordCancelText, { color: colors.text }]}>
                   {copy.cancel}
                 </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
+              </Pressable>
+              <Pressable
                 style={[styles.recordSubmit, { backgroundColor: accent }]}
                 onPress={() => {
                   pendingConfirm.current = current;
@@ -203,7 +202,7 @@ export function ConfirmModal({
                 >
                   {actionLabel}
                 </Text>
-              </TouchableOpacity>
+              </Pressable>
             </View>
           </View>
         </Animated.View>

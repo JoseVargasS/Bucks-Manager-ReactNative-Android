@@ -15,7 +15,9 @@ export const HeaderActionButton = memo(function HeaderActionButton({
   iconColor: string;
   onPress: () => void;
 }) {
-  const pressed = useRef(new Animated.Value(0)).current;
+  const pressedRef = useRef<Animated.Value | null>(null);
+  if (!pressedRef.current) pressedRef.current = new Animated.Value(0);
+  const pressed = pressedRef.current;
   const animate = (toValue: number, duration: number) => {
     pressed.stopAnimation();
     Animated.timing(pressed, {

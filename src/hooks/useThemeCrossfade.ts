@@ -20,9 +20,9 @@ export function useThemeCrossfade(
   toggleTheme: () => void,
   saveTheme: (t: ThemeMode) => void,
 ) {
-  const themeProgress = useRef(
-    new Animated.Value(theme === "dark" ? 1 : 0),
-  ).current;
+  const themeRef = useRef<Animated.Value | null>(null);
+  if (!themeRef.current) themeRef.current = new Animated.Value(theme === "dark" ? 1 : 0);
+  const themeProgress = themeRef.current;
   const themeAnimRef = useRef<Animated.CompositeAnimation | null>(null);
 
   // Tracks the last theme that was set BY the toggle animation.

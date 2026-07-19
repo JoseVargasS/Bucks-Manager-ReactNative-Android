@@ -59,12 +59,14 @@ export const ColorPicker = memo(function ColorPicker({
     onChange(hslToHex(Math.round(fraction * 360)));
   }, [onChange]);
 
-  const panHandlers = useRef(PanResponder.create({
+  const panRef = useRef<ReturnType<typeof PanResponder.create> | null>(null);
+  if (!panRef.current) panRef.current = PanResponder.create({
     onStartShouldSetPanResponder: () => true,
     onMoveShouldSetPanResponder: () => true,
     onPanResponderGrant: pick,
     onPanResponderMove: pick,
-  })).current.panHandlers;
+  });
+  const panHandlers = panRef.current.panHandlers;
 
   const onLayout = useCallback((e: LayoutChangeEvent) => {
     const { width } = e.nativeEvent.layout;

@@ -3,7 +3,9 @@ import { Animated, Easing } from "react-native";
 
 export function useModalTransition(visible: boolean, offset = 16, scaleFrom = 1, onClosed?: () => void) {
   const [mounted, setMounted] = useState(visible);
-  const progress = useRef(new Animated.Value(visible ? 1 : 0)).current;
+  const progressRef = useRef<Animated.Value | null>(null);
+  if (!progressRef.current) progressRef.current = new Animated.Value(visible ? 1 : 0);
+  const progress = progressRef.current;
   const onClosedRef = useRef(onClosed);
 
   useLayoutEffect(() => {

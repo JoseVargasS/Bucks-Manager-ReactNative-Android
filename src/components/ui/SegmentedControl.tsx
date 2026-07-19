@@ -18,7 +18,9 @@ export const SegmentedControl = memo(function SegmentedControl({
 }) {
   const [containerWidth, setContainerWidth] = useState(0);
   const selectedIndex = Math.max(0, options.findIndex((o) => o.key === selected));
-  const animIndex = useRef(new Animated.Value(selectedIndex)).current;
+  const animIndexRef = useRef<Animated.Value | null>(null);
+  if (!animIndexRef.current) animIndexRef.current = new Animated.Value(selectedIndex);
+  const animIndex = animIndexRef.current;
 
   useEffect(() => {
     Animated.timing(animIndex, {

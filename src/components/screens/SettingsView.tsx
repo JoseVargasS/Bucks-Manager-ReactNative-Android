@@ -1,5 +1,5 @@
 import { memo } from "react";
-import { ScrollView, Switch, TouchableOpacity, View } from "react-native";
+import { ScrollView, Switch, Pressable, View } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { base } from "@/styles/baseStyles";
 import { settingsStyles } from "@/components/screens/SettingsView.styles";
@@ -115,9 +115,9 @@ export const SettingsView = memo(function SettingsView({
         </View>
       </View>
 
-      <TouchableOpacity style={styles.signOutBtn} onPress={onDisconnect}>
+      <Pressable style={styles.signOutBtn} onPress={onDisconnect}>
         <Text style={[styles.signOutText, { color: colors.expense }]}>{copy.signOut}</Text>
-      </TouchableOpacity>
+      </Pressable>
     </ScrollView>
   );
 });
@@ -127,11 +127,11 @@ function SettingsRow({ colors, icon, label, value, tone, onPress, last = false }
   label: string; value?: string; tone?: string; onPress: () => void; last?: boolean;
 }) {
   return (
-    <TouchableOpacity style={[styles.settingsRow, !last && { borderBottomWidth: 0.5, borderColor: colors.border }]} onPress={onPress}>
+    <Pressable style={[styles.settingsRow, !last && { borderBottomWidth: 0.5, borderColor: colors.border }]} onPress={onPress}>
       <MaterialCommunityIcons name={icon} size={22} color={tone || colors.info} />
       <Text style={[styles.settingsRowLabel, { color: colors.text }]}>{label}</Text>
       {value !== undefined && <Text numberOfLines={1} style={[styles.settingsRowValue, { color: colors.muted }]}>{value}</Text>}
       <MaterialCommunityIcons name="chevron-right" size={22} color={colors.muted} />
-    </TouchableOpacity>
+    </Pressable>
   );
 }

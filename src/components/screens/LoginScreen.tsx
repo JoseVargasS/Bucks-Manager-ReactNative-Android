@@ -1,4 +1,4 @@
-import { ActivityIndicator, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Pressable, View } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { base } from "@/styles/baseStyles";
 import { loginStyles } from "@/components/screens/LoginScreen.styles";
@@ -16,7 +16,7 @@ export function LoginScreen({ colors, copy, loading, canConnect, onSignIn }: { c
       </View>
       <Text style={[styles.loginTitle, { color: colors.text }]}>Bucks Manager</Text>
       <Text style={{ fontSize: 13, fontWeight: "400", color: colors.muted, marginTop: 6 }}>{copy.loginSubtitle}</Text>
-      <TouchableOpacity
+      <Pressable
         testID="google-sign-in"
         accessibilityLabel={copy.signInWithGoogle}
         accessibilityRole="button"
@@ -42,7 +42,7 @@ export function LoginScreen({ colors, copy, loading, canConnect, onSignIn }: { c
             <Text style={[styles.googleLoginText, { color: colors.onPrimary }]}>{copy.signInWithGoogle}</Text>
           </>
         )}
-      </TouchableOpacity>
+      </Pressable>
       {!canConnect && <Text style={[styles.loginStatus, { color: colors.muted }]}>{copy.missingCredentials}</Text>}
     </View>
   );

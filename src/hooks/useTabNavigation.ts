@@ -11,7 +11,9 @@ import type { Tab } from "@/types";
 export function useTabNavigation() {
   const [tab, setTab] = useState<Tab>("dashboard");
   const tabRef = useRef<Tab>(tab);
-  const pagerTranslateX = useRef(new Animated.Value(0)).current;
+  const pagerRef = useRef<Animated.Value | null>(null);
+  if (!pagerRef.current) pagerRef.current = new Animated.Value(0);
+  const pagerTranslateX = pagerRef.current;
   const { width: tabWidth } = useWindowDimensions();
   const statusBarInset = NativeStatusBar.currentHeight || 0;
   const headerTopInset = statusBarInset + 6;

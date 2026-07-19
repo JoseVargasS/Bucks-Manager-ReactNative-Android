@@ -1,5 +1,5 @@
 import { memo } from "react";
-import { TouchableOpacity, View } from "react-native";
+import { Pressable, View } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { modalHeaderStyles as styles } from "@/components/ui/ModalHeader.styles";
 import { type Palette } from "@/theme/colors";
@@ -12,9 +12,9 @@ export const ModalHeader = memo(function ModalHeader({ title, icon, colors, onCl
       <Text style={[styles.modalTitle, { color: colors.text }]}>
         <MaterialCommunityIcons name={icon} size={20} color={colors.info} /> {title}
       </Text>
-      <TouchableOpacity onPress={onClose}>
+      <Pressable onPress={onClose}>
         <MaterialCommunityIcons name="close" size={24} color={colors.muted} />
-      </TouchableOpacity>
+      </Pressable>
     </View>
   );
 });

@@ -1,5 +1,5 @@
 import { memo, useCallback } from "react";
-import { Dimensions, Pressable, TouchableOpacity, View } from "react-native";
+import { Dimensions, Pressable, View } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { formatMoney } from "@/domain/bucksLogic";
 import { formatCreatedTime, typeColor, typeFill, typeLabelFull } from "@/utils/formats";
@@ -195,7 +195,7 @@ export const TransactionRow = memo(function TransactionRow({
             );
           })}
           {hiddenTagCount > 0 && (
-            <TouchableOpacity
+            <Pressable
               ref={handleTagRef}
               onPress={handleHiddenTagsPress}
               style={{
@@ -214,7 +214,7 @@ export const TransactionRow = memo(function TransactionRow({
               >
                 +{hiddenTagCount}
               </Text>
-            </TouchableOpacity>
+            </Pressable>
           )}
         </View>
       </View>

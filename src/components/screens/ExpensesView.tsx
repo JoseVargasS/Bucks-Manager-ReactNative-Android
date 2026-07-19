@@ -9,7 +9,7 @@ import {
 import {
   Animated,
   SectionList,
-  TouchableOpacity,
+  Pressable,
   View,
 } from "react-native";
 import type {
@@ -38,6 +38,130 @@ type TransactionSection = {
   title: string;
   data: Transaction[];
 };
+
+const ExpensesListHeader = memo(function ExpensesListHeader({
+  colors,
+  copy,
+  searchActive,
+  onExitSearch,
+  scrollY,
+  periodBar,
+}: {
+  colors: Palette;
+  copy: UiCopy;
+  searchActive: boolean;
+  onExitSearch: () => void;
+  scrollY: Animated.Value;
+  periodBar: React.ReactNode;
+}) {
+  return (
+    <>
+      <Animated.View style={{ opacity: scrollY.interpolate({ inputRange: [0, 5], outputRange: [1, 0], extrapolate: "clamp" }) }}>
+        <View style={{ paddingHorizontal: 14, paddingBottom: 4 }}>
+          {periodBar}
+        </View>
+      </Animated.View>
+
+      {searchActive && (
+        <View
+          style={[
+            styles.searchBanner,
+            styles.searchBannerMobile,
+            { backgroundColor: colors.infoSoft, borderColor: colors.info },
+          ]}
+        >
+          <Text style={{ color: colors.info, fontWeight: "600" }}>
+            {copy.searchResults}
+          </Text>
+          <Pressable onPress={onExitSearch}>
+            <Text style={{ color: colors.info, fontWeight: "700" }}>
+              {copy.exit}
+            </Text>
+          </Pressable>
+        </View>
+      )}
+
+      <Text
+        style={{
+          paddingHorizontal: 18,
+          paddingTop: 2,
+          fontSize: 16,
+          fontWeight: "700",
+          color: colors.text,
+        }}
+      >
+        {copy.movementsTitle}
+      </Text>
+    </>
+  );
+});
+
+const ExpensesListFooter = memo(function ExpensesListFooter({
+  colors,
+  copy,
+  searchActive,
+  sections,
+  onLoadOlder,
+}: {
+  colors: Palette;
+  copy: UiCopy;
+  searchActive: boolean;
+  sections: TransactionSection[];
+  onLoadOlder: () => void;
+}) {
+  if (searchActive) return null;
+  return (
+    <Pressable
+      style={[
+        styles.loadOlderBtn,
+        {
+          backgroundColor: colors.card,
+          marginHorizontal: 14,
+          marginTop: sections.length ? 18 : 12,
+        },
+      ]}
+      onPress={onLoadOlder}
+    >
+      <Text style={[styles.loadOlderText, { color: colors.text }]}>
+        {copy.loadOlder}
+      </Text>
+    </Pressable>
+  );
+});
+
+const ExpensesStickyHeader = memo(function ExpensesStickyHeader({
+  scrollY,
+  scrolled,
+  topInset,
+  periodBar,
+}: {
+  scrollY: Animated.Value;
+  scrolled: boolean;
+  topInset: number;
+  periodBar: React.ReactNode;
+}) {
+  return (
+    <Animated.View
+      pointerEvents={scrolled ? "box-none" : "none"}
+      style={{
+        position: "absolute",
+        top: 0,
+        left: 0,
+        right: 0,
+        paddingTop: topInset,
+        opacity: scrollY.interpolate({
+          inputRange: [0, 5],
+          outputRange: [0, 1],
+          extrapolate: "clamp",
+        }),
+      }}
+    >
+      <View style={{ paddingHorizontal: 14, paddingBottom: 4 }}>
+        {periodBar}
+      </View>
+    </Animated.View>
+  );
+});
 
 export const ExpensesView = memo(function ExpensesView({
   colors,
@@ -92,7 +216,9 @@ export const ExpensesView = memo(function ExpensesView({
   goPrevMonth: () => void;
   goNextMonth: () => void;
 }) {
-  const scrollY = useRef(new Animated.Value(0)).current;
+  const scrollYRef = useRef<Animated.Value | null>(null);
+  if (!scrollYRef.current) scrollYRef.current = new Animated.Value(0);
+  const scrollY = scrollYRef.current;
   const [scrolled, setScrolled] = useState(false);
   const periodBar = useMemo(() => (
     <PeriodControls
@@ -150,50 +276,6 @@ export const ExpensesView = memo(function ExpensesView({
   useLayoutEffect(() => {
     if (tagBubble) setDisplayTagBubble(tagBubble);
   }, [tagBubble]);
-
-  const renderListHeader = useCallback(
-    () => (
-      <>
-        <Animated.View style={{ opacity: scrollY.interpolate({ inputRange: [0, 5], outputRange: [1, 0], extrapolate: "clamp" }) }}>
-          <View style={{ paddingHorizontal: 14, paddingBottom: 4 }}>
-            {periodBar}
-          </View>
-        </Animated.View>
-
-        {searchActive && (
-          <View
-            style={[
-              styles.searchBanner,
-              styles.searchBannerMobile,
-              { backgroundColor: colors.infoSoft, borderColor: colors.info },
-            ]}
-          >
-            <Text style={{ color: colors.info, fontWeight: "600" }}>
-              {copy.searchResults}
-            </Text>
-            <TouchableOpacity onPress={onExitSearch}>
-              <Text style={{ color: colors.info, fontWeight: "700" }}>
-                {copy.exit}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        <Text
-          style={{
-            paddingHorizontal: 18,
-            paddingTop: 2,
-            fontSize: 16,
-            fontWeight: "700",
-            color: colors.text,
-          }}
-        >
-          {copy.movementsTitle}
-        </Text>
-      </>
-    ),
-    [colors, copy, searchActive, onExitSearch, scrollY, periodBar],
-  );
 
   const renderSectionHeader = useCallback(
     ({ section }: { section: TransactionSection }) => (
@@ -266,34 +348,6 @@ export const ExpensesView = memo(function ExpensesView({
     [colors.card, colors.muted, copy.noMovements],
   );
 
-  const renderListFooter = useCallback(() => {
-    if (searchActive) return null;
-    return (
-      <TouchableOpacity
-        style={[
-          styles.loadOlderBtn,
-          {
-            backgroundColor: colors.card,
-            marginHorizontal: 14,
-            marginTop: sections.length ? 18 : 12,
-          },
-        ]}
-        onPress={onLoadOlder}
-      >
-        <Text style={[styles.loadOlderText, { color: colors.text }]}>
-          {copy.loadOlder}
-        </Text>
-      </TouchableOpacity>
-    );
-  }, [
-    colors.card,
-    colors.text,
-    copy.loadOlder,
-    onLoadOlder,
-    searchActive,
-    sections.length,
-  ]);
-
   return (
     <View style={{ flex: 1 }}>
       <SectionList
@@ -302,9 +356,9 @@ export const ExpensesView = memo(function ExpensesView({
         keyExtractor={keyExtractor}
         renderItem={renderItem}
         renderSectionHeader={renderSectionHeader}
-        ListHeaderComponent={renderListHeader}
+        ListHeaderComponent={<ExpensesListHeader colors={colors} copy={copy} searchActive={searchActive} onExitSearch={onExitSearch} scrollY={scrollY} periodBar={periodBar} />}
         ListEmptyComponent={renderListEmpty}
-        ListFooterComponent={renderListFooter}
+        ListFooterComponent={<ExpensesListFooter colors={colors} copy={copy} searchActive={searchActive} sections={sections} onLoadOlder={onLoadOlder} />}
         contentContainerStyle={[
           styles.pageScroll,
           topInset !== undefined && { paddingTop: topInset },
@@ -326,25 +380,12 @@ export const ExpensesView = memo(function ExpensesView({
       />
 
       {topInset !== undefined && (
-        <Animated.View
-          pointerEvents={scrolled ? "box-none" : "none"}
-          style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            right: 0,
-            paddingTop: topInset,
-            opacity: scrollY.interpolate({
-              inputRange: [0, 5],
-              outputRange: [0, 1],
-              extrapolate: "clamp",
-            }),
-          }}
-        >
-          <View style={{ paddingHorizontal: 14, paddingBottom: 4 }}>
-            {periodBar}
-          </View>
-        </Animated.View>
+        <ExpensesStickyHeader
+          scrollY={scrollY}
+          scrolled={scrolled}
+          topInset={topInset}
+          periodBar={periodBar}
+        />
       )}
 
       {selectedCount > 0 && (

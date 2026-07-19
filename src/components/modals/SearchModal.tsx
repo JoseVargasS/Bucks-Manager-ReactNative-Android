@@ -1,5 +1,5 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
-import { Animated, BackHandler, Keyboard, StyleSheet, TouchableOpacity, View } from "react-native";
+import { Animated, BackHandler, Keyboard, StyleSheet, Pressable, View } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { base } from "@/styles/baseStyles";
 import { searchModalStyles } from "@/components/modals/SearchModal.styles";
@@ -65,7 +65,7 @@ export const SearchModal = forwardRef<SearchModalHandle, {
         importantForAccessibility={transition.modalVisible ? "yes" : "no-hide-descendants"}
         style={[StyleSheet.absoluteFill, styles.searchOverlay, { backgroundColor: colors.overlay, zIndex: Z_INDEX_SEARCH, elevation: Z_INDEX_SEARCH }, transition.containerStyle]}
       >
-        <TouchableOpacity style={styles.optionBackdrop} activeOpacity={1} onPress={close} />
+        <Pressable style={styles.optionBackdrop} onPress={close} />
         <Animated.View style={[styles.searchSheet, { backgroundColor: colors.card }, transition.panelStyle]}>
           <View style={[styles.searchGrabber, { backgroundColor: colors.border }]} />
           <View style={styles.searchHeader}>
@@ -76,9 +76,9 @@ export const SearchModal = forwardRef<SearchModalHandle, {
               <Text style={[styles.searchTitle, { color: colors.text }]}>{copy.advancedSearch}</Text>
               <Text style={[styles.searchSubtitle, { color: colors.muted }]}>{copy.advancedSearchSubtitle}</Text>
             </View>
-            <TouchableOpacity style={[styles.optionClose, { backgroundColor: colors.input }]} onPress={close}>
+            <Pressable style={[styles.optionClose, { backgroundColor: colors.input }]} onPress={close}>
               <MaterialCommunityIcons name="close" size={20} color={colors.text} />
-            </TouchableOpacity>
+            </Pressable>
           </View>
           <SearchPage colors={colors} copy={copy} currencySymbol={currencySymbol} tags={tags} filters={localFilters} setFilters={setLocalFilters} onSubmit={() => { const filters = localFilters; pendingAction.current = () => onSubmit(filters); close(); }} onClear={() => { pendingAction.current = onClear; close(); }} />
         </Animated.View>

@@ -1,5 +1,5 @@
 import { memo } from "react";
-import { StyleSheet, TouchableOpacity, View } from "react-native";
+import { StyleSheet, Pressable, View } from "react-native";
 import { BlurView } from "expo-blur";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Select } from "@/components/ui/Select";
@@ -85,27 +85,27 @@ export const PeriodControls = memo(function PeriodControls({
           tint={blurTint}
           style={[styles.periodNavGroup, styles.blurContainer]}
         >
-          <TouchableOpacity onPress={goPrevMonth} style={styles.periodNavBtn}>
+          <Pressable onPress={goPrevMonth} style={styles.periodNavBtn}>
             <MaterialCommunityIcons
               name="chevron-left"
               size={20}
               color={colors.info}
             />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={goToday} style={styles.periodNavBtn}>
+          </Pressable>
+          <Pressable onPress={goToday} style={styles.periodNavBtn}>
             <MaterialCommunityIcons
               name="calendar-today"
               size={18}
               color={colors.info}
             />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={goNextMonth} style={styles.periodNavBtn}>
+          </Pressable>
+          <Pressable onPress={goNextMonth} style={styles.periodNavBtn}>
             <MaterialCommunityIcons
               name="chevron-right"
               size={20}
               color={colors.info}
             />
-          </TouchableOpacity>
+          </Pressable>
         </BlurView>
       </View>
     </View>

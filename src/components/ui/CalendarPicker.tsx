@@ -10,7 +10,7 @@ import {
   Animated,
   Modal,
   ScrollView,
-  TouchableOpacity,
+  Pressable,
   View,
   StyleSheet,
   type ViewStyle,
@@ -278,13 +278,12 @@ export const CalendarPicker = memo(function CalendarPicker({
       <Animated.View
         style={[StyleSheet.absoluteFill, s.overlay, transition.containerStyle]}
       >
-        <TouchableOpacity
+        <Pressable
           style={[
             StyleSheet.absoluteFill,
             s.backdrop,
             { backgroundColor: colors.overlay },
           ]}
-          activeOpacity={1}
           onPress={onClose}
         />
         <Animated.View
@@ -298,7 +297,7 @@ export const CalendarPicker = memo(function CalendarPicker({
             <View
               style={[s.headerRow, { marginBottom: mode === "date" ? 14 : 0 }]}
             >
-              <TouchableOpacity
+              <Pressable
                 onPress={() => canGoBackYear && setViewYear(viewYear - 1)}
                 disabled={!canGoBackYear}
               >
@@ -307,8 +306,8 @@ export const CalendarPicker = memo(function CalendarPicker({
                   size={26}
                   color={canGoBackYear ? colors.text : colors.disabled}
                 />
-              </TouchableOpacity>
-              <TouchableOpacity
+              </Pressable>
+              <Pressable
                 onPress={() => {
                   setShowYearPicker(true);
                   setShowMonthPicker(false);
@@ -323,8 +322,8 @@ export const CalendarPicker = memo(function CalendarPicker({
                 >
                   {viewYear}
                 </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
+              </Pressable>
+              <Pressable
                 onPress={() => canGoForwardYear && setViewYear(viewYear + 1)}
                 disabled={!canGoForwardYear}
               >
@@ -333,11 +332,11 @@ export const CalendarPicker = memo(function CalendarPicker({
                   size={26}
                   color={canGoForwardYear ? colors.text : colors.disabled}
                 />
-              </TouchableOpacity>
+              </Pressable>
             </View>
             {mode === "date" && (
               <View style={s.monthNav}>
-                <TouchableOpacity
+                <Pressable
                   onPress={() => canGoBackMonth && setViewMonth(viewMonth - 1)}
                   disabled={!canGoBackMonth}
                 >
@@ -346,8 +345,8 @@ export const CalendarPicker = memo(function CalendarPicker({
                     size={22}
                     color={canGoBackMonth ? colors.muted : colors.disabled}
                   />
-                </TouchableOpacity>
-                <TouchableOpacity
+                </Pressable>
+                <Pressable
                   onPress={() => {
                     setShowMonthPicker(true);
                     setShowYearPicker(false);
@@ -362,8 +361,8 @@ export const CalendarPicker = memo(function CalendarPicker({
                   >
                     {monthName}
                   </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
+                </Pressable>
+                <Pressable
                   onPress={() =>
                     canGoForwardMonth && setViewMonth(viewMonth + 1)
                   }
@@ -374,7 +373,7 @@ export const CalendarPicker = memo(function CalendarPicker({
                     size={22}
                     color={canGoForwardMonth ? colors.muted : colors.disabled}
                   />
-                </TouchableOpacity>
+                </Pressable>
               </View>
             )}
           </View>
@@ -385,7 +384,7 @@ export const CalendarPicker = memo(function CalendarPicker({
                   const isSelected = i === viewMonth;
                   const disabled = isMonthDisabled(i);
                   return (
-                    <TouchableOpacity
+                    <Pressable
                       key={i}
                       onPress={() => !disabled && handleSelect(viewYear, i)}
                       disabled={disabled}
@@ -415,7 +414,7 @@ export const CalendarPicker = memo(function CalendarPicker({
                           {abbr}
                         </Text>
                       </View>
-                    </TouchableOpacity>
+                    </Pressable>
                   );
                 })}
               </View>
@@ -444,7 +443,7 @@ export const CalendarPicker = memo(function CalendarPicker({
                     const isSelected = day === selectedDay;
                     const disabled = isDayDisabled(day);
                     return (
-                      <TouchableOpacity
+                      <Pressable
                         key={day}
                         onPress={() => {
                           if (!disabled) {
@@ -484,7 +483,7 @@ export const CalendarPicker = memo(function CalendarPicker({
                             {day}
                           </Text>
                         </View>
-                      </TouchableOpacity>
+                      </Pressable>
                     );
                   })}
                 </View>
@@ -492,7 +491,7 @@ export const CalendarPicker = memo(function CalendarPicker({
             )}
           </View>
           <View style={[s.footer, { borderColor: colors.border }]}>
-            <TouchableOpacity
+            <Pressable
               onPress={() => {
                 const nowDate = new Date();
                 pendingSelection.current =
@@ -505,8 +504,8 @@ export const CalendarPicker = memo(function CalendarPicker({
               <Text style={[s.footerBtn, { color: colors.primary }]}>
                 {copy.thisMonth}
               </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
+            </Pressable>
+            <Pressable
               onPress={() => {
                 pendingSelection.current = "";
                 onClose();
@@ -515,7 +514,7 @@ export const CalendarPicker = memo(function CalendarPicker({
               <Text style={[s.footerBtn, { color: colors.muted }]}>
                 {copy.erase}
               </Text>
-            </TouchableOpacity>
+            </Pressable>
           </View>
 
           {showYearPicker && (
@@ -602,9 +601,8 @@ function PickerSheet({
         { backgroundColor: colors.overlay },
       ]}
     >
-      <TouchableOpacity
+      <Pressable
         style={StyleSheet.absoluteFill}
-        activeOpacity={1}
         onPress={onClose}
       />
       <View
@@ -635,7 +633,7 @@ function PickerRow({
   onPress: () => void;
 }) {
   return (
-    <TouchableOpacity
+    <Pressable
       onPress={onPress}
       style={[
         s.pickerRow,
@@ -651,7 +649,7 @@ function PickerRow({
       >
         {label}
       </Text>
-    </TouchableOpacity>
+    </Pressable>
   );
 }
 
@@ -669,7 +667,7 @@ function PickerChip({
   onPress: () => void;
 }) {
   return (
-    <TouchableOpacity
+    <Pressable
       onPress={() => {
         if (!disabled) onPress();
       }}
@@ -700,6 +698,6 @@ function PickerChip({
           {label}
         </Text>
       </View>
-    </TouchableOpacity>
+    </Pressable>
   );
 }

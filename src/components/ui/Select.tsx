@@ -19,7 +19,9 @@ export const Select = memo(function Select({ value, options, onSelect, colors, p
   placeholder?: string; style?: ViewStyle; title?: string; hideArrow?: boolean; buttonStyle?: ViewStyle;
 }) {
   const sheetRef = useRef<OptionSheetHandle>(null);
-  const pressed = useRef(new Animated.Value(0)).current;
+  const pressedRef = useRef<Animated.Value | null>(null);
+  if (!pressedRef.current) pressedRef.current = new Animated.Value(0);
+  const pressed = pressedRef.current;
   const selected = options.find((o) => o.value === value);
   const label = selected ? selected.label : placeholder;
 

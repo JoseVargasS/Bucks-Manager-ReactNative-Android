@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Animated, TouchableOpacity, View } from "react-native";
+import { Animated, Pressable, View } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { type Palette } from "@/theme/colors";
 import { PIN_LENGTH } from "@/theme/constants";
@@ -18,7 +18,9 @@ export function PinScreen({ colors, copy, title, subtitle, wrong, bgColor, onFil
 }) {
   const [digits, setDigits] = useState<string[]>([]);
   const [showingError, setShowingError] = useState(false);
-  const shake = useRef(new Animated.Value(0)).current;
+  const shakeRef = useRef<Animated.Value | null>(null);
+  if (!shakeRef.current) shakeRef.current = new Animated.Value(0);
+  const shake = shakeRef.current;
   const filled = digits.length === PIN_LENGTH;
 
   useEffect(() => {
@@ -85,19 +87,19 @@ export function PinScreen({ colors, copy, title, subtitle, wrong, bgColor, onFil
         {[["1", "2", "3"], ["4", "5", "6"], ["7", "8", "9"]].map((row, rowIndex) => (
           <View key={rowIndex} style={s.keypadRow}>
             {row.map((d) => (
-              <TouchableOpacity key={d} activeOpacity={0.6} onPress={() => pressDigit(d)} style={[s.key, { backgroundColor: colors.input }]}>
+              <Pressable key={d} onPress={() => pressDigit(d)} style={({ pressed }) => [s.key, { backgroundColor: colors.input }, pressed && { opacity: 0.6 }]}>
                 <Text style={[s.keyText, { color: colors.text }]}>{d}</Text>
-              </TouchableOpacity>
+              </Pressable>
             ))}
           </View>
         ))}
         <View style={s.keypadRow}>
-          <TouchableOpacity activeOpacity={0.6} onPress={pressBackspace} style={[s.key, { backgroundColor: colors.input }]}>
+          <Pressable onPress={pressBackspace} style={({ pressed }) => [s.key, { backgroundColor: colors.input }, pressed && { opacity: 0.6 }]}>
             <MaterialCommunityIcons name="backspace-outline" size={22} color={colors.text} />
-          </TouchableOpacity>
-          <TouchableOpacity activeOpacity={0.6} onPress={() => pressDigit("0")} style={[s.key, { backgroundColor: colors.input }]}>
+          </Pressable>
+          <Pressable onPress={() => pressDigit("0")} style={({ pressed }) => [s.key, { backgroundColor: colors.input }, pressed && { opacity: 0.6 }]}>
             <Text style={[s.keyText, { color: colors.text }]}>0</Text>
-          </TouchableOpacity>
+          </Pressable>
           <View style={s.placeholder} />
         </View>
       </View>

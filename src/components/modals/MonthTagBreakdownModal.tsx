@@ -1,5 +1,5 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useState } from "react";
-import { Animated, BackHandler, ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
+import { Animated, BackHandler, ScrollView, StyleSheet, Pressable, View } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { base } from "@/styles/baseStyles";
 import { monthTagBreakdownStyles } from "@/components/modals/MonthTagBreakdownModal.styles";
@@ -88,15 +88,15 @@ export const MonthTagBreakdownModal = forwardRef<
       importantForAccessibility={transition.modalVisible ? "yes" : "no-hide-descendants"}
       style={[StyleSheet.absoluteFill, styles.modalOverlay, { backgroundColor: colors.overlay, zIndex: Z_INDEX_DETAIL, elevation: Z_INDEX_DETAIL }, transition.containerStyle]}
     >
-      <TouchableOpacity style={styles.optionBackdrop} activeOpacity={1} onPress={close} />
+      <Pressable style={styles.optionBackdrop} onPress={close} />
       <Animated.View style={[styles.modal, { backgroundColor: colors.card }, transition.panelStyle]}>
         <View style={styles.header}>
           <Text style={[styles.headerTitle, { color: colors.text }]}>
             {copy.monthlyTagBreakdownTitle} {monthLabel}
           </Text>
-          <TouchableOpacity style={[styles.closeBtn, { backgroundColor: colors.input }]} onPress={close}>
+          <Pressable style={[styles.closeBtn, { backgroundColor: colors.input }]} onPress={close}>
             <MaterialCommunityIcons name="close" size={22} color={colors.text} />
-          </TouchableOpacity>
+          </Pressable>
         </View>
         <ScrollView style={styles.scroll} contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
           <SegmentedControl
