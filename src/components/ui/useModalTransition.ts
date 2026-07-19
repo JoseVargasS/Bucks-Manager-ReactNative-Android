@@ -7,10 +7,7 @@ export function useModalTransition(visible: boolean, offset = 16, scaleFrom = 1,
   if (!progressRef.current) progressRef.current = new Animated.Value(visible ? 1 : 0);
   const progress = progressRef.current;
   const onClosedRef = useRef(onClosed);
-
-  useLayoutEffect(() => {
-    onClosedRef.current = onClosed;
-  }, [onClosed]);
+  onClosedRef.current = onClosed;
 
   useLayoutEffect(() => {
     progress.stopAnimation();
