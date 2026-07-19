@@ -1,4 +1,5 @@
 nodeLinker: hoisted
+minimumReleaseAge: 10080
 minimumReleaseAgeExclude:
   - '@expo/cli@56.1.18 || 56.1.19 || 56.1.20'
   - '@expo/config-plugins@56.0.11 || 56.0.12 || 56.0.13'
@@ -26,5 +27,6 @@ minimumReleaseAgeExclude:
   - babel-preset-expo@56.0.17
   - expo-asset@56.0.19 || 56.0.20
   - expo-blur@56.0.4
+  - pnpm@11.13.0
 allowBuilds:
   unrs-resolver: true

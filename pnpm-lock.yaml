@@ -68,9 +68,6 @@ importers:
       expo-font:
         specifier: ~56.0.7
         version: 56.0.7(expo@56.0.16)(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.3))(react@19.2.3)
-      expo-modules-core:
-        specifier: ~56.0.21
-        version: 56.0.21(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.3))(react@19.2.3)
       expo-print:
         specifier: ~56.0.4
         version: 56.0.4(expo@56.0.16)(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.3))
@@ -83,6 +80,9 @@ importers:
       expo-splash-screen:
         specifier: ~56.0.13
         version: 56.0.13(expo@56.0.16)(typescript@6.0.3)
+      expo-system-ui:
+        specifier: ~56.0.5
+        version: 56.0.5(expo@56.0.16)(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.3))
       pnpm:
         specifier: ^11.13.0
         version: 11.13.0
@@ -1855,6 +1855,16 @@ packages:
     peerDependencies:
       expo: '*'
 
+  expo-system-ui@56.0.5:
+    resolution: {integrity: sha512-n1MmnUArV4cc3gVed9fGtluPme00PE9axKVx+NHbKxHFMam5l4GcOI7PxbYKFNx8o7WA1LRD7eLW33agmZrxGg==}
+    peerDependencies:
+      expo: '*'
+      react-native: '*'
+      react-native-web: '*'
+    peerDependenciesMeta:
+      react-native-web:
+        optional: true
+
   expo-updates-interface@56.0.2:
     resolution: {integrity: sha512-eWTwSZ9y8vrULG2oBn2TQSSIwBGSq/TxGJ3jY6tuVS2FWH/ASRIiKs3zkUZTRoC3ZuV2alz0mUClYV7nNrFx8g==}
     peerDependencies:
@@ -2801,6 +2811,7 @@ packages:
   pnpm@11.13.0:
     resolution: {integrity: sha512-iNlHJNjy5sGGdEpVhMblnsrIaex7oV6ctM1ijo3HBmggskgdjuO1HqjaMjpzeAaKpYxVajcg0yt8IKBR0Ig2Og==}
     engines: {node: '>=22.13'}
+    deprecated: This is a broken version. Please install pnpm v11.13.1 or newer
     hasBin: true
 
   postcss@8.5.16:
@@ -5658,6 +5669,15 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
       - typescript
+
+  expo-system-ui@56.0.5(expo@56.0.16)(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.3)):
+    dependencies:
+      '@react-native/normalize-colors': 0.85.3
+      debug: 4.4.3
+      expo: 56.0.16(@babel/core@7.29.7)(@expo/dom-webview@56.0.6)(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.3))(react@19.2.3)(typescript@6.0.3)
+      react-native: 0.85.3(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.3)
+    transitivePeerDependencies:
+      - supports-color
 
   expo-updates-interface@56.0.2(expo@56.0.16):
     dependencies:
