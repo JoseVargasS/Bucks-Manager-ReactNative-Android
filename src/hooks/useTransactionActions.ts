@@ -1,4 +1,4 @@
-import { useCallback, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import type {
   TransactionModalHandle,
 } from "@/components/modals/TransactionModal";
@@ -78,7 +78,9 @@ export function useTransactionActions({
   }, [hookClearSearchFilters]);
 
   const selectedRowsRef = useRef(selectedRows);
-  selectedRowsRef.current = selectedRows;
+  useEffect(() => {
+    selectedRowsRef.current = selectedRows;
+  });
   const handleTransactionPress = useCallback(
     (tx: Transaction) => {
       if (selectedRowsRef.current.length) {

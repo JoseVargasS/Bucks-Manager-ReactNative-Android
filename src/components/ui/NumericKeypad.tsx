@@ -61,8 +61,10 @@ export const NumericKeypad = memo(function NumericKeypad({
   // without re-subscribing every tick.
   const valueRef = useRef(value);
   const cursorRef = useRef(cursor);
-  valueRef.current = value;
-  cursorRef.current = cursor;
+  useEffect(() => {
+    valueRef.current = value;
+    cursorRef.current = cursor;
+  });
 
   const timersRef = useRef<{
     timeout: ReturnType<typeof setTimeout> | null;

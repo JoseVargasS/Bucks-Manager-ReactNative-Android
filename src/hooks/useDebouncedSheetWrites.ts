@@ -31,7 +31,9 @@ export function useDebouncedSheetWrites(
 ) {
   // ─── UI preferences debounced write ────────────────────────────────
   const writeUiPrefsRef = useRef(writeUiPreferences);
-  writeUiPrefsRef.current = writeUiPreferences;
+  useEffect(() => {
+    writeUiPrefsRef.current = writeUiPreferences;
+  });
   const prevPrefsRef = useRef<typeof preferences | null>(null);
 
   useEffect(() => {
@@ -64,7 +66,9 @@ export function useDebouncedSheetWrites(
 
   // ─── History debounced write ──────────────────────────────────────
   const writeHistoryRef = useRef(writeHistory);
-  writeHistoryRef.current = writeHistory;
+  useEffect(() => {
+    writeHistoryRef.current = writeHistory;
+  });
   const prevHistoryLenRef = useRef(0);
 
   useEffect(() => {

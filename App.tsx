@@ -196,7 +196,9 @@ function AppContent() {
     { errMsg, authErr, copy: copy as unknown as { syncError: string; sessionExpired: string; showingSavedData: string; pendingSyncStatus: string; syncing: string; deleteRecord: string; deleteSelection: string; moveRecord: string; moveRecordError: string; undoAction: string }, tagColors: colors.tagColors, language },
     reloadPromiseRef,
   );
-  connectRef.current = syncApi.connectGoogleWorkspace;
+  useEffect(() => {
+    connectRef.current = syncApi.connectGoogleWorkspace;
+  }, [syncApi.connectGoogleWorkspace]);
 
   // ─── Tag lifecycle effects ───────────────────────────────────────
   const { tagEditorVisible, openTagEditor, closeTagEditor } = useTagSyncEffects(

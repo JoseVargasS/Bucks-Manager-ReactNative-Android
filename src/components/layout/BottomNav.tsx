@@ -1,4 +1,4 @@
-import { memo, useMemo, useCallback, useRef } from "react";
+import { memo, useMemo, useCallback, useLayoutEffect, useRef } from "react";
 import { Animated, Easing, Pressable, View } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { base } from "@/styles/baseStyles";
@@ -130,11 +130,13 @@ const BottomNavItem = memo(function BottomNavItem({
   const localActive = useRef(new Animated.Value(active ? 1 : 0)).current;
   const prevActive = useRef(active);
 
-  if (active !== prevActive.current) {
-    prevActive.current = active;
-    localActive.stopAnimation();
-    localActive.setValue(active ? 1 : 0);
-  }
+  useLayoutEffect(() => {
+    if (active !== prevActive.current) {
+      prevActive.current = active;
+      localActive.stopAnimation();
+      localActive.setValue(active ? 1 : 0);
+    }
+  }, [active, localActive]);
 
   const handlePress = useCallback(() => {
     localActive.stopAnimation();
