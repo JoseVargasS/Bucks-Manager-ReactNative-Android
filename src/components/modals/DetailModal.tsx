@@ -1,5 +1,5 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
-import { Animated, BackHandler, ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
+import { Animated, BackHandler, ScrollView, StyleSheet, Pressable, View } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { base } from "@/styles/baseStyles";
 import { detailStyles } from "@/components/modals/DetailModal.styles";
@@ -72,15 +72,15 @@ export const DetailModal = forwardRef<DetailModalHandle, { colors: Palette; curr
         importantForAccessibility={transition.modalVisible ? "yes" : "no-hide-descendants"}
         style={[StyleSheet.absoluteFill, styles.modalOverlay, { backgroundColor: colors.overlay, zIndex: Z_INDEX_DETAIL, elevation: Z_INDEX_DETAIL }, transition.containerStyle]}
       >
-        <TouchableOpacity style={styles.optionBackdrop} activeOpacity={1} onPress={close} />
+        <Pressable style={styles.optionBackdrop} onPress={close} />
         <Animated.View style={[styles.detailModal, { backgroundColor: colors.card }, transition.panelStyle]}>
           <View style={[styles.recordHeader, { borderBottomWidth: 0 }]}>
             <Text style={[styles.recordTitle, { color: colors.text }]}>
               <MaterialCommunityIcons name="receipt-text" size={20} color={colors.warn} /> {copy.detailTitle}
             </Text>
-            <TouchableOpacity style={[styles.closeBtn, { backgroundColor: colors.input }]} onPress={close}>
+            <Pressable style={[styles.closeBtn, { backgroundColor: colors.input }]} onPress={close}>
               <MaterialCommunityIcons name="close" size={22} color={colors.text} />
-            </TouchableOpacity>
+            </Pressable>
           </View>
           <ScrollView style={styles.detailScroll} contentContainerStyle={styles.detailBody} showsVerticalScrollIndicator={false}>
               <View style={[styles.detailHero, { backgroundColor: colors.input }]}>
@@ -108,10 +108,11 @@ export const DetailModal = forwardRef<DetailModalHandle, { colors: Palette; curr
                   </Text>
                   {firstSectionTags.length > 0 && (
                     <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 4, marginTop: 6 }}>
-                      {firstSectionTags.filter((id) => findTagById(id, tags)).map((id) => {
+                      {firstSectionTags.flatMap((id) => {
                         const tag = findTagById(id, tags);
-                        const tagColor = tag?.color || colors.muted;
-                        const tagLabel = tag?.label || id;
+                        if (!tag) return [];
+                        const tagColor = tag.color || colors.muted;
+                        const tagLabel = tag.label || id;
                         return (
                           <View key={id} style={{ maxWidth: "100%", borderRadius: 6, paddingHorizontal: 7, paddingVertical: 3, backgroundColor: tagColor }}>
                             <Text numberOfLines={1} style={{ color: tagTextColor(tagColor, colors), fontSize: 11, fontWeight: "700" }}>{tagLabel}</Text>
@@ -131,10 +132,11 @@ export const DetailModal = forwardRef<DetailModalHandle, { colors: Palette; curr
                         <Text selectable style={[styles.detailDescriptionText, { color: colors.text }]}>{li.description || "—"}</Text>
                         {li.tags.length > 0 && (
                           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 4, marginTop: 4 }}>
-                            {li.tags.filter((id) => findTagById(id, tags)).map((id) => {
+                            {li.tags.flatMap((id) => {
                               const tag = findTagById(id, tags);
-                              const tagColor = tag?.color || colors.muted;
-                              const tagLabel = tag?.label || id;
+                              if (!tag) return [];
+                              const tagColor = tag.color || colors.muted;
+                              const tagLabel = tag.label || id;
                               return (
                                 <View key={id} style={{ maxWidth: "100%", borderRadius: 6, paddingHorizontal: 7, paddingVertical: 3, backgroundColor: tagColor }}>
                                   <Text numberOfLines={1} style={{ color: tagTextColor(tagColor, colors), fontSize: 11, fontWeight: "700" }}>{tagLabel}</Text>
@@ -156,14 +158,14 @@ export const DetailModal = forwardRef<DetailModalHandle, { colors: Palette; curr
                 <DetailMetaRow icon="clock-outline" label={copy.time} value={current ? formatCreatedTime(current.createdAt) : ""} tone={colors.muted} colors={colors} />
               </View>
               <View style={styles.detailActions}>
-                <TouchableOpacity disabled={!current} style={[styles.detailActionBtn, { backgroundColor: colors.input }]} onPress={() => { if (!current) return; pendingAction.current = () => onEdit(current); close(); }}>
+                <Pressable disabled={!current} style={[styles.detailActionBtn, { backgroundColor: colors.input }]} onPress={() => { if (!current) return; pendingAction.current = () => onEdit(current); close(); }}>
                   <MaterialCommunityIcons name="pencil" size={18} color={colors.info} />
                   <Text style={[styles.detailActionText, { color: colors.info }]}>{copy.edit}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity disabled={!current} style={[styles.detailActionBtn, { backgroundColor: colors.input }]} onPress={() => { if (!current) return; pendingAction.current = () => onDelete(current); close(); }}>
+                </Pressable>
+                <Pressable disabled={!current} style={[styles.detailActionBtn, { backgroundColor: colors.input }]} onPress={() => { if (!current) return; pendingAction.current = () => onDelete(current); close(); }}>
                   <MaterialCommunityIcons name="trash-can" size={18} color={colors.expense} />
                   <Text style={[styles.detailActionText, { color: colors.expense }]}>{copy.delete}</Text>
-                </TouchableOpacity>
+                </Pressable>
               </View>
           </ScrollView>
         </Animated.View>

@@ -1,5 +1,5 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
-import { Alert, Animated, BackHandler, Keyboard, ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
+import { Alert, Animated, BackHandler, Keyboard, ScrollView, StyleSheet, Pressable, View } from "react-native";
 import type { TextInput as RNTextInput } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { isValidTransactionDraft, TRANSACTION_TYPES } from "@/domain/bucksLogic";
@@ -340,16 +340,16 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
         importantForAccessibility={transition.modalVisible ? "yes" : "no-hide-descendants"}
         style={[StyleSheet.absoluteFill, styles.modalOverlay, { backgroundColor: colors.overlay, zIndex: Z_INDEX_MODAL, elevation: Z_INDEX_MODAL }, transition.containerStyle]}
       >
-        <TouchableOpacity style={styles.optionBackdrop} activeOpacity={1} onPress={close} />
+        <Pressable style={styles.optionBackdrop} onPress={close} />
 
         <Animated.View ref={modalRef} collapsable={false} style={[styles.recordModal, { backgroundColor: colors.card }, transition.panelStyle]}>
           <View style={[styles.recordHeader, { borderColor: colors.border }]}>
             <Text style={[styles.recordTitle, { color: colors.text }]}>
               <MaterialCommunityIcons name="calculator-variant" size={19} color={colors.info} /> {editingTx ? copy.editRecord : copy.newRecord}
             </Text>
-            <TouchableOpacity style={[styles.closeBtn, { backgroundColor: colors.input }]} onPress={close}>
+            <Pressable style={[styles.closeBtn, { backgroundColor: colors.input }]} onPress={close}>
               <MaterialCommunityIcons name="close" size={22} color={colors.text} />
-            </TouchableOpacity>
+            </Pressable>
           </View>
           {tagsOpenFor && tagsReady && (
             <View
@@ -368,13 +368,13 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
             onScrollBeginDrag={dismissTags}
           >
             <Text style={[styles.label, { color: colors.text }]}>{copy.date}</Text>
-            <TouchableOpacity
-              style={[{ backgroundColor: colors.input, borderColor: colors.border, borderRadius: 10, paddingHorizontal: 12, minHeight: 42, flexDirection: "row", alignItems: "center", gap: 10, borderWidth: 1, marginBottom: 12 }]}
+            <Pressable
+              style={{ backgroundColor: colors.input, borderColor: colors.border, borderRadius: 10, paddingHorizontal: 12, minHeight: 42, flexDirection: "row", alignItems: "center", gap: 10, borderWidth: 1, marginBottom: 12 }}
               onPress={() => { Keyboard.dismiss(); setTagsOpenFor(null); setCalVisible(true); }}
             >
-              <Text style={[{ color: colors.text, fontWeight: "600", flex: 1 }]}>{formDraft.date || copy.selectDate}</Text>
+              <Text style={{ color: colors.text, fontWeight: "600", flex: 1 }}>{formDraft.date || copy.selectDate}</Text>
               <MaterialCommunityIcons name="calendar" size={20} color={colors.info} />
-            </TouchableOpacity>
+            </Pressable>
             <CalendarPicker visible={calVisible} value={formDraft.date} onSelect={(date: string) => setFormDraft((current) => ({ ...current, date }))} onClose={() => setCalVisible(false)} colors={colors} copy={copy} />
             <Text style={[styles.label, { color: colors.text }]}>{copy.type}</Text>
             <Select
@@ -420,7 +420,7 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
             </View>
 
             {lineItems.map((item) => {
-              const itemTags = (item.tags || []).map((id) => findTagById(id, tags)).filter(Boolean) as Tag[];
+              const itemTags = (item.tags || []).flatMap((id) => findTagById(id, tags) ?? []);
               const unusedTags = tags.filter((t) => !itemTags.some((it) => it.id === t.id));
               const cardBorder = itemTags.length > 0
                 ? (itemTags[0]?.color ?? colors.border)
@@ -442,7 +442,7 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
                     />
                     {isExpense && tags.length > 0 && (
                       itemTags.length > 0 ? (
-                        <TouchableOpacity
+                        <Pressable
                           ref={(ref) => { tagAddRefs.current[item.id] = ref; }}
                           style={[styles.selectedTagInlineChip, { backgroundColor: itemTags[0].color }]}
                           onPress={() => openTagsOverlay(item.id)}
@@ -451,22 +451,22 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
                             {itemTags[0].label}
                           </Text>
                           <MaterialCommunityIcons name="chevron-down" size={12} color={tagTextColor(itemTags[0].color, colors)} style={{ opacity: 0.85 }} />
-                        </TouchableOpacity>
+                        </Pressable>
                       ) : unusedTags.length > 0 ? (
-                        <TouchableOpacity
+                        <Pressable
                           ref={(ref) => { tagAddRefs.current[item.id] = ref; }}
                           style={[styles.addTagInlineBtn, { borderColor: colors.muted }]}
                           onPress={() => openTagsOverlay(item.id)}
                         >
                           <MaterialCommunityIcons name="tag-plus-outline" size={14} color={colors.muted} />
                           <Text style={[styles.addTagInlineText, { color: colors.muted }]}>Etiqueta</Text>
-                        </TouchableOpacity>
+                        </Pressable>
                       ) : null
                     )}
                     {lineItems.length > 1 && (
-                      <TouchableOpacity style={[styles.removeLineItemBtn, { backgroundColor: colors.expenseSoft }]} onPress={() => removeLineItem(item.id)}>
+                      <Pressable style={[styles.removeLineItemBtn, { backgroundColor: colors.expenseSoft }]} onPress={() => removeLineItem(item.id)}>
                         <MaterialCommunityIcons name="close" size={18} color={colors.expense} />
-                      </TouchableOpacity>
+                      </Pressable>
                     )}
                   </View>
 
@@ -513,13 +513,13 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
               );
             })}
 
-            <TouchableOpacity
+            <Pressable
               style={[styles.addLineItemBtn, { borderColor: colors.muted }]}
               onPress={addLineItem}
             >
               <MaterialCommunityIcons name="plus-circle-outline" size={20} color={colors.muted} />
               <Text style={[styles.addLineItemText, { color: colors.muted }]}>Agregar monto</Text>
-            </TouchableOpacity>
+            </Pressable>
 
             {showCreateTag && (
               <View style={{ backgroundColor: colors.input, borderRadius: 12, padding: 12, gap: 10, marginTop: 4 }}>
@@ -536,18 +536,18 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
                 />
                 <ColorPicker color={createTagColor} onChange={setCreateTagColor} compact />
                 <View style={{ flexDirection: "row", gap: 8 }}>
-                  <TouchableOpacity
+                  <Pressable
                     style={{ flex: 1, borderRadius: 8, paddingVertical: 9, alignItems: "center", backgroundColor: colors.border }}
                     onPress={() => { setShowCreateTag(false); setCreatingTagFor(null); }}
                   >
                     <Text style={{ fontSize: 13, fontWeight: "600", color: colors.muted }}>{copy.cancel}</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
+                  </Pressable>
+                  <Pressable
                     style={{ flex: 1, borderRadius: 8, paddingVertical: 9, alignItems: "center", backgroundColor: colors.primary }}
                     onPress={handleCreateTag}
                   >
                     <Text style={{ fontSize: 13, fontWeight: "700", color: colors.onPrimary }}>{copy.add}</Text>
-                  </TouchableOpacity>
+                  </Pressable>
                 </View>
               </View>
             )}
@@ -566,14 +566,14 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
             </View>
 
             <View style={styles.recordActions}>
-              <TouchableOpacity style={[styles.recordCancel, { backgroundColor: colors.input, borderColor: colors.border }]} onPress={close}>
+              <Pressable style={[styles.recordCancel, { backgroundColor: colors.input, borderColor: colors.border }]} onPress={close}>
                 <MaterialCommunityIcons name="close" size={18} color={colors.text} />
                 <Text style={[styles.recordCancelText, { color: colors.text }]}>{copy.cancel}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.recordSubmit, { backgroundColor: colors.primary }]} onPress={submit}>
+              </Pressable>
+              <Pressable style={[styles.recordSubmit, { backgroundColor: colors.primary }]} onPress={submit}>
                 <MaterialCommunityIcons name="plus" size={20} color={colors.onPrimary} />
                 <Text style={[styles.recordSubmitText, { color: colors.onPrimary }]}>{editingTx ? copy.save : copy.add}</Text>
-              </TouchableOpacity>
+              </Pressable>
             </View>
           </ScrollView>
           </View>
@@ -598,19 +598,19 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
                 {availableTags.length > 0 && (
                   <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 8 }}>
                     {availableTags.map((tag) => (
-                      <TouchableOpacity
+                      <Pressable
                         key={tag.id}
                         style={[styles.selectOptionRow, { width: "48%", backgroundColor: colors.input }]}
                         onPress={() => toggleTag(tagsOpenFor!, tag.id)}
                       >
                         <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: tag.color }} />
                         <Text numberOfLines={1} style={[styles.selectOptionLabel, { color: colors.text }]}>{tag.label}</Text>
-                      </TouchableOpacity>
+                      </Pressable>
                     ))}
                   </View>
                 )}
                 <View style={{ borderTopWidth: availableTags.length > 0 ? 0.5 : 0, borderColor: colors.border, paddingTop: 8 }}>
-                  <TouchableOpacity
+                  <Pressable
                     style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingVertical: 6 }}
                     onPress={() => {
                       setCreatingTagFor(tagsOpenFor);
@@ -623,7 +623,7 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
                   >
                     <MaterialCommunityIcons name="tag-plus-outline" size={16} color={colors.primary} />
                     <Text style={{ fontSize: 13, fontWeight: "600", color: colors.primary }}>{copy.createTag || "Crear etiqueta"}</Text>
-                  </TouchableOpacity>
+                  </Pressable>
                 </View>
               </ScrollView>
             </View>

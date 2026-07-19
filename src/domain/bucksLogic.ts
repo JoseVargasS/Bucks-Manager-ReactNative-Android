@@ -72,21 +72,20 @@ export function buildTransactionFromDraft(draft: TransactionDraft, rowId: number
   const createdAt = draft.createdAt || new Date().toISOString();
 
   if (draft.lineItems && draft.lineItems.length > 0) {
-    const lineItems: LineItem[] = draft.lineItems
-      .map((li) => {
-        const raw = normalizeAmountExpression(li.amount);
-        const amount = calculateExpression(raw);
-        return {
-          id: li.id,
-          rawAmount: li.amount,
-          amount,
-          formula: isMathFormula(li.amount) ? raw : undefined,
-          description: li.description.trim(),
-          tags: draft.type.startsWith("GASTO") ? li.tags : [],
-        };
-      })
-      .filter((li) => li.rawAmount.trim() !== "" && Number.isFinite(li.amount) && li.amount !== 0)
-      .map(({ rawAmount: _raw, ...li }) => li);
+    const lineItems: LineItem[] = [];
+    for (const li of draft.lineItems) {
+      if (li.amount.trim() === "") continue;
+      const raw = normalizeAmountExpression(li.amount);
+      const amount = calculateExpression(raw);
+      if (!Number.isFinite(amount) || amount === 0) continue;
+      lineItems.push({
+        id: li.id,
+        amount,
+        formula: isMathFormula(li.amount) ? raw : undefined,
+        description: li.description.trim(),
+        tags: draft.type.startsWith("GASTO") ? li.tags : [],
+      });
+    }
     if (lineItems.length === 0) throw new Error("Invalid transaction draft");
     const totalAmount = lineItems.reduce((sum, li) => sum + li.amount, 0);
     const allTags = [...new Set(lineItems.flatMap((li) => li.tags))];

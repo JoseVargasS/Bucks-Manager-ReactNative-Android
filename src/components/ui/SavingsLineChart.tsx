@@ -152,6 +152,8 @@ export const SavingsLineChart = memo(function SavingsLineChart({
   );
 });
 
+const compactFormatter = new Intl.NumberFormat(undefined, { notation: "compact", maximumFractionDigits: 1 });
+
 function compact(value: number) {
-  return new Intl.NumberFormat(undefined, { notation: "compact", maximumFractionDigits: 1 }).format(value);
+  return compactFormatter.format(value);
 }

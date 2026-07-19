@@ -13,7 +13,9 @@ import { withAlpha } from "@/utils/helpers";
 import { Text } from "@/components/ui/AppText";
 
 function usePressAnimation(durationIn = 70, durationOut = 110) {
-  const pressed = useRef(new Animated.Value(0)).current;
+  const pressedRef = useRef<Animated.Value | null>(null);
+  if (!pressedRef.current) pressedRef.current = new Animated.Value(0);
+  const pressed = pressedRef.current;
   const onPressIn = useCallback(() => {
     Animated.timing(pressed, {
       toValue: 1,
@@ -45,7 +47,7 @@ export const BottomNav = memo(function BottomNav({
   onAdd: () => void;
 }) {
   const { card, borderStrong, bg } = useColors();
-  const isDark = useMemo(() => bg === dark.bg, [bg]);
+  const isDark = bg === dark.bg;
   const glassSurface = useMemo(
     () => withAlpha(card, isDark ? 0.85 : 0.82),
     [isDark, card],
@@ -127,7 +129,9 @@ const BottomNavItem = memo(function BottomNavItem({
   const { primary, primarySoft, muted, text } = useColors();
   const accent = active ? primary : muted;
   const { pressed, onPressIn, onPressOut } = usePressAnimation();
-  const localActive = useRef(new Animated.Value(active ? 1 : 0)).current;
+  const localActiveRef = useRef<Animated.Value | null>(null);
+  if (!localActiveRef.current) localActiveRef.current = new Animated.Value(active ? 1 : 0);
+  const localActive = localActiveRef.current;
   const prevActive = useRef(active);
 
   useLayoutEffect(() => {

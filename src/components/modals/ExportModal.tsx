@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { Animated, Modal, ScrollView, TouchableOpacity, View } from "react-native";
+import { Animated, Modal, ScrollView, Pressable, View } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { base } from "@/styles/baseStyles";
 import { exportModalStyles } from "@/components/modals/ExportModal.styles";
@@ -47,43 +47,43 @@ export function ExportModal({ visible, colors, copy, config, setConfig, minDate,
   return (
     <Modal visible transparent animationType="none" onRequestClose={onClose}>
       <Animated.View style={[styles.modalOverlay, { backgroundColor: colors.overlay }, transition.containerStyle]}>
-        <TouchableOpacity style={styles.optionBackdrop} activeOpacity={1} onPress={onClose} />
+        <Pressable style={styles.optionBackdrop} onPress={onClose} />
         <Animated.View style={[styles.modal, { backgroundColor: colors.card }, transition.panelStyle]}>
           <ModalHeader title={copy.exportMovements} icon="file-export" colors={colors} onClose={onClose} />
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 10 }} keyboardShouldPersistTaps="handled">
             <Text style={[styles.label, { color: colors.text }]}>{copy.format}</Text>
             <View style={styles.twoCols}>
-              <TouchableOpacity
+              <Pressable
                 style={[styles.exportChip, { backgroundColor: config.format === "xlsx" ? colors.primarySoft : colors.input, borderColor: config.format === "xlsx" ? colors.primary : colors.border }]}
                 onPress={() => setConfig({ ...config, format: "xlsx" })}
               >
                 <MaterialCommunityIcons name="file-delimited" size={20} color={config.format === "xlsx" ? colors.primary : colors.muted} />
-                <Text style={[{ color: config.format === "xlsx" ? colors.primary : colors.text, fontWeight: "700" }]}>CSV</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
+                <Text style={{ color: config.format === "xlsx" ? colors.primary : colors.text, fontWeight: "700" }}>CSV</Text>
+              </Pressable>
+              <Pressable
                 style={[styles.exportChip, { backgroundColor: config.format === "pdf" ? colors.primarySoft : colors.input, borderColor: config.format === "pdf" ? colors.primary : colors.border }]}
                 onPress={() => setConfig({ ...config, format: "pdf" })}
               >
                 <MaterialCommunityIcons name="file-pdf-box" size={20} color={config.format === "pdf" ? colors.primary : colors.muted} />
-                <Text style={[{ color: config.format === "pdf" ? colors.primary : colors.text, fontWeight: "700" }]}>PDF</Text>
-              </TouchableOpacity>
+                <Text style={{ color: config.format === "pdf" ? colors.primary : colors.text, fontWeight: "700" }}>PDF</Text>
+              </Pressable>
             </View>
             <Text style={[styles.label, { color: colors.text, marginTop: 12 }]}>{copy.range}</Text>
             <View style={styles.twoCols}>
-              <TouchableOpacity
+              <Pressable
                 style={[styles.exportChip, { backgroundColor: config.rangeMode === "dates" ? colors.primarySoft : colors.input, borderColor: config.rangeMode === "dates" ? colors.primary : colors.border }]}
                 onPress={() => setConfig({ ...config, rangeMode: "dates" })}
               >
                 <MaterialCommunityIcons name="calendar-range" size={20} color={config.rangeMode === "dates" ? colors.primary : colors.muted} />
-                <Text style={[{ color: config.rangeMode === "dates" ? colors.primary : colors.text, fontWeight: "700" }]}>{copy.byDates}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
+                <Text style={{ color: config.rangeMode === "dates" ? colors.primary : colors.text, fontWeight: "700" }}>{copy.byDates}</Text>
+              </Pressable>
+              <Pressable
                 style={[styles.exportChip, { backgroundColor: config.rangeMode === "months" ? colors.primarySoft : colors.input, borderColor: config.rangeMode === "months" ? colors.primary : colors.border }]}
                 onPress={() => setConfig({ ...config, rangeMode: "months" })}
               >
                 <MaterialCommunityIcons name="calendar-month" size={20} color={config.rangeMode === "months" ? colors.primary : colors.muted} />
-                <Text style={[{ color: config.rangeMode === "months" ? colors.primary : colors.text, fontWeight: "700" }]}>{copy.byMonths}</Text>
-              </TouchableOpacity>
+                <Text style={{ color: config.rangeMode === "months" ? colors.primary : colors.text, fontWeight: "700" }}>{copy.byMonths}</Text>
+              </Pressable>
             </View>
             <RangeField
               label={mode === "month" ? copy.startMonth : copy.from}
@@ -135,10 +135,10 @@ function RangeField({ label, value, onChange, pickerMode, pickerMin, colors, cop
   return (
     <>
       <Text style={[styles.label, { color: colors.text, marginTop: 12 }]}>{label}</Text>
-      <TouchableOpacity style={[{ borderRadius: 10, paddingHorizontal: 12, minHeight: 42, flexDirection: "row", alignItems: "center", gap: 10, borderWidth: 1, backgroundColor: colors.input, borderColor: colors.border }]} onPress={onOpen}>
+      <Pressable style={{ borderRadius: 10, paddingHorizontal: 12, minHeight: 42, flexDirection: "row", alignItems: "center", gap: 10, borderWidth: 1, backgroundColor: colors.input, borderColor: colors.border }} onPress={onOpen}>
         <MaterialCommunityIcons name="calendar" size={20} color={colors.info} />
         <Text style={{ color: value ? colors.text : colors.muted, fontWeight: "600", flex: 1 }}>{displayValue}</Text>
-      </TouchableOpacity>
+      </Pressable>
       <CalendarPicker visible={isOpen} value={value} mode={pickerMode} minDate={pickerMin} onSelect={onChange} onClose={onClose} colors={colors} copy={copy} />
     </>
   );

@@ -1,5 +1,5 @@
-import { useMemo } from "react";
-import { Animated, FlatList, Modal, TouchableOpacity, View } from "react-native";
+import { useCallback, useMemo } from "react";
+import { Animated, FlatList, Modal, Pressable, View } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { type HistoryEntry } from "@/types";
 import { base } from "@/styles/baseStyles";
@@ -25,19 +25,49 @@ export function HistoryModal({ visible, entries, colors, currencySymbol, copy, o
   const deletedOnly = useMemo(() => entries.filter((entry) => entry.action === "delete"), [entries]);
   const transition = useModalTransition(visible, 12, 0.985);
 
+  const renderHistoryItem = useCallback(({ item }: { item: HistoryEntry }) => (
+    <View style={[s.listItem, { borderColor: colors.border }]}>
+      <View style={[s.historyIcon, { backgroundColor: colors.expenseSoft }]}>
+        <MaterialCommunityIcons name="trash-can" size={18} color={colors.expense} />
+      </View>
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <View style={s.labelRow}>
+          <Text style={[s.deleteLabel, { color: colors.expense }]}>
+            {copy.delete}
+          </Text>
+          <Text style={[s.timestamp, { color: colors.muted }]}>
+            {formatCreatedTime(item.timestamp)}
+          </Text>
+        </View>
+        <Text numberOfLines={1} style={[s.detail, { color: colors.text }]}>
+          {item.transaction.detail || copy.detailPlaceholder}
+        </Text>
+        <Text style={[s.amount, { color: item.transaction.amount >= 0 ? colors.income : colors.expense }]}>
+          {formatMoney(item.transaction.amount, currencySymbol)}
+        </Text>
+      </View>
+      <Pressable
+        style={[s.undoBtn, { backgroundColor: colors.input }]}
+        onPress={() => onUndo(item)}
+      >
+        <MaterialCommunityIcons name="undo" size={18} color={colors.primary} />
+      </Pressable>
+    </View>
+  ), [colors, copy, currencySymbol, onUndo]);
+
   if (!transition.modalVisible) return null;
   return (
     <Modal visible transparent animationType="none" onRequestClose={onClose}>
       <Animated.View style={[styles.modalOverlay, { backgroundColor: colors.overlay }, transition.containerStyle]}>
-        <TouchableOpacity style={styles.optionBackdrop} activeOpacity={1} onPress={onClose} />
+        <Pressable style={styles.optionBackdrop} onPress={onClose} />
         <Animated.View style={[styles.recordModal, { backgroundColor: colors.card }, transition.panelStyle]}>
           <View style={[styles.recordHeader, { borderColor: colors.border }]}>
             <Text style={[styles.recordTitle, { color: colors.text }]}>
               <MaterialCommunityIcons name="delete-restore" size={19} color={colors.expense} /> {copy.history}
             </Text>
-            <TouchableOpacity style={[styles.closeBtn, { backgroundColor: colors.input }]} onPress={onClose}>
+            <Pressable style={[styles.closeBtn, { backgroundColor: colors.input }]} onPress={onClose}>
               <MaterialCommunityIcons name="close" size={22} color={colors.text} />
-            </TouchableOpacity>
+            </Pressable>
           </View>
           <View style={s.body}>
             <Text style={[s.subtitle, { color: colors.muted }]}>
@@ -54,35 +84,7 @@ export function HistoryModal({ visible, entries, colors, currencySymbol, copy, o
                 keyExtractor={(item) => item.id}
                 style={s.list}
                 showsVerticalScrollIndicator={false}
-                renderItem={({ item }) => (
-                  <View style={[s.listItem, { borderColor: colors.border }]}>
-                    <View style={[s.historyIcon, { backgroundColor: colors.expenseSoft }]}>
-                      <MaterialCommunityIcons name="trash-can" size={18} color={colors.expense} />
-                    </View>
-                    <View style={{ flex: 1, minWidth: 0 }}>
-                      <View style={s.labelRow}>
-                        <Text style={[s.deleteLabel, { color: colors.expense }]}>
-                          {copy.delete}
-                        </Text>
-                        <Text style={[s.timestamp, { color: colors.muted }]}>
-                          {formatCreatedTime(item.timestamp)}
-                        </Text>
-                      </View>
-                      <Text numberOfLines={1} style={[s.detail, { color: colors.text }]}>
-                        {item.transaction.detail || copy.detailPlaceholder}
-                      </Text>
-                      <Text style={[s.amount, { color: item.transaction.amount >= 0 ? colors.income : colors.expense }]}>
-                        {formatMoney(item.transaction.amount, currencySymbol)}
-                      </Text>
-                    </View>
-                    <TouchableOpacity
-                      style={[s.undoBtn, { backgroundColor: colors.input }]}
-                      onPress={() => onUndo(item)}
-                    >
-                      <MaterialCommunityIcons name="undo" size={18} color={colors.primary} />
-                    </TouchableOpacity>
-                  </View>
-                )}
+                renderItem={renderHistoryItem}
               />
             )}
           </View>

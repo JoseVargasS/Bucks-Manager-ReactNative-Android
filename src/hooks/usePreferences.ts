@@ -29,6 +29,23 @@ const CURRENCY_OPTIONS_SET = new Set([
   "S/", "$", "€", "£", "¥", "R$", "MX$", "COP$", "CLP$",
 ]);
 
+function sanitizeColorScheme(next: string): ColorSchemePreference {
+  return COLOR_SCHEME_PREFERENCES.includes(next as ColorSchemePreference)
+    ? (next as ColorSchemePreference)
+    : DEFAULT_COLOR_SCHEME;
+}
+function sanitizeFont(next: string): FontPreference {
+  return FONT_PREFERENCES.includes(next as FontPreference)
+    ? (next as FontPreference)
+    : "dmsans";
+}
+function sanitizeCurrency(next: string): string {
+  return CURRENCY_OPTIONS_SET.has(next) ? next : detectDeviceCurrencySymbol();
+}
+function sanitizeLanguage(next: string): LanguageMode {
+  return next === "en" ? "en" : "es";
+}
+
 const FONT_COPY_KEYS: Record<FontPreference, keyof UiCopy> = {
   dmsans: "system",
   serif: "serif",
@@ -123,19 +140,6 @@ export function usePreferences(): PreferencesState {
   const [theme, setThemeState] = useState<ThemeMode>("dark");
 
   const copy: UiCopy = UI_COPY[language];
-
-  const sanitizeColorScheme = (next: string): ColorSchemePreference =>
-    COLOR_SCHEME_PREFERENCES.includes(next as ColorSchemePreference)
-      ? (next as ColorSchemePreference)
-      : DEFAULT_COLOR_SCHEME;
-  const sanitizeFont = (next: string): FontPreference =>
-    FONT_PREFERENCES.includes(next as FontPreference)
-      ? (next as FontPreference)
-      : "dmsans";
-  const sanitizeCurrency = (next: string): string =>
-    CURRENCY_OPTIONS_SET.has(next) ? next : detectDeviceCurrencySymbol();
-  const sanitizeLanguage = (next: string): LanguageMode =>
-    next === "en" ? "en" : "es";
 
   const restorePreferences = useCallback(async () => {
     const [storedLanguage, storedCurrency, storedFont, storedColorScheme, storedTheme] =

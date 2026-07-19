@@ -4,7 +4,7 @@ import {
   Animated,
   FlatList,
   Modal,
-  TouchableOpacity,
+  Pressable,
   View,
 } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
@@ -42,13 +42,14 @@ export function TagEditorModal({
   const [editingLabel, setEditingLabel] = useState("");
   const [editingColor, setEditingColor] = useState("");
   const keyboardOffset = useKeyboardOffset(visible, (height) => Math.min(height * 0.45, 180));
-  const persistQueue = useRef(Promise.resolve());
+  const persistQueue = useRef<Promise<unknown> | null>(null);
+  if (!persistQueue.current) persistQueue.current = Promise.resolve();
   const transition = useModalTransition(visible, 12, 0.985);
 
   const commitTags = useCallback(
     (next: Tag[]) => {
       setTags(next);
-      persistQueue.current = persistQueue.current
+      persistQueue.current = persistQueue.current!
         .catch(() => undefined)
         .then(() => saveTags(next))
         .catch(() => {
@@ -97,6 +98,23 @@ export function TagEditorModal({
     [commitTags, tags],
   );
 
+  const renderTagItem = useCallback(({ item }: { item: Tag }) => (
+    <TagRow
+      tag={item}
+      colors={colors}
+      copy={copy}
+      editing={editingId === item.id}
+      editingLabel={editingId === item.id ? editingLabel : undefined}
+      editingColor={editingId === item.id ? editingColor : undefined}
+      onStartEdit={startEdit}
+      onChangeLabel={setEditingLabel}
+      onChangeColor={setEditingColor}
+      onSave={editingId === item.id ? saveEdit : undefined}
+      onCancel={editingId === item.id ? cancelEdit : undefined}
+      onDelete={handleDelete}
+    />
+  ), [colors, copy, editingId, editingLabel, editingColor, startEdit, setEditingLabel, setEditingColor, saveEdit, cancelEdit, handleDelete]);
+
   if (!transition.modalVisible) return null;
   return (
     <Modal visible transparent animationType="none" onRequestClose={onClose}>
@@ -107,9 +125,8 @@ export function TagEditorModal({
           transition.containerStyle,
         ]}
       >
-        <TouchableOpacity
+        <Pressable
           style={styles.optionBackdrop}
-          activeOpacity={1}
           onPress={onClose}
         />
         <View
@@ -138,7 +155,7 @@ export function TagEditorModal({
                 />{" "}
                 {copy.tagsTitle}
               </Text>
-              <TouchableOpacity
+              <Pressable
                 style={[styles.closeBtn, { backgroundColor: colors.input }]}
                 onPress={onClose}
               >
@@ -147,7 +164,7 @@ export function TagEditorModal({
                   size={22}
                   color={colors.text}
                 />
-              </TouchableOpacity>
+              </Pressable>
             </View>
 
             <View style={s.body}>
@@ -163,7 +180,7 @@ export function TagEditorModal({
                   style={[s.input, { backgroundColor: colors.input, color: colors.text }]}
                   onSubmitEditing={handleAdd}
                 />
-                <TouchableOpacity
+                <Pressable
                   onPress={handleAdd}
                   style={[s.addBtn, { backgroundColor: colors.primary }]}
                 >
@@ -172,7 +189,7 @@ export function TagEditorModal({
                     size={22}
                     color={colors.onPrimary}
                   />
-                </TouchableOpacity>
+                </Pressable>
               </View>
 
               <View style={{ paddingHorizontal: 4 }}>
@@ -188,26 +205,7 @@ export function TagEditorModal({
                 keyExtractor={(t) => t.id}
                 style={s.flatList}
                 keyboardShouldPersistTaps="handled"
-                renderItem={({ item }) => (
-                  <TagRow
-                    tag={item}
-                    colors={colors}
-                    copy={copy}
-                    editing={editingId === item.id}
-                    editingLabel={
-                      editingId === item.id ? editingLabel : undefined
-                    }
-                    editingColor={
-                      editingId === item.id ? editingColor : undefined
-                    }
-                    onStartEdit={startEdit}
-                    onChangeLabel={setEditingLabel}
-                    onChangeColor={setEditingColor}
-                    onSave={editingId === item.id ? saveEdit : undefined}
-                    onCancel={editingId === item.id ? cancelEdit : undefined}
-                    onDelete={handleDelete}
-                  />
-                )}
+                renderItem={renderTagItem}
               />
             </View>
           </Animated.View>
@@ -263,20 +261,20 @@ const TagRow = memo(function TagRow({
             />
             <ColorPicker color={editingColor || tag.color} onChange={onChangeColor} compact />
           </View>
-          <TouchableOpacity onPress={onSave}>
+          <Pressable onPress={onSave}>
             <MaterialCommunityIcons
               name="check"
               size={20}
               color={colors.primary}
             />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={onCancel}>
+          </Pressable>
+          <Pressable onPress={onCancel}>
             <MaterialCommunityIcons
               name="close"
               size={20}
               color={colors.muted}
             />
-          </TouchableOpacity>
+          </Pressable>
         </>
       ) : (
         <>
@@ -292,20 +290,20 @@ const TagRow = memo(function TagRow({
               {copy.tagCustomBadge}
             </Text>
           )}
-          <TouchableOpacity onPress={() => onStartEdit(tag)}>
+          <Pressable onPress={() => onStartEdit(tag)}>
             <MaterialCommunityIcons
               name="pencil"
               size={18}
               color={colors.muted}
             />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => onDelete(tag.id)}>
+          </Pressable>
+          <Pressable onPress={() => onDelete(tag.id)}>
             <MaterialCommunityIcons
               name="trash-can"
               size={18}
               color={colors.expense}
             />
-          </TouchableOpacity>
+          </Pressable>
         </>
       )}
     </View>

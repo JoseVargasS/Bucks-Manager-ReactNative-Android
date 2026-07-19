@@ -17,6 +17,10 @@ import {
 } from "@/components/modals/SearchModal";
 import type { SearchFilters, SummaryRow, Tag, Transaction } from "@/types";
 
+function renumberTransactions(items: Transaction[]) {
+  return items.map((item, idx) => ({ ...item, rowId: idx + 2 }));
+}
+
 type FinancialState = {
   transactions: Transaction[];
   summaries: SummaryRow[];
@@ -156,10 +160,6 @@ export function useFinancialState(tagsList: Tag[]): FinancialState {
   );
 
   // --- Pure helpers ---
-
-  function renumberTransactions(items: Transaction[]) {
-    return items.map((item, idx) => ({ ...item, rowId: idx + 2 }));
-  }
 
   // --- Actions ---
 

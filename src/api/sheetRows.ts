@@ -329,31 +329,29 @@ export async function readTransactions(token: string, spreadsheetId: string) {
     0,
     findHeaderIndex(rows, TRANSACTION_HEADERS.slice(0, 4)),
   );
-  return (data.values || [])
-    .map((row, index): Transaction | null => {
-      if (index <= headerIndex) return null;
-      const date = parseSheetDate(row[0]);
-      if (!date) return null;
-      const type = normalizeType(String(row[3] || ""));
-      if (!type) return null;
-      const createdAt = parseCreatedAt(row[4]);
-      const lineItems = parseLineItems(String(row[6] || ""));
-      return {
-        rowId: index + 1,
-        date: formatDateForSheet(date),
-        rawDate: date.toISOString(),
-        rawDateMs: date.getTime(),
-        createdAtMs: parseCreatedAtMs(createdAt),
-        amount: parseNumber(row[1]),
-        detail: String(row[2] || ""),
-        formula: parseAmountFormula(formulaData.values?.[index]?.[1], type),
-        type,
-        createdAt,
-        tags: parseTags(row[5]),
-        ...(lineItems && { lineItems }),
-      };
-    })
-    .filter(Boolean) as Transaction[];
+  return (data.values || []).flatMap((row, index): Transaction[] => {
+    if (index <= headerIndex) return [];
+    const date = parseSheetDate(row[0]);
+    if (!date) return [];
+    const type = normalizeType(String(row[3] || ""));
+    if (!type) return [];
+    const createdAt = parseCreatedAt(row[4]);
+    const lineItems = parseLineItems(String(row[6] || ""));
+    return [{
+      rowId: index + 1,
+      date: formatDateForSheet(date),
+      rawDate: date.toISOString(),
+      rawDateMs: date.getTime(),
+      createdAtMs: parseCreatedAtMs(createdAt),
+      amount: parseNumber(row[1]),
+      detail: String(row[2] || ""),
+      formula: parseAmountFormula(formulaData.values?.[index]?.[1], type),
+      type,
+      createdAt,
+      tags: parseTags(row[5]),
+      ...(lineItems && { lineItems }),
+    }];
+  });
 }
 
 export async function readSummaries(token: string, spreadsheetId: string) {
@@ -363,24 +361,22 @@ export async function readSummaries(token: string, spreadsheetId: string) {
   );
   const rows = data.values || [];
   const headerIndex = Math.max(0, findHeaderIndex(rows, SUMMARY_HEADERS));
-  return rows
-    .map((row, index): SummaryRow | null => {
-      if (index <= headerIndex) return null;
-      const date = parseSheetDate(row[0]);
-      if (!date) return null;
-      return {
-        monthYear: getMonthYear(date),
-        freqIncome: parseNumber(row[1]),
-        nonFreqIncome: parseNumber(row[2]),
-        totalIncome: parseNumber(row[3]),
-        freqExpense: parseNumber(row[4]),
-        nonFreqExpense: parseNumber(row[5]),
-        totalExpense: parseNumber(row[6]),
-        netMonthly: parseNumber(row[7]),
-        netNoFreq: parseNumber(row[8]),
-      };
-    })
-    .filter(Boolean) as SummaryRow[];
+  return rows.flatMap((row, index): SummaryRow[] => {
+    if (index <= headerIndex) return [];
+    const date = parseSheetDate(row[0]);
+    if (!date) return [];
+    return [{
+      monthYear: getMonthYear(date),
+      freqIncome: parseNumber(row[1]),
+      nonFreqIncome: parseNumber(row[2]),
+      totalIncome: parseNumber(row[3]),
+      freqExpense: parseNumber(row[4]),
+      nonFreqExpense: parseNumber(row[5]),
+      totalExpense: parseNumber(row[6]),
+      netMonthly: parseNumber(row[7]),
+      netNoFreq: parseNumber(row[8]),
+    }];
+  });
 }
 
 async function writeTransactionRow(
