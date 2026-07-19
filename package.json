@@ -61,10 +61,9 @@
     "start": "expo start",
     "test": "npx jest --config jest.config.mjs --no-cache",
     "test:coverage": "npx jest --config jest.config.mjs --coverage --no-cache",
-    "test:watch": "npx jest --config jest.config.mjs --watch"
+    "test:watch": "npx jest --config jest.config.mjs --watch",
+    "doctor": "npx react-doctor@latest"
   },
   "private": true,
-  "overrides": {
-    "expo-constants": "~56.0.20"
-  }
+  "overrides": {}
 }
