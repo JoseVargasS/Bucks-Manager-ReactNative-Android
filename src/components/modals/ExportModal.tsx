@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import { Animated, Modal, ScrollView, Pressable, View } from "react-native";
+import { BlurView } from "expo-blur";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { base } from "@/styles/baseStyles";
 import { exportModalStyles } from "@/components/modals/ExportModal.styles";
@@ -46,6 +47,7 @@ export function ExportModal({ visible, colors, copy, config, setConfig, minDate,
   const minForMode = mode === "month" && minDate ? minDate.slice(0, 7) : minDate;
   return (
     <Modal visible transparent animationType="none" onRequestClose={onClose}>
+      <BlurView intensity={30} tint="dark" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
       <Animated.View style={[styles.modalOverlay, { backgroundColor: colors.overlay }, transition.containerStyle]}>
         <Pressable style={styles.optionBackdrop} onPress={onClose} />
         <Animated.View style={[styles.modal, { backgroundColor: colors.card }, transition.panelStyle]}>

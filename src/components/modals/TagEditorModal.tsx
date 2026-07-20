@@ -7,6 +7,7 @@ import {
   Pressable,
   View,
 } from "react-native";
+import { BlurView } from "expo-blur";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { base } from "@/styles/baseStyles";
 import { recordModalStyles } from "@/components/modals/TransactionModal.styles";
@@ -118,6 +119,7 @@ export function TagEditorModal({
   if (!transition.modalVisible) return null;
   return (
     <Modal visible transparent animationType="none" onRequestClose={onClose}>
+      <BlurView intensity={30} tint="dark" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
       <Animated.View
         style={[
           styles.modalOverlay,

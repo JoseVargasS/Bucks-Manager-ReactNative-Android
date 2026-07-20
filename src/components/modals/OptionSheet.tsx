@@ -1,5 +1,6 @@
 import { forwardRef, useCallback, useImperativeHandle, useRef, useState } from "react";
 import { Animated, Modal, StyleSheet, Pressable, View, ScrollView } from "react-native";
+import { BlurView } from "expo-blur";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { base } from "@/styles/baseStyles";
 import { optionSheetStyles } from "@/components/modals/OptionSheet.styles";
@@ -35,6 +36,7 @@ export const OptionSheet = forwardRef<OptionSheetHandle, { colors: Palette }>(fu
   if (!config || !transition.modalVisible) return null;
   return (
     <Modal visible={transition.modalVisible} transparent animationType="none" onRequestClose={close}>
+      <BlurView intensity={30} tint="dark" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
       <Animated.View style={[styles.optionOverlay, { backgroundColor: colors.overlay }, transition.containerStyle]}>
         <Pressable style={styles.optionBackdrop} onPress={close} />
         <Animated.View

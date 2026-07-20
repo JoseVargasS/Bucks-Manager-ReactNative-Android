@@ -1,5 +1,6 @@
 import { useCallback, useMemo } from "react";
 import { Animated, FlatList, Modal, Pressable, View } from "react-native";
+import { BlurView } from "expo-blur";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { type HistoryEntry } from "@/types";
 import { base } from "@/styles/baseStyles";
@@ -58,6 +59,7 @@ export function HistoryModal({ visible, entries, colors, currencySymbol, copy, o
   if (!transition.modalVisible) return null;
   return (
     <Modal visible transparent animationType="none" onRequestClose={onClose}>
+      <BlurView intensity={30} tint="dark" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
       <Animated.View style={[styles.modalOverlay, { backgroundColor: colors.overlay }, transition.containerStyle]}>
         <Pressable style={styles.optionBackdrop} onPress={onClose} />
         <Animated.View style={[styles.recordModal, { backgroundColor: colors.card }, transition.panelStyle]}>

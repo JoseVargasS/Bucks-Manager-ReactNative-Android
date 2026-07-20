@@ -1,5 +1,6 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { Animated, BackHandler, Keyboard, StyleSheet, Pressable, View } from "react-native";
+import { BlurView } from "expo-blur";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { base } from "@/styles/baseStyles";
 import { searchModalStyles } from "@/components/modals/SearchModal.styles";
@@ -65,6 +66,7 @@ export const SearchModal = forwardRef<SearchModalHandle, {
         importantForAccessibility={transition.modalVisible ? "yes" : "no-hide-descendants"}
         style={[StyleSheet.absoluteFill, styles.searchOverlay, { backgroundColor: colors.overlay, zIndex: Z_INDEX_SEARCH, elevation: Z_INDEX_SEARCH }, transition.containerStyle]}
       >
+        <BlurView intensity={30} tint="dark" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
         <Pressable style={styles.optionBackdrop} onPress={close} />
         <Animated.View style={[styles.searchSheet, { backgroundColor: colors.card }, transition.panelStyle]}>
           <View style={[styles.searchGrabber, { backgroundColor: colors.border }]} />
