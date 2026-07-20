@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { mergeTagsToCatalog } from "@/api/googleWorkspace";
+import { writeTagsCatalog } from "@/api/googleWorkspace";
 import type { HistoryEntry, Tag } from "@/types";
 import type { UiPreferencesSnapshot } from "./usePreferences";
 
@@ -89,7 +89,7 @@ export function useDebouncedSheetWrites(
     if (prevTagsRef.current === tagsList) return;
     prevTagsRef.current = tagsList;
     const timer = setTimeout(() => {
-      mergeTagsToCatalog(accessToken, spreadsheetId, tagsList).catch(
+      writeTagsCatalog(accessToken, spreadsheetId, tagsList).catch(
         () => undefined,
       );
     }, 1500);
