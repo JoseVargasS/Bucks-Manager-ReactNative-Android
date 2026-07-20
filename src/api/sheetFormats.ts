@@ -25,7 +25,7 @@ function headerMatches(actual: string, expected: string) {
 }
 
 function hasHeaders(actual: string[], expected: string[]) {
-  if (actual.length !== expected.length) return false;
+  if (actual.length < expected.length) return false;
   const normalized = actual.map(normalizeHeader);
   return expected.every((header, index) =>
     headerMatches(normalized[index], header),
