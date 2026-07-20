@@ -68,7 +68,7 @@ These rules reflect the current shape of the app and the scale it must support. 
 
 ### Runtime state
 
-- `App.tsx` owns cross-cutting runtime state: session restore, preferences, cache hydration, Google synchronization, optimistic writes, pager state, and modal refs.
+- `App.tsx` owns cross-cutting runtime state: session restore, preferences, cache hydration, Google synchronization, optimistic writes, pager state, and modal refs. Cross-cutting logic has been extracted into 12 dedicated hooks (see `CONTEXT.md` for the full list).
 - The three main pages stay mounted inside one animated pager. Primary interaction modals open through refs so opening them does not require a root visibility-state round trip.
 - Mutations update React state and the local cache first, then write to Sheets and force one reconciliation read.
 - `reloadFromGoogle()` shares one in-flight promise. `pendingSyncRef` prevents an ordinary refresh from replacing optimistic state. Each mutation sets `pendingSyncRef.current = true` before the sync call so the reconciliation does not overwrite the optimistic update.
@@ -81,7 +81,7 @@ These rules reflect the current shape of the app and the scale it must support. 
 - Add, edit, delete, and move interactions must update locally before remote reconciliation.
 - Add frequent income as a normal transaction with type `INGRESO FRECUENTE`; the legacy monthly summary value is read-only fallback data.
 - If column F already has the normalized `Tags` header, do not repeat tag migration or formatting writes.
-- On `reloadFromGoogle`: read the tag catalogue from `MONTHLY SUMMARY!K2`, merge with in-memory `tagsList`, and persist merged result back to sheet with a 1.5s debounce. Custom tags use the sheet as source of truth (label + colour); default tags keep the language-correct label but adopt the sheet colour.
+- On `reloadFromGoogle`: read the tag catalogue from `MONTHLY SUMMARY!K2`, merge with in-memory `tagsList` using `mergeTagsFromSheet` which starts from sheet tags (source of truth) and adds only local custom tags not yet synced. The debounced write-back uses `writeTagsCatalog` to push the full local catalogue to the sheet so deletions and label updates propagate.
 - If the stored spreadsheet was trashed in Drive, clear the local cache and start fresh without erroring out.
 
 ### Render and re-render budget
@@ -145,9 +145,10 @@ Do not re-merge these contexts. Do not introduce a global "settings" context tha
 
 ### Mutation pipeline
 
-- A module-level `syncQueue` serializes Sheets mutations so a fast edit cannot race the reconcile read of an earlier edit.
+- A module-level `syncQueue` in `useGoogleSync.ts` (exported for `connectFlow.ts`) serializes Sheets mutations so a fast edit cannot race the reconcile read of an earlier edit.
 - Disconnect Google when the token fails and there is no local cache.
 - Mutations always update local state and the cache before issuing the network call. Failed network calls keep the local data visible with a pending or error status.
+- `connectFlow.ts` contains the offline-first connect logic (`combineTransactions`, `ensureTagsInCatalogue`, `scheduleBackgroundUpload`, `handleOfflineAfterConnect`) extracted from `useGoogleSync` as explicit-parameter functions with no closure coupling.
 
 ### Imports and packaging
 
