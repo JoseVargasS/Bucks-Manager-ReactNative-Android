@@ -34,7 +34,6 @@ export const SettingsView = memo(function SettingsView({
     condensed: copy.condensed,
     light: copy.lightFont,
     casual: copy.casual,
-    cursive: copy.cursive,
     smallcaps: copy.smallCaps,
     inter: copy.inter,
     fredoka: copy.fredoka,
@@ -50,9 +49,6 @@ export const SettingsView = memo(function SettingsView({
     intervariable: copy.interVariable,
     comicsansms: copy.comicSansMS,
     proggysquare: copy.proggySquare,
-    redstarbold: copy.redstarBold,
-    sansi: copy.sansi,
-    sfscribbledsans: copy.sfScribbledSans,
   };
   return (
     <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.pageScroll, styles.pageScrollMobile]}>

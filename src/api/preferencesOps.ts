@@ -9,10 +9,10 @@ const VALID_COLOR_SCHEMES = Object.keys(accents) as ColorSchemePreference[];
 const VALID_LANGUAGES: LanguageMode[] = ["es", "en"];
 const VALID_FONT_PREFERENCES: FontPreference[] = [
   "dmsans", "serif", "mono", "condensed", "light", "casual",
-  "cursive", "smallcaps", "inter", "intervariable", "jetbrainsmono",
+  "smallcaps", "inter", "intervariable", "jetbrainsmono",
   "spacemono", "orbitron", "playfair", "bebasneue", "fredoka",
   "comicneue", "sora", "patrickhand", "plusjakartasans", "comicsansms",
-  "proggysquare", "redstarbold", "sansi", "sfscribbledsans",
+  "proggysquare",
 ];
 
 // Shape persisted to the sheet. v2 = v1 + theme (dark/light).

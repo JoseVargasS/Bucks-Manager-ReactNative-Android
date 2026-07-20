@@ -52,7 +52,6 @@ const FONT_COPY_KEYS: Record<FontPreference, keyof UiCopy> = {
   condensed: "condensed",
   light: "lightFont",
   casual: "casual",
-  cursive: "cursive",
   smallcaps: "smallCaps",
   inter: "inter",
   intervariable: "interVariable",
@@ -68,9 +67,6 @@ const FONT_COPY_KEYS: Record<FontPreference, keyof UiCopy> = {
   plusjakartasans: "plusJakartaSans",
   comicsansms: "comicSansMS",
   proggysquare: "proggySquare",
-  redstarbold: "redstarBold",
-  sansi: "sansi",
-  sfscribbledsans: "sfScribbledSans",
 };
 
 export function getFontPickerOptions(copy: UiCopy) {

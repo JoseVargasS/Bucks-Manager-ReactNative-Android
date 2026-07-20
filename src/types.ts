@@ -102,7 +102,6 @@ export type FontPreference =
   | "condensed"
   | "light"
   | "casual"
-  | "cursive"
   | "smallcaps"
   | "inter"
   | "fredoka"
@@ -117,7 +116,4 @@ export type FontPreference =
   | "plusjakartasans"
   | "intervariable"
   | "comicsansms"
-  | "proggysquare"
-  | "redstarbold"
-  | "sansi"
-  | "sfscribbledsans";
+  | "proggysquare";

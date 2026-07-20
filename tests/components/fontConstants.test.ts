@@ -8,8 +8,6 @@ describe("fontConstants", () => {
   });
 
   it("has scale overrides for specific fonts", () => {
-    expect(FONT_SIZE_SCALE.sansi).toBe(1.35);
-    expect(FONT_SIZE_SCALE.sfscribbledsans).toBe(1.3);
     expect(FONT_SIZE_SCALE.proggysquare).toBe(1.4);
     expect(FONT_SIZE_SCALE.comicsansms).toBe(1.2);
     expect(FONT_SIZE_SCALE.dmsans).toBeUndefined();
@@ -26,6 +24,6 @@ describe("fontConstants", () => {
   it("every font has a unique icon", () => {
     const icons = Object.values(FONT_ICONS);
     const unique = new Set(icons);
-    expect(unique.size).toBeGreaterThan(10);
+    expect(unique.size).toBeGreaterThanOrEqual(8);
   });
 });

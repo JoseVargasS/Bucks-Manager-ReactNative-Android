@@ -7,7 +7,6 @@ export const FONT_FAMILIES: Record<FontPreference, string> = {
   condensed: "sans-serif-condensed",
   light: "sans-serif-light",
   casual: "casual",
-  cursive: "cursive",
   smallcaps: "sans-serif-smallcaps",
   inter: "Inter",
   fredoka: "Fredoka",
@@ -23,14 +22,10 @@ export const FONT_FAMILIES: Record<FontPreference, string> = {
   intervariable: "InterVariable",
   comicsansms: "ComicSansMS",
   proggysquare: "ProggySquare",
-  redstarbold: "RedstarBold",
-  sansi: "SANSI",
-  sfscribbledsans: "SFScribbledSans",
+
 };
 
 export const FONT_SIZE_SCALE: Partial<Record<FontPreference, number>> = {
-  sansi: 1.35,
-  sfscribbledsans: 1.3,
   proggysquare: 1.4,
   comicsansms: 1.2,
 };
@@ -42,7 +37,6 @@ export const FONT_ICONS: Record<FontPreference, MaterialIconName> = {
   condensed: "format-letter-spacing",
   light: "feather",
   casual: "draw",
-  cursive: "fountain-pen-tip",
   smallcaps: "format-letter-case-upper",
   inter: "format-font",
   intervariable: "format-font",
@@ -58,7 +52,5 @@ export const FONT_ICONS: Record<FontPreference, MaterialIconName> = {
   plusjakartasans: "format-font",
   comicsansms: "emoticon-happy",
   proggysquare: "code-tags",
-  redstarbold: "star",
-  sansi: "format-font",
-  sfscribbledsans: "draw",
+
 };

@@ -269,33 +269,6 @@
                     "weight": 400
                   }
                 ]
-              },
-              {
-                "fontFamily": "RedstarBold",
-                "fontDefinitions": [
-                  {
-                    "path": "./assets/fonts/RedstarBold.ttf",
-                    "weight": 700
-                  }
-                ]
-              },
-              {
-                "fontFamily": "SANSI",
-                "fontDefinitions": [
-                  {
-                    "path": "./assets/fonts/SANSI.ttf",
-                    "weight": 400
-                  }
-                ]
-              },
-              {
-                "fontFamily": "SFScribbledSans",
-                "fontDefinitions": [
-                  {
-                    "path": "./assets/fonts/SFScribbledSans.ttf",
-                    "weight": 700
-                  }
-                ]
               }
             ]
           }
