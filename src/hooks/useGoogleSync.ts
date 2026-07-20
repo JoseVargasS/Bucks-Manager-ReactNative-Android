@@ -4,8 +4,6 @@ import { getItemAsync, setItemAsync, deleteItemAsync } from "expo-secure-store";
 import { GoogleSignin } from "@react-native-google-signin/google-signin";
 import { shouldRescanForSheetError } from "@/utils/errorHandler";
 import {
-  findCompatibleSheets,
-  createBucksSpreadsheet,
   isSheetTrashed,
   readTransactions,
   readSummaries,
@@ -15,7 +13,7 @@ import {
   buildUiPreferences,
 } from "@/api/googleWorkspace";
 import { readHistory, writeHistory as writeHistoryApi } from "@/api/historyOps";
-import { calculateSummaries, SHEET_NAMES } from "@/domain/bucksLogic";
+import { calculateSummaries } from "@/domain/bucksLogic";
 import { loadFinancialCache, deleteFinancialCache, loadOfflineCache } from "@/data/localCache";
 import { mergeTagsFromSheet, saveTags } from "@/utils/tags";
 import { TOKEN_KEY, SHEET_KEY } from "@/theme/constants";
@@ -24,6 +22,7 @@ import type { UiPreferencesSnapshot } from "@/hooks/usePreferences";
 import type { SessionApi } from "./useSession";
 import {
   handleOfflineAfterConnect,
+  findOrCreateSpreadsheet,
   type OfflineConnectDeps,
 } from "./connectFlow";
 
@@ -384,30 +383,13 @@ export function useGoogleSync(
         }
       }
       setConnectionStatus("scanning");
-      const candidates = await findCompatibleSheets(token);
-      const namedSheet = candidates.find(
-        (c) => c.name.trim().toUpperCase() === SHEET_NAMES.transactions,
-      );
-      let connectedSheetId = "";
-      let isNewSheet = false;
-      if (namedSheet) {
-        setConnectionStatus("loading");
-        connectedSheetId = namedSheet.id;
-        await selectSpreadsheet(token, namedSheet.id);
-      } else if (candidates.length > 0) {
-        setConnectionStatus("loading");
-        connectedSheetId = candidates[0].id;
-        await selectSpreadsheet(token, candidates[0].id);
-      } else {
-        setConnectionStatus("creating");
-        connectedSheetId = await createBucksSpreadsheet(token);
-        isNewSheet = true;
-        await selectSpreadsheet(token, connectedSheetId);
-      }
+      const { sheetId, isNewSheet } = await findOrCreateSpreadsheet(token);
+      setConnectionStatus("loading");
+      await selectSpreadsheet(token, sheetId);
       void handleOfflineAfterConnect(
         offlineTxs,
         isNewSheet,
-        connectedSheetId,
+        sheetId,
         fin,
         { tagsListRef, setTagsList },
         { tagColors, language },

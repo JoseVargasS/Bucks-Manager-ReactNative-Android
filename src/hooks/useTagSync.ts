@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { removeTagFromAllRows } from "@/api/googleWorkspace";
+import { removeTagsFromAllRows } from "@/api/googleWorkspace";
 import { loadTags, migrateTransactionTags } from "@/utils/tags";
 import type { LanguageMode, Tag, Transaction } from "@/types";
 
@@ -57,11 +57,9 @@ export function useTagSyncEffects(
       return changed ? next : current;
     });
     if (removedIds.length && accessToken && spreadsheetId) {
-      for (const tagId of removedIds) {
-        removeTagFromAllRows(accessToken, spreadsheetId, tagId).catch(
-          () => undefined,
-        );
-      }
+      removeTagsFromAllRows(accessToken, spreadsheetId, removedIds).catch(
+        () => undefined,
+      );
     }
   }, [tagsList, accessToken, spreadsheetId, replaceTransactions]);
 

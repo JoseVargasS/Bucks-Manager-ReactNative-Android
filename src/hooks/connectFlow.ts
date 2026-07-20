@@ -1,6 +1,6 @@
 import { GoogleSignin } from "@react-native-google-signin/google-signin";
-import { saveTransaction } from "@/api/googleWorkspace";
-import { calculateSummaries } from "@/domain/bucksLogic";
+import { findCompatibleSheets, createBucksSpreadsheet, saveTransaction } from "@/api/googleWorkspace";
+import { calculateSummaries, SHEET_NAMES } from "@/domain/bucksLogic";
 import { DEFAULT_TAGS, labelForTagId } from "@/utils/tags";
 import { transactionToDraft } from "@/utils/transactions";
 import type { LanguageMode, Tag, Transaction, SummaryRow } from "@/types";
@@ -59,6 +59,28 @@ export interface OfflineConnectDeps {
   setPendingSync: (v: boolean) => void;
   pendingSyncRef: { current: boolean };
   reloadFromGoogle: (token?: string, sheetId?: string, showLoader?: boolean, forceFresh?: boolean) => Promise<void>;
+}
+
+/**
+ * Find a compatible spreadsheet in Drive or create one if none exists.
+ * Returns the sheet ID and whether it was just created.
+ * Pure discovery — no UI state, no selectSpreadsheet side effects.
+ */
+export async function findOrCreateSpreadsheet(
+  token: string,
+): Promise<{ sheetId: string; isNewSheet: boolean }> {
+  const candidates = await findCompatibleSheets(token);
+  const namedSheet = candidates.find(
+    (c) => c.name.trim().toUpperCase() === SHEET_NAMES.transactions,
+  );
+  if (namedSheet) {
+    return { sheetId: namedSheet.id, isNewSheet: false };
+  }
+  if (candidates.length > 0) {
+    return { sheetId: candidates[0].id, isNewSheet: false };
+  }
+  const sheetId = await createBucksSpreadsheet(token);
+  return { sheetId, isNewSheet: true };
 }
 
 export function scheduleBackgroundUpload(

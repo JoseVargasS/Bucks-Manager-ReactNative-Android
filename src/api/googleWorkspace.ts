@@ -11,6 +11,7 @@ export {
 } from "./sheetRows";
 export {
   removeTagFromAllRows,
+  removeTagsFromAllRows,
   readTagsCatalog,
   writeTagsCatalog,
 } from "./tagsOps";
