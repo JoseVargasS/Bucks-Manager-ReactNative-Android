@@ -140,10 +140,11 @@ describe("nativeStorage", () => {
     expect(tags.some(({ id }) => id === "default-comida")).toBeTruthy();
   });
 
-  test("tags return empty when saved JSON is corrupt", async () => {
+  test("tags return defaults when saved JSON is corrupt", async () => {
     secureStore.values.set("bucks_tags", "not json");
     const tags = await loadTags();
-    expect(tags).toEqual([]);
+    expect(tags.length).toEqual(6);
+    expect(tags[0].id).toEqual("default-salud");
   });
 
   test("financial cache round-trips valid data and respects spreadsheet ownership", async () => {

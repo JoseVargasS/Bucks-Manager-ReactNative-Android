@@ -51,6 +51,8 @@ describe("useGoogleSync", () => {
       teardownSession: () => {},
       disconnectGoogle: async () => {},
       resetFinancialState: () => {},
+      setConnectionStatus: () => {},
+      setOffline: () => {},
       pendingSyncRef: { current: false },
       ...overrides,
     } as any;
