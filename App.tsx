@@ -20,7 +20,6 @@ const styles = StyleSheet.create({
   content: { flex: 1 },
 });
 import { BottomNav } from "@/components/layout/BottomNav";
-import { LoginScreen } from "@/components/screens/LoginScreen";
 import { PinScreen } from "@/components/screens/PinScreen";
 import {
   TransactionModal,
@@ -66,7 +65,7 @@ import {
   COLOR_SCHEME_OPTIONS,
 } from "@/theme/constants";
 import { useFinancialState } from "@/hooks/useFinancialState";
-import { usePreferences } from "@/hooks/usePreferences";
+import { usePreferences, CURRENCY_OPTIONS } from "@/hooks/usePreferences";
 import { useExport } from "@/hooks/useExport";
 import { usePin } from "@/hooks/usePin";
 import { useSession } from "@/hooks/useSession";
@@ -83,6 +82,10 @@ import { useHistoryPanel } from "@/hooks/useHistoryPanel";
 import { useTransactionActions } from "@/hooks/useTransactionActions";
 import { getErrorMessage, isAuthError } from "@/utils/errorHandler";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { ConnectBanner } from "@/components/ui/ConnectBanner";
+import { ConnectingOverlay } from "@/components/ui/ConnectingOverlay";
+import { MergePromptModal, type MergePromptConfig } from "@/components/modals/MergePromptModal";
+import { CurrencyPickerModal } from "@/components/modals/CurrencyPickerModal";
 import {
   StartupSplash,
   TabPage,
@@ -108,6 +111,8 @@ function AppContent() {
     saveTheme,
     restorePreferences,
     applyRemotePreferences,
+    needsCurrencyPick,
+    dismissCurrencyPick,
   } = usePreferences();
   const { themeProgressBg, toggleThemeWithCrossfade } = useThemeCrossfade(
     theme,
@@ -183,6 +188,8 @@ function AppContent() {
     rehydratingCache,
     pendingSyncRef,
     canConnect,
+    isOffline,
+    connectionStatus,
     runGoogleSignIn,
     disconnectGoogle, removeGoogleAccount,
   } = session;
@@ -244,6 +251,17 @@ function AppContent() {
     syncApi.wireRemoteUiPreferences(applyRemotePreferences);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [applyRemotePreferences]);
+
+  // ─── Merge prompt ─────────────────────────────────────────────────
+  const mergeCallbacksRef = useRef<{ onMerge: () => void; onRemoteOnly: () => void } | null>(null);
+  const [mergePrompt, setMergePrompt] = useState<MergePromptConfig | null>(null);
+  useEffect(() => {
+    syncApi.wireMergePrompt((cfg) => {
+      mergeCallbacksRef.current = { onMerge: cfg.onMerge, onRemoteOnly: cfg.onRemoteOnly };
+      setMergePrompt({ localCount: cfg.localCount, remoteCount: cfg.remoteCount });
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // ─── Export ──────────────────────────────────────────────────────
   const {
@@ -564,25 +582,6 @@ function AppContent() {
   );
 
   // ─── Render ──────────────────────────────────────────────────────
-  if (!accessToken) {
-    return (
-      <View style={[styles.safe, { backgroundColor: colors.bg }]}>
-        <NativeStatusBar
-          barStyle={theme === "dark" ? "light-content" : "dark-content"}
-          translucent
-          backgroundColor="transparent"
-        />
-        <LoginScreen
-          colors={colors}
-          copy={copy}
-          loading={loading}
-          canConnect={canConnect}
-          onSignIn={() => runGoogleSignIn(false)}
-        />
-      </View>
-    );
-  }
-
   if (
     bootstrapping ||
     accountTransition ||
@@ -638,6 +637,16 @@ function AppContent() {
         backgroundColor="transparent"
       />
       <View style={[styles.shell, styles.shellCompact, { paddingTop: 0 }]}>
+        <ConnectingOverlay
+          status={connectionStatus as "scanning" | "loading" | "creating" | "merging" | "syncing" | null}
+          copy={{
+            scanning: copy.connectingScanning,
+            loading: copy.connectingLoading,
+            creating: copy.connectingCreating,
+            merging: copy.connectingMerging,
+            syncing: copy.connectingSyncing,
+          }}
+        />
         <View
           style={[
             styles.content,
@@ -692,6 +701,12 @@ function AppContent() {
           setTab={changeTab}
           onAdd={openAdd}
         />
+        {isOffline && canConnect && (
+          <ConnectBanner
+            onPress={() => runGoogleSignIn(false)}
+            copy={{ connectBanner: copy.connectBanner }}
+          />
+        )}
       </View>
 
       <TransactionModal
@@ -757,6 +772,41 @@ function AppContent() {
           onClose={closeTagEditor}
         />
       </Suspense>
+      <MergePromptModal
+        config={mergePrompt}
+        colors={colors}
+        copy={{
+          mergeTitle: "Datos en Drive",
+          mergeMsg: "Tienes registros en tu hoja. ¿Combinarlos con estos?",
+          mergeOption: "Sí, combinar",
+          mergeRemoteOnly: "No",
+        }}
+        onClose={() => setMergePrompt(null)}
+        onMerge={() => {
+          mergeCallbacksRef.current?.onMerge();
+          setMergePrompt(null);
+          mergeCallbacksRef.current = null;
+        }}
+        onRemoteOnly={() => {
+          mergeCallbacksRef.current?.onRemoteOnly();
+          setMergePrompt(null);
+          mergeCallbacksRef.current = null;
+        }}
+      />
+      <CurrencyPickerModal
+        visible={needsCurrencyPick}
+        colors={colors}
+        copy={{ chooseCurrency: "Elige tu moneda", continue: "Continuar" }}
+        options={CURRENCY_OPTIONS.map((o) => ({
+          label: language === "en" ? o.labelEn : o.labelEs,
+          value: o.value,
+        }))}
+        onConfirm={(val) => {
+          saveCurrencySymbol(val);
+          dismissCurrencyPick();
+        }}
+        onClose={() => dismissCurrencyPick()}
+      />
       <SearchModal
         ref={searchModalRef}
         colors={colors}
