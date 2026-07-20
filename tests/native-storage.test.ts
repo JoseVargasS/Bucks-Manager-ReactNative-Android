@@ -484,4 +484,38 @@ describe("nativeStorage", () => {
     ] as any;
     expect(migrateTransactionTags(txs, tagsCatalog)).toBe(txs);
   });
+
+  // ─── Offline cache ────────────────────────────────────────────────
+
+  test("loadOfflineCache returns null when file does not exist", async () => {
+    const { loadOfflineCache } = await import("../src/data/localCache");
+    expect(await loadOfflineCache()).toBeNull();
+  });
+
+  test("loadOfflineCache returns parsed data when file exists", async () => {
+    const { loadOfflineCache, saveOfflineCache } = await import("../src/data/localCache");
+    await saveOfflineCache([], [], {});
+    const result = await loadOfflineCache();
+    expect(result).toBeTruthy();
+    expect(result!.transactions).toEqual([]);
+  });
+
+  test("loadOfflineCache returns null for corrupt JSON", async () => {
+    fileSystem.files.set("mock://document/bucks-offline-cache.json", "not-json");
+    const { loadOfflineCache } = await import("../src/data/localCache");
+    expect(await loadOfflineCache()).toBeNull();
+  });
+
+  test("loadOfflineCache returns null for invalid shape", async () => {
+    fileSystem.files.set("mock://document/bucks-offline-cache.json", JSON.stringify({ schemaVersion: 3, transactions: "bad", summaries: [], freqIncome: {} }));
+    const { loadOfflineCache } = await import("../src/data/localCache");
+    expect(await loadOfflineCache()).toBeNull();
+  });
+
+  test("deleteOfflineCache removes the file", async () => {
+    const { deleteOfflineCache, loadOfflineCache, saveOfflineCache } = await import("../src/data/localCache");
+    await saveOfflineCache([], [], {});
+    await deleteOfflineCache();
+    expect(await loadOfflineCache()).toBeNull();
+  });
 });

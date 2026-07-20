@@ -40,6 +40,7 @@ g.__bucksFileSystemMock = {
   writeError: null as Error | null,
   reset() {
     this.files.clear();
+    this.writeError = null;
   },
   async getInfoAsync(path: string) {
     return { exists: this.files.has(path) };

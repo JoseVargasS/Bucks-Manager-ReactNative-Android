@@ -12,7 +12,7 @@ jest.mock("@/domain/bucksLogic", () => ({
   SHEET_NAMES: { transactions: "INCOME AND EXPENSES", summary: "MONTHLY SUMMARY" },
 }));
 
-import { removeTagFromAllRows, readTagsCatalog, writeTagsCatalog } from "@/api/tagsOps";
+import { removeTagFromAllRows, removeTagsFromAllRows, readTagsCatalog, writeTagsCatalog } from "@/api/tagsOps";
 import { googleFetch } from "@/api/googleFetch";
 
 const mockGoogleFetch = googleFetch as jest.Mock;
@@ -59,6 +59,44 @@ describe("removeTagFromAllRows", () => {
     mockGoogleFetch.mockResolvedValueOnce({});
 
     await removeTagFromAllRows("tok", "sheet-1", "tag-a");
+    expect(mockGoogleFetch).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("removeTagsFromAllRows", () => {
+  test("removes multiple tags from column F in one pass", async () => {
+    mockGoogleFetch
+      .mockResolvedValueOnce({ values: [["tag-a,tag-b,tag-c"], ["tag-a,tag-c"]] })
+      .mockResolvedValueOnce({});
+
+    await removeTagsFromAllRows("tok", "sheet-1", ["tag-a", "tag-c"]);
+    expect(mockGoogleFetch).toHaveBeenCalledTimes(2);
+  });
+
+  test("removes tags from line items JSON in column G", async () => {
+    const lineItems = [{ id: "li-1", tags: ["tag-a", "tag-b"] }];
+    mockGoogleFetch
+      .mockResolvedValueOnce({ values: [["", JSON.stringify(lineItems)]] })
+      .mockResolvedValueOnce({});
+
+    await removeTagsFromAllRows("tok", "sheet-1", ["tag-a"]);
+    expect(mockGoogleFetch).toHaveBeenCalledTimes(2);
+  });
+
+  test("does nothing when tagIds is empty", async () => {
+    await removeTagsFromAllRows("tok", "sheet-1", []);
+    expect(mockGoogleFetch).not.toHaveBeenCalled();
+  });
+
+  test("does not call batchUpdate when no rows match", async () => {
+    mockGoogleFetch.mockResolvedValueOnce({ values: [["tag-b"], ["tag-c"]] });
+    await removeTagsFromAllRows("tok", "sheet-1", ["tag-a"]);
+    expect(mockGoogleFetch).toHaveBeenCalledTimes(1);
+  });
+
+  test("handles empty values", async () => {
+    mockGoogleFetch.mockResolvedValueOnce({ values: [] });
+    await removeTagsFromAllRows("tok", "sheet-1", ["tag-a"]);
     expect(mockGoogleFetch).toHaveBeenCalledTimes(1);
   });
 });

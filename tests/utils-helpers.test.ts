@@ -165,6 +165,20 @@ describe("helpers", () => {
     Intl.DateTimeFormat = originalDateTimeFormat;
   });
 
+  test("detectDeviceCurrencySymbol falls back to language map when extractCurrencySymbol returns undefined", () => {
+    const mockLocale = { resolvedOptions: () => ({ locale: "x-KK" }) };
+    const originalDateTimeFormat = Intl.DateTimeFormat;
+    const originalNumberFormat = Intl.NumberFormat;
+    (Intl as any).DateTimeFormat = function () { return mockLocale; };
+    (Intl as any).NumberFormat = function () {
+      return { formatToParts: () => [] };
+    };
+    const result = detectDeviceCurrencySymbol();
+    expect(result).toBe("$");
+    Intl.DateTimeFormat = originalDateTimeFormat;
+    Intl.NumberFormat = originalNumberFormat;
+  });
+
   // --- withAlpha ---
   test("withAlpha converts hex to rgba", () => {
     expect(withAlpha("#ff0000", 0.5)).toBe("rgba(255, 0, 0, 0.5)");

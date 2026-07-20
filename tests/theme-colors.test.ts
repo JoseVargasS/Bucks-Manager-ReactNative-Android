@@ -144,4 +144,13 @@ describe("themeColors", () => {
       expect(key in palette).toBeTruthy();
     }
   });
+
+  test("getPalette re-orders cache on access (LRU promotion)", () => {
+    getPalette("dark", "sky");
+    getPalette("dark", "cyprus");
+    getPalette("dark", "ocean");
+    getPalette("dark", "sky");
+    const d = getPalette("dark", "obsidian");
+    expect(d.primary).toBe("#C8FF00");
+  });
 });
