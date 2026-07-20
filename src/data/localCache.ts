@@ -6,6 +6,7 @@ import { logError } from "@/utils/errorHandler";
 
 const CACHE_VERSION = 3;
 const CACHE_FILE = `${FileSystem.documentDirectory || FileSystem.cacheDirectory}bucks-finance-cache.json`;
+const OFFLINE_CACHE_FILE = `${FileSystem.documentDirectory || FileSystem.cacheDirectory}bucks-offline-cache.json`;
 
 export type FinancialCache = {
   schemaVersion: typeof CACHE_VERSION;
@@ -86,4 +87,48 @@ function isSummary(value: unknown): value is SummaryRow {
   return typeof row.monthYear === "string"
     && [row.freqIncome, row.nonFreqIncome, row.totalIncome, row.freqExpense, row.nonFreqExpense, row.totalExpense, row.netMonthly, row.netNoFreq]
       .every(Number.isFinite);
+}
+
+type OfflineCache = {
+  schemaVersion: typeof CACHE_VERSION;
+  transactions: Transaction[];
+  summaries: SummaryRow[];
+  freqIncome: Record<string, number>;
+};
+
+export async function loadOfflineCache() {
+  try {
+    const info = await FileSystem.getInfoAsync(OFFLINE_CACHE_FILE);
+    if (!info.exists) return null;
+    const parsed = JSON.parse(await FileSystem.readAsStringAsync(OFFLINE_CACHE_FILE)) as unknown;
+    if (!isOfflineCacheShape(parsed)) return null;
+    return parsed;
+  } catch (e) {
+    logError(e, "localCache:loadOfflineCache");
+    return null;
+  }
+}
+
+export async function saveOfflineCache(
+  transactions: Transaction[],
+  summaries: SummaryRow[],
+  freqIncome: Record<string, number>,
+) {
+  const payload: OfflineCache = { schemaVersion: CACHE_VERSION, transactions, summaries, freqIncome };
+  await FileSystem.writeAsStringAsync(OFFLINE_CACHE_FILE, JSON.stringify(payload));
+}
+
+export async function deleteOfflineCache() {
+  await FileSystem.deleteAsync(OFFLINE_CACHE_FILE, { idempotent: true });
+}
+
+function isOfflineCacheShape(value: unknown): value is OfflineCache {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as Partial<OfflineCache>;
+  return (candidate.schemaVersion ?? 1) <= CACHE_VERSION
+    && Array.isArray(candidate.transactions)
+    && candidate.transactions.every(isTransaction)
+    && Array.isArray(candidate.summaries)
+    && candidate.summaries.every(isSummary)
+    && isNumberMap(candidate.freqIncome);
 }

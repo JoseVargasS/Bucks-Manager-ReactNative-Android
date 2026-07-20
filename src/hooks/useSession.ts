@@ -2,7 +2,7 @@ import { useRef, useState } from "react";
 import { Alert } from "react-native";
 import Constants from "expo-constants";
 import { GoogleSignin } from "@react-native-google-signin/google-signin";
-import { deleteItemAsync, setItemAsync } from "expo-secure-store";
+import { deleteItemAsync, getItemAsync, setItemAsync } from "expo-secure-store";
 import { getWorkspaceAccessToken as getWorkspaceAccessTokenBase, syncAccountInfo as syncAccountInfoBase } from "@/api/googleAuth";
 import { deleteFinancialCache } from "@/data/localCache";
 import { type UiCopy } from "@/i18n";
@@ -36,10 +36,14 @@ export interface SessionApi {
   setRehydratingCache: (v: boolean) => void;
   canConnect: boolean;
   pendingSyncRef: React.MutableRefObject<boolean>;
+  isOffline: boolean;
+  setOffline: (v: boolean) => void;
+  connectionStatus: string | null;
+  setConnectionStatus: (status: string | null) => void;
   runGoogleSignIn: (switchingAccount: boolean) => Promise<void>;
   getWorkspaceAccessToken: (useCached: boolean) => Promise<{ accessToken: string | null }>;
   syncAccountInfo: () => void;
-  teardownSession: (options?: { clearToken?: boolean; catchErrors?: boolean }) => Promise<void>;
+  teardownSession: (options?: { clearToken?: boolean; catchErrors?: boolean; clearSheetId?: boolean }) => Promise<void>;
   clearGoogleSession: () => Promise<void>;
   disconnectGoogle: () => Promise<void>;
   removeGoogleAccount: () => Promise<void>;
@@ -63,6 +67,8 @@ export function useSession(
   const [pendingSync, setPendingSync] = useState(false);
   const [accountInfo, setAccountInfo] = useState<{ name?: string; email?: string } | null>(null);
   const [rehydratingCache, setRehydratingCache] = useState(false);
+  const [isOffline, setOffline] = useState(true);
+  const [connectionStatus, setConnectionStatus] = useState<string | null>(null);
   const pendingSyncRef = useRef(false);
 
   const canConnect = Boolean(GOOGLE_ANDROID_CLIENT_ID || GOOGLE_WEB_CLIENT_ID);
@@ -76,12 +82,12 @@ export function useSession(
     if (info) setAccountInfo(info);
   }
 
-  async function teardownSession(options: { clearToken?: boolean; catchErrors?: boolean } = {}) {
-    const { clearToken = true, catchErrors = false } = options;
+  async function teardownSession(options: { clearToken?: boolean; catchErrors?: boolean; clearSheetId?: boolean } = {}) {
+    const { clearToken = true, catchErrors = false, clearSheetId = true } = options;
     try {
       await Promise.all([
         deleteItemAsync(TOKEN_KEY),
-        deleteItemAsync(SHEET_KEY),
+        clearSheetId ? deleteItemAsync(SHEET_KEY) : Promise.resolve(),
         deleteFinancialCache(),
       ]);
     } catch (e) {
@@ -95,6 +101,7 @@ export function useSession(
       setAuthError("");
       setPendingSync(false);
       setIsSyncing(false);
+      setOffline(true);
       pendingSyncRef.current = false;
     }
   }
@@ -137,12 +144,13 @@ export function useSession(
   }
 
   async function finalizeSignIn(token: string) {
+    const savedSheetId = await getItemAsync(SHEET_KEY);
     await setItemAsync(TOKEN_KEY, token);
     setAccessToken(token);
     setIsFirstRemoteLoad(true);
     setSyncError("");
     syncAccountInfo();
-    await onConnectGoogleWorkspace(token, "", true);
+    await onConnectGoogleWorkspace(token, savedSheetId || "", !savedSheetId);
   }
 
   async function runGoogleSignIn(switchingAccount: boolean) {
@@ -150,17 +158,20 @@ export function useSession(
       Alert.alert(copy.googleOAuth, copy.missingEnvCredentials);
       return;
     }
+    if (loading) return;
     setLoading(true);
+    setConnectionStatus("scanning");
     try {
       await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
       if (switchingAccount) await GoogleSignin.signOut();
       const response = await GoogleSignin.signIn();
-      if (response.type !== "success") return;
+      if (response.type !== "success") { setConnectionStatus(null); return; }
       const tokens = await getWorkspaceAccessToken(true);
       if (!tokens.accessToken) throw new Error(copy.googleSignInError);
       if (switchingAccount) await runSwitchCleanup();
       await finalizeSignIn(tokens.accessToken);
     } catch (error) {
+      setConnectionStatus(null);
       const message = error instanceof Error ? error.message : copy.googleSignInError;
       const isDeveloperError = message.includes("DEVELOPER_ERROR") || message.includes("code: 10");
       Alert.alert("Google", isDeveloperError ? copy.oauthConfigRejected : message);
@@ -185,6 +196,8 @@ export function useSession(
     rehydratingCache, setRehydratingCache,
     canConnect,
     pendingSyncRef,
+    isOffline, setOffline,
+    connectionStatus, setConnectionStatus,
     runGoogleSignIn,
     getWorkspaceAccessToken,
     syncAccountInfo,

@@ -10,7 +10,7 @@ import {
   sortTransactionsDesc,
   filterTransactionsByRollingPeriod,
 } from "@/utils/transactions";
-import { saveFinancialCache } from "@/data/localCache";
+import { saveFinancialCache, saveOfflineCache } from "@/data/localCache";
 import { getPeriodRange, getAvailableMonthsForYear } from "@/utils/helpers";
 import {
   emptySearchFilters,
@@ -199,14 +199,17 @@ export function useFinancialState(tagsList: Tag[]): FinancialState {
       nextTransactions.length > 0 || summariesToUse.length > 0;
     setHasLocalData(nextHasLocalData);
     hasLocalDataRef.current = nextHasLocalData;
-    if (!sheetId) return;
-    saveFinancialCache({
-      spreadsheetId: sheetId,
-      transactions: nextTransactions,
-      summaries: summariesToUse,
-      freqIncome: nextFreqIncome,
-      lastSyncedAt: syncedAt,
-    }).catch(() => undefined);
+    if (sheetId) {
+      saveFinancialCache({
+        spreadsheetId: sheetId,
+        transactions: nextTransactions,
+        summaries: summariesToUse,
+        freqIncome: nextFreqIncome,
+        lastSyncedAt: syncedAt,
+      }).catch(() => undefined);
+    } else {
+      saveOfflineCache(nextTransactions, summariesToUse, nextFreqIncome).catch(() => undefined);
+    }
   }
 
   function resetFinancial() {
