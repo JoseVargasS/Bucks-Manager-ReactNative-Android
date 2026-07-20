@@ -7,7 +7,6 @@ import { type ColorSchemePreference } from "@/theme/colors";
 import { useTheme } from "@/theme/ThemeContext";
 import { type LanguageMode, type FontPreference, type MaterialIconName, type ThemeMode } from "@/types";
 import {
-  detectDeviceCurrencySymbol,
   detectDeviceLanguage,
 } from "@/utils/helpers";
 import { setAppFontPreference } from "@/components/ui/AppText";
@@ -26,7 +25,7 @@ const COLOR_SCHEME_PREFERENCES: ColorSchemePreference[] = [
 ];
 const DEFAULT_COLOR_SCHEME: ColorSchemePreference = "sky";
 const CURRENCY_OPTIONS_SET = new Set([
-  "S/", "$", "€", "£", "¥", "R$", "MX$", "COP$", "CLP$",
+  "$", "S/", "MX$", "CLP$", "COP$", "Bs", "R$", "€", "£", "¥",
 ]);
 
 function sanitizeColorScheme(next: string): ColorSchemePreference {
@@ -40,7 +39,7 @@ function sanitizeFont(next: string): FontPreference {
     : "dmsans";
 }
 function sanitizeCurrency(next: string): string {
-  return CURRENCY_OPTIONS_SET.has(next) ? next : detectDeviceCurrencySymbol();
+  return CURRENCY_OPTIONS_SET.has(next) ? next : "$";
 }
 function sanitizeLanguage(next: string): LanguageMode {
   return next === "en" ? "en" : "es";
@@ -89,15 +88,16 @@ export const CURRENCY_OPTIONS: Array<{
   labelEn: string;
   icon: MaterialIconName;
 }> = [
-  { labelEs: "Soles peruanos (S/)", labelEn: "Peruvian soles (S/)", value: "S/", icon: "cash" },
   { labelEs: "Dólares ($)", labelEn: "US dollars ($)", value: "$", icon: "currency-usd" },
+  { labelEs: "Soles peruanos (S/)", labelEn: "Peruvian soles (S/)", value: "S/", icon: "cash" },
+  { labelEs: "Pesos mexicanos (MX$)", labelEn: "Mexican pesos (MX$)", value: "MX$", icon: "cash" },
+  { labelEs: "Pesos chilenos (CLP$)", labelEn: "Chilean pesos (CLP$)", value: "CLP$", icon: "cash" },
+  { labelEs: "Pesos colombianos (COP$)", labelEn: "Colombian pesos (COP$)", value: "COP$", icon: "cash" },
+  { labelEs: "Bolivianos (Bs)", labelEn: "Bolivianos (Bs)", value: "Bs", icon: "cash" },
+  { labelEs: "Reales (R$)", labelEn: "Brazilian reais (R$)", value: "R$", icon: "currency-brl" },
   { labelEs: "Euros (€)", labelEn: "Euros (€)", value: "€", icon: "currency-eur" },
   { labelEs: "Libras (£)", labelEn: "Pounds (£)", value: "£", icon: "currency-gbp" },
   { labelEs: "Yenes (¥)", labelEn: "Yen (¥)", value: "¥", icon: "currency-jpy" },
-  { labelEs: "Reales (R$)", labelEn: "Brazilian reais (R$)", value: "R$", icon: "currency-brl" },
-  { labelEs: "Pesos mexicanos (MX$)", labelEn: "Mexican pesos (MX$)", value: "MX$", icon: "cash" },
-  { labelEs: "Pesos colombianos (COP$)", labelEn: "Colombian pesos (COP$)", value: "COP$", icon: "cash" },
-  { labelEs: "Pesos chilenos (CLP$)", labelEn: "Chilean pesos (CLP$)", value: "CLP$", icon: "cash" },
 ];
 
 // Snapshot of all cloud-synced cosmetic preferences. Mirrors the shape
@@ -118,6 +118,8 @@ type PreferencesState = {
   colorScheme: ColorSchemePreference;
   theme: ThemeMode;
   copy: UiCopy;
+  needsCurrencyPick: boolean;
+  dismissCurrencyPick: () => void;
   saveLanguage: (next: string) => void;
   saveCurrencySymbol: (next: string) => void;
   saveFontPreference: (next: string) => void;
@@ -134,10 +136,11 @@ function persistPreference(key: string, value: string) {
 export function usePreferences(): PreferencesState {
   const { setColorScheme, setTheme: setThemeMode } = useTheme();
   const [language, setLanguage] = useState<LanguageMode>(detectDeviceLanguage);
-  const [currencySymbol, setCurrencySymbol] = useState(detectDeviceCurrencySymbol);
+  const [currencySymbol, setCurrencySymbol] = useState("$");
   const [fontPreference, setFontPreference] = useState<FontPreference>("dmsans");
   const [colorScheme, setColorSchemeState] = useState<ColorSchemePreference>(DEFAULT_COLOR_SCHEME);
   const [theme, setThemeState] = useState<ThemeMode>("dark");
+  const [needsCurrencyPick, setNeedsCurrencyPick] = useState(false);
 
   const copy: UiCopy = UI_COPY[language];
 
@@ -159,12 +162,12 @@ export function usePreferences(): PreferencesState {
     }
     const nextCurrency = storedCurrency && CURRENCY_OPTIONS_SET.has(storedCurrency)
       ? storedCurrency
-      : detectDeviceCurrencySymbol();
-    if (storedCurrency !== nextCurrency) {
+      : null;
+    if (nextCurrency) {
       setCurrencySymbol(nextCurrency);
-      await setItemAsync(CURRENCY_SYMBOL_KEY, nextCurrency);
     } else {
-      setCurrencySymbol(nextCurrency);
+      setCurrencySymbol("$");
+      setNeedsCurrencyPick(true);
     }
     const nextFont = storedFont === "system" || FONT_PREFERENCES.includes(storedFont as FontPreference)
       ? sanitizeFont(storedFont === "system" ? "dmsans" : (storedFont as string))
@@ -215,6 +218,8 @@ export function usePreferences(): PreferencesState {
     [setColorScheme, setThemeMode],
   );
 
+  const dismissCurrencyPick = useCallback(() => setNeedsCurrencyPick(false), []);
+
   const saveLanguage = useCallback((next: string) => {
     const value = sanitizeLanguage(next);
     setLanguage(value);
@@ -254,6 +259,8 @@ export function usePreferences(): PreferencesState {
     colorScheme,
     theme,
     copy,
+    needsCurrencyPick,
+    dismissCurrencyPick,
     saveLanguage,
     saveCurrencySymbol,
     saveFontPreference,
