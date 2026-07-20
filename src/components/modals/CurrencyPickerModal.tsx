@@ -95,10 +95,10 @@ export function CurrencyPickerModal({
                 </Pressable>
               );
             }}
-            style={{ maxHeight: 400 }}
+            style={{ maxHeight: 400, paddingHorizontal: 8 }}
           />
 
-          <View style={styles.recordActions}>
+          <View style={[styles.recordActions, { paddingHorizontal: 8, paddingBottom: 8 }]}>
             <Pressable
               style={[styles.recordCancel, { backgroundColor: colors.input, borderColor: colors.border }]}
               onPress={onClose}

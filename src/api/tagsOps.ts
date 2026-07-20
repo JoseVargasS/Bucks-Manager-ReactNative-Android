@@ -109,3 +109,12 @@ export async function writeTagsCatalog(token: string, spreadsheetId: string, tag
     body: JSON.stringify({ values: [["TAGS CATALOGUE"], [JSON.stringify(tags)]] }),
   });
 }
+
+export async function mergeTagsToCatalog(token: string, spreadsheetId: string, localTags: Tag[]): Promise<void> {
+  const sheetTags = await readTagsCatalog(token, spreadsheetId);
+  const sheetIds = new Set(sheetTags.map((t) => t.id));
+  const newTags = localTags.filter((t) => !sheetIds.has(t.id));
+  if (!newTags.length) return;
+  const merged = [...sheetTags, ...newTags];
+  await writeTagsCatalog(token, spreadsheetId, merged);
+}

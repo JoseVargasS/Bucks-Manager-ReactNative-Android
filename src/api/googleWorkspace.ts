@@ -13,6 +13,7 @@ export {
   removeTagFromAllRows,
   readTagsCatalog,
   writeTagsCatalog,
+  mergeTagsToCatalog,
 } from "./tagsOps";
 export {
   readUiPreferences,

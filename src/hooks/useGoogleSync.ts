@@ -18,7 +18,7 @@ import {
 import { readHistory, writeHistory as writeHistoryApi } from "@/api/historyOps";
 import { calculateSummaries, SHEET_NAMES } from "@/domain/bucksLogic";
 import { loadFinancialCache, deleteFinancialCache, loadOfflineCache } from "@/data/localCache";
-import { mergeTagsFromSheet, saveTags } from "@/utils/tags";
+import { DEFAULT_TAGS, labelForTagId, mergeTagsFromSheet, saveTags } from "@/utils/tags";
 import { transactionToDraft } from "@/utils/transactions";
 import { TOKEN_KEY, SHEET_KEY } from "@/theme/constants";
 import type { LanguageMode, Tag, Transaction, SummaryRow, HistoryEntry } from "@/types";
@@ -85,6 +85,8 @@ export function useGoogleSync(
   } = session;
   const { applyFinancialState, persistFinancialState, hasLocalDataRef, freqIncomeRef, transactions: txList } = fin;
   const { tagsList, setTagsList } = tags;
+  const tagsListRef = useRef(tagsList);
+  tagsListRef.current = tagsList;
   const { errMsg, authErr, copy, tagColors, language } = helpers;
   const remoteUiPreferencesRef = useRef<((prefs: UiPreferencesSnapshot) => void) | null>(null);
   const remoteHistoryRef = useRef<((entries: HistoryEntry[]) => void) | null>(null);
@@ -222,8 +224,8 @@ export function useGoogleSync(
       applyFinancialState(tx, nextSummaries, nextFreqIncome, syncedAt);
       lastRemoteTxCountRef.current = tx.length;
       lastRemoteTxsRef.current = tx;
-      const mergedTags = mergeTagsFromSheet(tagsList, sheetTags, tx, tagColors, language);
-      if (mergedTags !== tagsList) {
+      const mergedTags = mergeTagsFromSheet(tagsListRef.current, sheetTags, tx, tagColors, language);
+      if (mergedTags !== tagsListRef.current) {
         saveTags(mergedTags).catch(() => undefined);
         setTagsList(mergedTags);
       }
@@ -447,10 +449,11 @@ export function useGoogleSync(
       return;
     }
     if (isNewSheet) {
-      setConnectionStatus("syncing");
       applyFinancialState(offlineTxs, calculateSummaries(offlineTxs, freqIncomeRef.current), freqIncomeRef.current, new Date().toISOString());
+      ensureTagsInCatalogue(offlineTxs);
       persistFinancialState(offlineTxs, [], freqIncomeRef.current, new Date().toISOString(), sheetId);
-      await uploadOfflineTransactions(offlineTxs, sheetId);
+      scheduleBackgroundUpload(offlineTxs, sheetId);
+      await new Promise((r) => setTimeout(r, 2000));
       setConnectionStatus(null);
       session.setOffline(false);
       return;
@@ -464,14 +467,12 @@ export function useGoogleSync(
         localCount: offlineTxs.length,
         remoteCount,
         onMerge: () => {
-          setConnectionStatus("merging");
           const combined = combineTransactions(offlineTxs, remoteTxs);
           applyFinancialState(combined, calculateSummaries(combined, freqIncomeRef.current), freqIncomeRef.current, new Date().toISOString());
+          ensureTagsInCatalogue(combined);
           persistFinancialState(combined, [], freqIncomeRef.current, new Date().toISOString(), sheetId);
-          void uploadOfflineTransactions(offlineTxs, sheetId).then(() => {
-            setConnectionStatus(null);
-            session.setOffline(false);
-          });
+          scheduleBackgroundUpload(offlineTxs, sheetId);
+          setTimeout(() => { setConnectionStatus(null); session.setOffline(false); }, 2000);
           resolve();
         },
         onRemoteOnly: () => { setConnectionStatus(null); session.setOffline(false); resolve(); },
@@ -479,18 +480,63 @@ export function useGoogleSync(
     });
   }
 
-  async function uploadOfflineTransactions(txs: Transaction[], sheetId: string) {
-    const tokens = await GoogleSignin.getTokens();
-    const fresh = tokens.accessToken || "";
-    if (!fresh) return;
-    for (const tx of txs) {
-      try {
-        await saveTransaction(fresh, sheetId, transactionToDraft(tx));
-      } catch {
-        // ponytail: best-effort; reloadFromGoogle reconcilia después
+  // ponytail: djb2-like hash para color determinístico de tags huérfanos.
+  function hashId(id: string): number {
+    let hash = 5381;
+    for (let i = 0; i < id.length; i++) {
+      hash = ((hash << 5) + hash + id.charCodeAt(i)) | 0;
+    }
+    return Math.abs(hash);
+  }
+
+  function ensureTagsInCatalogue(transactions: Transaction[]) {
+    const current = tagsListRef.current;
+    const existingIds = new Set(current.map((t) => t.id));
+    const toAdd: Tag[] = [];
+    for (const t of transactions) {
+      if (!t.tags) continue;
+      for (const tagId of t.tags) {
+        if (existingIds.has(tagId)) continue;
+        existingIds.add(tagId);
+        const dt = DEFAULT_TAGS.find((d) => d.id === tagId);
+        if (dt) {
+          toAdd.push({ id: dt.id, label: dt[language], color: dt.color });
+        } else {
+          toAdd.push({
+            id: tagId,
+            label: labelForTagId(tagId, current),
+            color: tagColors[hashId(tagId) % tagColors.length],
+          });
+        }
       }
     }
-    await reloadFromGoogle(fresh, sheetId, false, true);
+    if (toAdd.length > 0) setTagsList([...current, ...toAdd]);
+  }
+
+  function scheduleBackgroundUpload(txs: Transaction[], sheetId: string) {
+    syncQueueRef.current = syncQueueRef.current
+      .catch(() => undefined)
+      .then(async () => {
+        const tokens = await GoogleSignin.getTokens();
+        const fresh = tokens.accessToken || "";
+        if (!fresh) return;
+        setPendingSync(true);
+        pendingSyncRef.current = true;
+        for (const tx of txs) {
+          try {
+            await saveTransaction(fresh, sheetId, transactionToDraft(tx));
+          } catch {
+            // ponytail: best-effort; reloadFromGoogle reconcilia después
+          }
+        }
+        pendingSyncRef.current = false;
+        setPendingSync(false);
+        await reloadFromGoogle(fresh, sheetId, false, true);
+      })
+      .catch(() => {
+        pendingSyncRef.current = false;
+        setPendingSync(false);
+      });
   }
 
   return {
