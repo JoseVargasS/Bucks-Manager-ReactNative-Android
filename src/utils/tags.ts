@@ -60,13 +60,19 @@ function translateDefaults(tags: Tag[], language: LanguageMode): Tag[] {
 export async function loadTags(language: LanguageMode = "es"): Promise<Tag[]> {
   try {
     const raw = await SecureStore.getItemAsync(TAGS_KEY);
-    const tags = normalizeTags(raw ? JSON.parse(raw) : []);
-    const translated = translateDefaults(tags, language);
-    if (translated !== tags) await saveTags(translated);
-    return translated;
+    let tags: Tag[];
+    if (raw) {
+      tags = normalizeTags(JSON.parse(raw));
+      const translated = translateDefaults(tags, language);
+      if (translated !== tags) await saveTags(translated);
+      return translated;
+    }
+    tags = DEFAULT_TAGS.map((d) => ({ id: d.id, label: d[language], color: d.color }));
+    await saveTags(tags);
+    return tags;
   } catch (e) {
     logError(e, "tags:loadTags");
-    return normalizeTags([]);
+    return DEFAULT_TAGS.map((d) => ({ id: d.id, label: d[language], color: d.color }));
   }
 }
 
@@ -176,14 +182,23 @@ export function mergeTagsFromSheet(
   for (const t of transactions) {
     if (!t.tags) continue;
     for (const tagId of t.tags) {
-      if (tagId && tagId.startsWith("custom-") && !existingIds.has(tagId)) {
+      if (tagId && !existingIds.has(tagId)) {
         existingIds.add(tagId);
-        added.push({
-          id: tagId,
-          label: labelForTagId(tagId, currentTags),
-          color: tagColors[colorIdx % tagColors.length],
-        });
-        colorIdx++;
+        if (tagId.startsWith("custom-")) {
+          added.push({
+            id: tagId,
+            label: labelForTagId(tagId, currentTags),
+            color: tagColors[colorIdx % tagColors.length],
+          });
+          colorIdx++;
+        } else {
+          // Default tag referenced by a transaction but missing from sheet
+          // catalogue — restore it from DEFAULT_TAGS.
+          const dt = DEFAULT_TAGS.find((d) => d.id === tagId);
+          if (dt) {
+            byId.set(dt.id, { id: dt.id, label: dt[language], color: dt.color });
+          }
+        }
       }
     }
   }
