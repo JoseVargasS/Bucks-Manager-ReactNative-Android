@@ -224,14 +224,14 @@ export const PieChart = memo(function PieChart({
       Animated.timing(opacities[i], {
         toValue: 1,
         duration: 220,
-        useNativeDriver: false,
+        useNativeDriver: true,
       }).start();
       setTimeout(() => {
         if (sweepToken.current !== token) return;
         Animated.timing(opacities[i], {
           toValue: IDLE_OPACITY,
           duration: 220,
-          useNativeDriver: false,
+          useNativeDriver: true,
         }).start();
         i = (i + 1) % n;
         if (sweepToken.current === token) setTimeout(step, 140);

@@ -26,7 +26,7 @@ export const SegmentedControl = memo(function SegmentedControl({
     Animated.timing(animIndex, {
       toValue: selectedIndex,
       duration: 200,
-      useNativeDriver: false,
+      useNativeDriver: true,
     }).start();
   }, [selectedIndex, animIndex]);
 
@@ -51,15 +51,11 @@ export const SegmentedControl = memo(function SegmentedControl({
       }}
     >
       {segmentW > 0 && (
-        <Animated.View
+          <Animated.View
           style={{
             position: "absolute",
             top: 3,
             bottom: 3,
-            left: animIndex.interpolate({
-              inputRange: Array.from({ length: n }, (_, i) => i),
-              outputRange: Array.from({ length: n }, (_, i) => i * (segmentW + 2)),
-            }),
             width: segmentW,
             backgroundColor: colors.card,
             borderRadius: 8,
@@ -68,6 +64,12 @@ export const SegmentedControl = memo(function SegmentedControl({
             shadowOpacity: 0.06,
             shadowRadius: 2,
             elevation: 1,
+            transform: [{
+              translateX: animIndex.interpolate({
+                inputRange: Array.from({ length: n }, (_, i) => i),
+                outputRange: Array.from({ length: n }, (_, i) => i * (segmentW + 2)),
+              }),
+            }],
           }}
         />
       )}

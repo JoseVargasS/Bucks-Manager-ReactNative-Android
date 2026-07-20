@@ -22,7 +22,7 @@ export function useChartFade(itemCount: number, selectedIndex: number, dataIdent
       Animated.timing(value, {
         toValue: i === selectedIndex ? SELECTED_OPACITY : target,
         duration: 220,
-        useNativeDriver: false,
+        useNativeDriver: true,
       }),
     );
     Animated.parallel(anims).start();
