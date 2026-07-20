@@ -13,11 +13,13 @@ import {
   readUiPreferences,
   writeUiPreferences as writeUiPreferencesApi,
   buildUiPreferences,
+  saveTransaction,
 } from "@/api/googleWorkspace";
 import { readHistory, writeHistory as writeHistoryApi } from "@/api/historyOps";
 import { calculateSummaries, SHEET_NAMES } from "@/domain/bucksLogic";
-import { loadFinancialCache, deleteFinancialCache } from "@/data/localCache";
+import { loadFinancialCache, deleteFinancialCache, loadOfflineCache } from "@/data/localCache";
 import { mergeTagsFromSheet, saveTags } from "@/utils/tags";
+import { transactionToDraft } from "@/utils/transactions";
 import { TOKEN_KEY, SHEET_KEY } from "@/theme/constants";
 import type { LanguageMode, Tag, Transaction, SummaryRow, HistoryEntry } from "@/types";
 import type { UiPreferencesSnapshot } from "@/hooks/usePreferences";
@@ -45,6 +47,8 @@ export interface GoogleSyncApi {
   writeHistory: (entries: HistoryEntry[]) => void;
   // Registers a callback that applies remote history (from sheet) to local state.
   wireRemoteHistory: (apply: (entries: HistoryEntry[]) => void) => void;
+  // Registers a callback that shows the merge prompt modal.
+  wireMergePrompt: (cb: (cfg: { localCount: number; remoteCount: number; onMerge: () => void; onRemoteOnly: () => void }) => void) => void;
 }
 
 export function useGoogleSync(
@@ -77,12 +81,16 @@ export function useGoogleSync(
     getWorkspaceAccessToken, syncAccountInfo,
     teardownSession, disconnectGoogle, resetFinancialState,
     pendingSyncRef,
+    setConnectionStatus,
   } = session;
   const { applyFinancialState, persistFinancialState, hasLocalDataRef, freqIncomeRef, transactions: txList } = fin;
   const { tagsList, setTagsList } = tags;
   const { errMsg, authErr, copy, tagColors, language } = helpers;
   const remoteUiPreferencesRef = useRef<((prefs: UiPreferencesSnapshot) => void) | null>(null);
   const remoteHistoryRef = useRef<((entries: HistoryEntry[]) => void) | null>(null);
+  const mergePromptRef = useRef<((cfg: { localCount: number; remoteCount: number; onMerge: () => void; onRemoteOnly: () => void }) => void) | null>(null);
+  const lastRemoteTxCountRef = useRef(0);
+  const lastRemoteTxsRef = useRef<Transaction[]>([]);
 
   async function restoreSession() {
     const [token, sheetId] = await Promise.all([
@@ -93,6 +101,7 @@ export function useGoogleSync(
       setAccessToken(token);
       setSpreadsheetId(sheetId);
       syncAccountInfo();
+      session.setOffline(false);
       const cached = await loadFinancialCache(sheetId);
       if (cached) {
         setRehydratingCache(true);
@@ -107,6 +116,17 @@ export function useGoogleSync(
       } else {
         setIsFirstRemoteLoad(true);
         await refreshStoredSession(token, sheetId, false);
+      }
+    } else {
+      const offline = await loadOfflineCache();
+      if (offline) {
+        applyFinancialState(
+          offline.transactions,
+          offline.summaries,
+          offline.freqIncome,
+          null,
+          true,
+        );
       }
     }
   }
@@ -136,7 +156,7 @@ export function useGoogleSync(
       if (authErr(error)) {
         setAuthError(errMsg(error));
         if (hadCache) {
-          teardownSession({ catchErrors: true });
+          teardownSession({ catchErrors: true, clearSheetId: false });
         } else {
           await disconnectGoogle();
         }
@@ -200,6 +220,8 @@ export function useGoogleSync(
         : calculateSummaries(tx, nextFreqIncome);
       const syncedAt = new Date().toISOString();
       applyFinancialState(tx, nextSummaries, nextFreqIncome, syncedAt);
+      lastRemoteTxCountRef.current = tx.length;
+      lastRemoteTxsRef.current = tx;
       const mergedTags = mergeTagsFromSheet(tagsList, sheetTags, tx, tagColors, language);
       if (mergedTags !== tagsList) {
         saveTags(mergedTags).catch(() => undefined);
@@ -343,6 +365,13 @@ export function useGoogleSync(
     [],
   );
 
+  const wireMergePrompt = useCallback(
+    (cb: (cfg: { localCount: number; remoteCount: number; onMerge: () => void; onRemoteOnly: () => void }) => void) => {
+      mergePromptRef.current = cb;
+    },
+    [],
+  );
+
   async function connectGoogleWorkspace(
     token: string,
     preferredSheetId = "",
@@ -350,26 +379,44 @@ export function useGoogleSync(
   ) {
     setLoading(true);
     setIsSyncing(true);
+    const offlineTxs = txList.length > 0 ? [...txList] : [];
     try {
       if (preferredSheetId && !forceScan) {
         try {
+          setConnectionStatus("loading");
           await selectSpreadsheet(token, preferredSheetId, false);
+          setConnectionStatus(null);
+          session.setOffline(false);
           return;
         } catch (error) {
           if (!shouldRescanForSheetError(error)) throw error;
         }
       }
+      setConnectionStatus("scanning");
       const candidates = await findCompatibleSheets(token);
       const namedSheet = candidates.find(
         (c) => c.name.trim().toUpperCase() === SHEET_NAMES.transactions,
       );
+      let connectedSheetId = "";
+      let isNewSheet = false;
       if (namedSheet) {
+        setConnectionStatus("loading");
+        connectedSheetId = namedSheet.id;
         await selectSpreadsheet(token, namedSheet.id);
-        return;
+      } else if (candidates.length > 0) {
+        setConnectionStatus("loading");
+        connectedSheetId = candidates[0].id;
+        await selectSpreadsheet(token, candidates[0].id);
+      } else {
+        setConnectionStatus("creating");
+        connectedSheetId = await createBucksSpreadsheet(token);
+        isNewSheet = true;
+        await selectSpreadsheet(token, connectedSheetId);
       }
-      const sheetId = await createBucksSpreadsheet(token);
-      await selectSpreadsheet(token, sheetId);
+      void handleOfflineAfterConnect(offlineTxs, isNewSheet, connectedSheetId);
     } catch (error) {
+      setConnectionStatus(null);
+      session.setOffline(true);
       setSyncError(errMsg(error));
       if (!hasLocalDataRef.current)
         Alert.alert("Google Sheets", errMsg(error));
@@ -377,6 +424,73 @@ export function useGoogleSync(
       setLoading(false);
       setIsSyncing(false);
     }
+  }
+
+  // ponytail: concatena y ordena cronológicamente sin deduplicar.
+  // La decisión del usuario ("combinar") implica que ningún dato se pierde.
+  function combineTransactions(local: Transaction[], remote: Transaction[]): Transaction[] {
+    const merged = [...local, ...remote];
+    merged.sort((a, b) => {
+      const da = a.rawDate.localeCompare(b.rawDate);
+      if (da !== 0) return da;
+      const ca = a.createdAtMs ?? a.createdAt ?? "";
+      const cb = b.createdAtMs ?? b.createdAt ?? "";
+      return ca < cb ? -1 : ca > cb ? 1 : 0;
+    });
+    return merged;
+  }
+
+  async function handleOfflineAfterConnect(offlineTxs: Transaction[], isNewSheet: boolean, sheetId: string) {
+    if (offlineTxs.length === 0) {
+      setConnectionStatus(null);
+      session.setOffline(false);
+      return;
+    }
+    if (isNewSheet) {
+      setConnectionStatus("syncing");
+      applyFinancialState(offlineTxs, calculateSummaries(offlineTxs, freqIncomeRef.current), freqIncomeRef.current, new Date().toISOString());
+      persistFinancialState(offlineTxs, [], freqIncomeRef.current, new Date().toISOString(), sheetId);
+      await uploadOfflineTransactions(offlineTxs, sheetId);
+      setConnectionStatus(null);
+      session.setOffline(false);
+      return;
+    }
+    const remoteCount = lastRemoteTxCountRef.current;
+    const remoteTxs = lastRemoteTxsRef.current;
+    await new Promise<void>((resolve) => {
+      const cb = mergePromptRef.current;
+      if (!cb) { setConnectionStatus(null); session.setOffline(false); resolve(); return; }
+      cb({
+        localCount: offlineTxs.length,
+        remoteCount,
+        onMerge: () => {
+          setConnectionStatus("merging");
+          const combined = combineTransactions(offlineTxs, remoteTxs);
+          applyFinancialState(combined, calculateSummaries(combined, freqIncomeRef.current), freqIncomeRef.current, new Date().toISOString());
+          persistFinancialState(combined, [], freqIncomeRef.current, new Date().toISOString(), sheetId);
+          void uploadOfflineTransactions(offlineTxs, sheetId).then(() => {
+            setConnectionStatus(null);
+            session.setOffline(false);
+          });
+          resolve();
+        },
+        onRemoteOnly: () => { setConnectionStatus(null); session.setOffline(false); resolve(); },
+      });
+    });
+  }
+
+  async function uploadOfflineTransactions(txs: Transaction[], sheetId: string) {
+    const tokens = await GoogleSignin.getTokens();
+    const fresh = tokens.accessToken || "";
+    if (!fresh) return;
+    for (const tx of txs) {
+      try {
+        await saveTransaction(fresh, sheetId, transactionToDraft(tx));
+      } catch {
+        // ponytail: best-effort; reloadFromGoogle reconcilia después
+      }
+    }
+    await reloadFromGoogle(fresh, sheetId, false, true);
   }
 
   return {
@@ -390,5 +504,6 @@ export function useGoogleSync(
     wireRemoteUiPreferences,
     writeHistory,
     wireRemoteHistory,
+    wireMergePrompt,
   };
 }
