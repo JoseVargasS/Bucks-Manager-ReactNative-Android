@@ -96,10 +96,9 @@ The list path must stay cheap even when a user accumulates thousands of rows ove
 
 ### Memoization
 
-- Wrap every reusable UI primitive in `React.memo`: `StatCard`, `Kpi`, `ModalHeader`, `ActionRow`, `Field`, `HighlightedText`, `BarChart`, `Select`, `CalendarPicker`, `Text`, `TextInput`, `StatCard`, `Kpi`, `ModalHeader`, `ActionRow`, `Field`, `HighlightedText`, `BarChart`, `Select`, `CalendarPicker`, and the layout primitives `BottomNav`, `BottomNavItem`, `PeriodControls`, `HeaderActionButton`, `HeaderFade`, `HeaderTitleFade`, `BottomFade`, `TabPage`, `HeaderShell`. New UI primitives must be memoized at creation time.
+- Every reusable UI primitive must be wrapped in `React.memo` at creation time. This includes all components in `src/components/ui/` and `src/components/layout/`, plus screen-level list rows and headers.
 - `AppText`'s `Text` and `TextInput` are memoized and observe the font preference through a sync external store so a font change does not remount rows.
 - `TransactionRow` is memoized with `keyExtractor` derived from `rowId+rawDate+createdAtMs`; do not include amount or detail in the key.
-- A child that consumes only one color via `useColor(key)` rerenders only when that color changes. Prefer this over passing the full `Palette`.
 
 ### Theme and palette contexts
 
@@ -127,7 +126,7 @@ Do not re-merge these contexts. Do not introduce a global "settings" context tha
 - Custom user tags are not translated. Default tags (`default-comida`, `default-salud`, etc.) are translated through the catalogue; their colors persist across language switches.
 - Components resolve an id to its label and color through shared maps (`tagColorMap`, `tagLabelMap`, `findTagById`, `labelForTagId`).
 - `applySearch` accepts an optional `tagLabelsById` map so text search matches the tag label in the current language.
-- `localCache` schemaVersion is 2. The in-memory `migrateTransactionTags` runs once when tags finish loading so legacy label refs are rewritten to ids without persisting the migration separately.
+- `localCache` schemaVersion is 3. The in-memory `migrateTransactionTags` runs once when tags finish loading so legacy label refs are rewritten to ids without persisting the migration separately.
 
 ### Local cache and persistence
 
@@ -154,6 +153,10 @@ Do not re-merge these contexts. Do not introduce a global "settings" context tha
 
 - Import `MaterialCommunityIcons` from `@expo/vector-icons/MaterialCommunityIcons`, never the package root; the root entry bundles every icon font.
 
+### DevDependencies
+
+- Do not remove `test-renderer` from devDependencies. It is a peerDependency of `@testing-library/react-native@14.x` for React 19 (replaces the discontinued `react-test-renderer`). Auditing tools may flag it as "unused" because it is never directly imported — it is resolved as a peer at install time.
+
 ## Validation
 
 Before committing app changes, run:
@@ -170,10 +173,16 @@ Read `CONTEXT.md` before changing startup, sync, transaction ordering, navigatio
 
 ## Git Commits
 
-- Always use Conventional Commits.
-- Use hyphen bullets in the commit body when listing changes.
-- Each bullet point MUST stay on a single line — never wrap a bullet across multiple lines.
-- When the change spans multiple of the invariants above, call out which invariant moved and why.
+Uses `git-commit` and `commit-policy` skill (merged from awesome-copilot/skills/git-commit + project conventions). See `~/.opencode/skills/git-commit/SKILL.md` and `~/.opencode/skills/commit-policy/SKILL.md`.
+
+Key project rules:
+
+- `refactor:` for P3 codebase maintenance
+- Hyphen bullets in body, short body (what/why not how)
+- Each bullet MUST stay on a single line — never wrap a bullet across multiple lines
+- Prefer multiple focused commits unless told "no los separes"
+- Verify `git status` + `git diff` before writing message
+- Never commit secrets or build artifacts
 
 ## UI Direction
 
@@ -194,8 +203,22 @@ Use the mobile GAS workflow as the functional reference, but follow the current 
 - Modals should use rounded dark/light panels, clear labels, bordered inputs, large actions, and theme overlay tokens.
 
 <!-- PERUVIAN_SPANISH -->
-## Peruvian Spanish
 
-Responde siempre en español peruano. Usa "tú" (tuteo), no "vos". Peruanismos comunes: "pues" (final de frases), "bacán/chévere" (genial), "al toque" (rápido), "ahorita", "causa/pata/flaco" (trato amistoso), "así nomás", "ya, ya" (entendido). No uses: "vale", "che", "pana", "vosotros", "coche", "ordenador". Trato informal con el usuario a menos que el contexto pida cortesía.
+# Peruvian Spanish
+
+Responde siempre en español peruano (español del Perú).
+
+## Reglas
+
+- **Tuteo**: usa "tú" siempre, nunca "vos".
+- **No uses**: "che", "pana", "boludo", "coño", "hostia", "vosotros", "coger" (en sentido de tomar/obtener), "ordenador", "conducir" (manejar), "coche", "cerveza" (chela o fría), "guay", "mola".
+- **Peruanismos comunes**: "ps" (al final de frases: "dime ps"), "dime ps" (como una forma de repreguntar algo que no se respondió), "ya" ("ya, ya"), "bacán/xvr" (genial), "de una" (inmediatamente), "al fast" (super rapido),"al toque" (rápido), "ahorita" (ahora/en un momento), "causha" (amigo), "bateria" (amigo), "flaco/flaca" (apelativo amistoso), "jato" (casa), "relax" (tranquilo), "habla p mano" (saludo mas frecuente que "causa"), "apla" (saludo: "apla causha"), "en que estás" (saludo), "así noma" (así no más), "ya, ya" (OK, entendido), "ni idea", "va" (ok), "ptmr me webee" (uy, me equivoqué en lo que hice), "la cagué" (me equivoqué terriblemente, no salió como queríamos)
+- **Comida**: "ceviche", "lomo saltado", "ají", "papa rellena", "rocoto relleno", "causa", "chifa", "anticuchos", "picarones".
+- **Lugares**: las referencias geográficas usan nombres peruanos: "Lima", "Miraflores", "San Isidro", "provincias".
+
+## Modo
+
+- Trato informal con el usuario ("tú", "oye", "qué tal") a menos que el contexto pida cortesía.
+- Responde directo, sin rodeos. Si hay jerga, úsala naturalmente, no la fuerces.
+- Marcas peruanas: "Inca Kola", "Pilsen", "Cusqueña", "Donofrio".
 <!-- PERUVIAN_SPANISH -->
-

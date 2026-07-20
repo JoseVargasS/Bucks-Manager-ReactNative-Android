@@ -71,7 +71,7 @@ The toggle animates the shell and `HeaderShell` background through an `Animated.
 
 - `src/utils/transactions.ts`: rolling-period filter, decorated descending sort, and map-based date grouping.
 - `src/api/googleWorkspace.ts`: tag readiness inferred from the transaction read, bounded Drive validation, batched reads, row mutations, and tag catalogue read/write to `MONTHLY SUMMARY!K1:K2`.
-- `src/data/localCache.ts`: stale-while-revalidate snapshot for transactions, summaries, frequent income, and last sync time. `CACHE_VERSION = 2`.
+- `src/data/localCache.ts`: stale-while-revalidate snapshot for transactions, summaries, frequent income, and last sync time. `CACHE_VERSION = 3`.
 - `src/components/screens/ExpensesView.tsx`: virtualized `SectionList`; clipping stays disabled because Android previously rendered blank rows after edits.
 - `src/components/modals/TransactionModal.tsx`, `DetailModal.tsx`, `SearchModal.tsx`, and `OptionSheet.tsx`: ref-driven open path for immediate presentation.
 - `src/components/ui/Select.tsx`: opens an `OptionSheet` (bottom sheet via Modal) instead of an inline dropdown or portal. This avoids Android z-index issues with nested ScrollViews.
@@ -81,7 +81,7 @@ The toggle animates the shell and `HeaderShell` background through an `Animated.
 
 ## Memoization Contract
 
-Every reusable UI primitive is `React.memo`-wrapped: `StatCard`, `Kpi`, `ModalHeader`, `ActionRow`, `Field`, `HighlightedText`, `BarChart`, `Select`, `CalendarPicker`, `Text`, `TextInput`, plus the layout primitives `BottomNav`, `BottomNavItem`, `PeriodControls`, `HeaderActionButton`, `HeaderFade`, `HeaderTitleFade`, `BottomFade`, `TabPage`, `HeaderShell`. New primitives must be memoized at creation time.
+Every reusable UI primitive is `React.memo`-wrapped at creation time: all components in `src/components/ui/` and `src/components/layout/`, plus screen-level list rows and headers.
 
 The app shell uses memoized grouped props (`tabPageProps`, `headerProps`) so screen children receive stable references when the relevant inputs do not change. The memo lists should grow with the inputs the screen actually consumes.
 
