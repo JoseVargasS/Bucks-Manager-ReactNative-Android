@@ -13,21 +13,23 @@ import {
   readUiPreferences,
   writeUiPreferences as writeUiPreferencesApi,
   buildUiPreferences,
-  saveTransaction,
 } from "@/api/googleWorkspace";
 import { readHistory, writeHistory as writeHistoryApi } from "@/api/historyOps";
 import { calculateSummaries, SHEET_NAMES } from "@/domain/bucksLogic";
 import { loadFinancialCache, deleteFinancialCache, loadOfflineCache } from "@/data/localCache";
-import { DEFAULT_TAGS, labelForTagId, mergeTagsFromSheet, saveTags } from "@/utils/tags";
-import { transactionToDraft } from "@/utils/transactions";
+import { mergeTagsFromSheet, saveTags } from "@/utils/tags";
 import { TOKEN_KEY, SHEET_KEY } from "@/theme/constants";
 import type { LanguageMode, Tag, Transaction, SummaryRow, HistoryEntry } from "@/types";
 import type { UiPreferencesSnapshot } from "@/hooks/usePreferences";
 import type { SessionApi } from "./useSession";
+import {
+  handleOfflineAfterConnect,
+  type OfflineConnectDeps,
+} from "./connectFlow";
 
 // ponytail: module-level promise chain serializes every Sheets mutation so a
 // fast edit cannot race with the reconcile read of an earlier edit.
-const syncQueueRef = { current: Promise.resolve() };
+export const syncQueueRef = { current: Promise.resolve() };
 
 export interface GoogleSyncApi {
   restoreSession: () => Promise<void>;
@@ -36,18 +38,10 @@ export interface GoogleSyncApi {
   syncGoogleInBackground: (task: (freshToken: string) => Promise<void>, title: string) => void;
   connectGoogleWorkspace: (token: string, preferredSheetId?: string, forceScan?: boolean) => Promise<void>;
   selectSpreadsheet: (token: string, sheetId: string, showLoader?: boolean) => Promise<void>;
-  // Writes a UI preferences snapshot to MONTHLY SUMMARY!L1:L2. Mirrors the
-  // shape and queueing used by tag catalogue and transaction writes. Returns
-  // a noop when the user has not connected a sheet yet.
   writeUiPreferences: (snapshot: UiPreferencesSnapshot) => void;
-  // Registers a callback that applies remote UI preferences (from sheet) to
-  // local state. Called once on mount; the callback itself is stable.
   wireRemoteUiPreferences: (apply: (prefs: UiPreferencesSnapshot) => void) => void;
-  // Writes deletion history to MONTHLY SUMMARY!M1:M2.
   writeHistory: (entries: HistoryEntry[]) => void;
-  // Registers a callback that applies remote history (from sheet) to local state.
   wireRemoteHistory: (apply: (entries: HistoryEntry[]) => void) => void;
-  // Registers a callback that shows the merge prompt modal.
   wireMergePrompt: (cb: (cfg: { localCount: number; remoteCount: number; onMerge: () => void; onRemoteOnly: () => void }) => void) => void;
 }
 
@@ -229,8 +223,6 @@ export function useGoogleSync(
         saveTags(mergedTags).catch(() => undefined);
         setTagsList(mergedTags);
       }
-      // Sheet is the source of truth for cosmetic preferences; the local
-      // value only leads the UI between app launch and the first sync.
       if (sheetUiPreferences) {
         const apply = remoteUiPreferencesRef.current;
         if (apply) {
@@ -243,7 +235,6 @@ export function useGoogleSync(
           });
         }
       }
-      // Merge deletion history from sheet with local entries.
       if (sheetHistory.length) {
         const apply = remoteHistoryRef.current;
         if (apply) apply(sheetHistory);
@@ -318,10 +309,6 @@ export function useGoogleSync(
     }
   }
 
-  // Walks the same sync queue used by mutations so writes serialize with
-  // transactions. Reads spreadsheetId and accessToken from the live
-  // session state at call time (no closure capture), so the writer always
-  // targets the spreadsheet the user is currently connected to.
   const writeUiPreferences = useCallback(
     (snapshot: UiPreferencesSnapshot) => {
       if (!spreadsheetId) return;
@@ -333,11 +320,6 @@ export function useGoogleSync(
         );
       }, copy.syncError);
     },
-    // syncGoogleInBackground is a stable closure for the hook's lifetime.
-    // Including it would force a new reference every render and tear the
-    // shared queue. spreadsheetId changes (token refresh, sheet change)
-    // are read at call time via the closure re-creation that useCallback
-    // performs on dep change.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [spreadsheetId, copy.syncError],
   );
@@ -373,6 +355,13 @@ export function useGoogleSync(
     },
     [],
   );
+
+  const connectDeps: OfflineConnectDeps = {
+    syncQueueRef,
+    setPendingSync,
+    pendingSyncRef,
+    reloadFromGoogle,
+  };
 
   async function connectGoogleWorkspace(
     token: string,
@@ -415,7 +404,18 @@ export function useGoogleSync(
         isNewSheet = true;
         await selectSpreadsheet(token, connectedSheetId);
       }
-      void handleOfflineAfterConnect(offlineTxs, isNewSheet, connectedSheetId);
+      void handleOfflineAfterConnect(
+        offlineTxs,
+        isNewSheet,
+        connectedSheetId,
+        fin,
+        { tagsListRef, setTagsList },
+        { tagColors, language },
+        connectDeps,
+        { setConnectionStatus, setOffline: session.setOffline },
+        mergePromptRef,
+        { current: { count: lastRemoteTxCountRef.current, txs: lastRemoteTxsRef.current } },
+      );
     } catch (error) {
       setConnectionStatus(null);
       session.setOffline(true);
@@ -426,117 +426,6 @@ export function useGoogleSync(
       setLoading(false);
       setIsSyncing(false);
     }
-  }
-
-  // ponytail: concatena y ordena cronológicamente sin deduplicar.
-  // La decisión del usuario ("combinar") implica que ningún dato se pierde.
-  function combineTransactions(local: Transaction[], remote: Transaction[]): Transaction[] {
-    const merged = [...local, ...remote];
-    merged.sort((a, b) => {
-      const da = a.rawDate.localeCompare(b.rawDate);
-      if (da !== 0) return da;
-      const ca = a.createdAtMs ?? a.createdAt ?? "";
-      const cb = b.createdAtMs ?? b.createdAt ?? "";
-      return ca < cb ? -1 : ca > cb ? 1 : 0;
-    });
-    return merged;
-  }
-
-  async function handleOfflineAfterConnect(offlineTxs: Transaction[], isNewSheet: boolean, sheetId: string) {
-    if (offlineTxs.length === 0) {
-      setConnectionStatus(null);
-      session.setOffline(false);
-      return;
-    }
-    if (isNewSheet) {
-      applyFinancialState(offlineTxs, calculateSummaries(offlineTxs, freqIncomeRef.current), freqIncomeRef.current, new Date().toISOString());
-      ensureTagsInCatalogue(offlineTxs);
-      persistFinancialState(offlineTxs, [], freqIncomeRef.current, new Date().toISOString(), sheetId);
-      scheduleBackgroundUpload(offlineTxs, sheetId);
-      await new Promise((r) => setTimeout(r, 2000));
-      setConnectionStatus(null);
-      session.setOffline(false);
-      return;
-    }
-    const remoteCount = lastRemoteTxCountRef.current;
-    const remoteTxs = lastRemoteTxsRef.current;
-    await new Promise<void>((resolve) => {
-      const cb = mergePromptRef.current;
-      if (!cb) { setConnectionStatus(null); session.setOffline(false); resolve(); return; }
-      cb({
-        localCount: offlineTxs.length,
-        remoteCount,
-        onMerge: () => {
-          const combined = combineTransactions(offlineTxs, remoteTxs);
-          applyFinancialState(combined, calculateSummaries(combined, freqIncomeRef.current), freqIncomeRef.current, new Date().toISOString());
-          ensureTagsInCatalogue(combined);
-          persistFinancialState(combined, [], freqIncomeRef.current, new Date().toISOString(), sheetId);
-          scheduleBackgroundUpload(offlineTxs, sheetId);
-          setTimeout(() => { setConnectionStatus(null); session.setOffline(false); }, 2000);
-          resolve();
-        },
-        onRemoteOnly: () => { setConnectionStatus(null); session.setOffline(false); resolve(); },
-      });
-    });
-  }
-
-  // ponytail: djb2-like hash para color determinístico de tags huérfanos.
-  function hashId(id: string): number {
-    let hash = 5381;
-    for (let i = 0; i < id.length; i++) {
-      hash = ((hash << 5) + hash + id.charCodeAt(i)) | 0;
-    }
-    return Math.abs(hash);
-  }
-
-  function ensureTagsInCatalogue(transactions: Transaction[]) {
-    const current = tagsListRef.current;
-    const existingIds = new Set(current.map((t) => t.id));
-    const toAdd: Tag[] = [];
-    for (const t of transactions) {
-      if (!t.tags) continue;
-      for (const tagId of t.tags) {
-        if (existingIds.has(tagId)) continue;
-        existingIds.add(tagId);
-        const dt = DEFAULT_TAGS.find((d) => d.id === tagId);
-        if (dt) {
-          toAdd.push({ id: dt.id, label: dt[language], color: dt.color });
-        } else {
-          toAdd.push({
-            id: tagId,
-            label: labelForTagId(tagId, current),
-            color: tagColors[hashId(tagId) % tagColors.length],
-          });
-        }
-      }
-    }
-    if (toAdd.length > 0) setTagsList([...current, ...toAdd]);
-  }
-
-  function scheduleBackgroundUpload(txs: Transaction[], sheetId: string) {
-    syncQueueRef.current = syncQueueRef.current
-      .catch(() => undefined)
-      .then(async () => {
-        const tokens = await GoogleSignin.getTokens();
-        const fresh = tokens.accessToken || "";
-        if (!fresh) return;
-        setPendingSync(true);
-        pendingSyncRef.current = true;
-        for (const tx of txs) {
-          try {
-            await saveTransaction(fresh, sheetId, transactionToDraft(tx));
-          } catch {
-            // ponytail: best-effort; reloadFromGoogle reconcilia después
-          }
-        }
-        pendingSyncRef.current = false;
-        setPendingSync(false);
-        await reloadFromGoogle(fresh, sheetId, false, true);
-      })
-      .catch(() => {
-        pendingSyncRef.current = false;
-        setPendingSync(false);
-      });
   }
 
   return {
