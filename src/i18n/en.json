@@ -110,7 +110,6 @@
   "type": "Type",
   "selectType": "Select type",
   "amount": "Amount",
-  "amountHelp": "positive income, negative expenses",
   "detail": "Detail",
   "detailPlaceholder": "Example: Grocery purchase",
   "concepto": "Concept",
@@ -216,5 +215,8 @@
   "stableYears": "stable years",
   "positiveYears": "Positive years",
   "yearlyAverage": "Avg. yearly spend",
+  "frequent": "Recurring",
+  "nonFrequent": "Non-recurring",
+  "vsPrevMonth": "vs last month",
   "languageCode": "en"
 }

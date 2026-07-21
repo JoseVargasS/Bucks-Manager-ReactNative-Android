@@ -110,7 +110,6 @@
   "type": "Tipo",
   "selectType": "Seleccionar tipo",
   "amount": "Monto",
-  "amountHelp": "ingresos positivos, gastos negativos",
   "detail": "Detalle",
   "detailPlaceholder": "Ej: Compra en supermercado",
   "concepto": "Concepto",
@@ -216,5 +215,8 @@
   "stableYears": "años estables",
   "positiveYears": "Años positivos",
   "yearlyAverage": "Gasto prom. anual",
+  "frequent": "Frecuente",
+  "nonFrequent": "No frecuente",
+  "vsPrevMonth": "vs mes pasado",
   "languageCode": "es"
 }

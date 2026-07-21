@@ -60,8 +60,6 @@ export const recordModalStyles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 5,
     borderRadius: 8,
-    borderWidth: 1,
-    borderStyle: "dashed",
   },
   addTagInlineText: {
     fontSize: 11,

@@ -3,18 +3,18 @@ import { Alert, Animated, BackHandler, Keyboard, Pressable, ScrollView, StyleShe
 import type { TextInput as NativeTextInput } from "react-native";
 import { BlurView } from "expo-blur";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import { isValidTransactionDraft, TRANSACTION_TYPES } from "@/domain/bucksLogic";
+import { isValidTransactionDraft } from "@/domain/bucksLogic";
 import { computeLineItemsTotal, getBlankDraft } from "@/utils/transactions";
 import { base } from "@/styles/baseStyles";
 import { recordModalStyles } from "@/components/modals/TransactionModal.styles";
 
 const styles = { ...base, ...recordModalStyles };
 import { Z_INDEX_MODAL } from "@/theme/constants";
-import { Select } from "@/components/ui/Select";
+import { TypeSelector } from "@/components/ui/TypeSelector";
 import { CalendarPicker } from "@/components/ui/CalendarPicker";
 import { type Palette } from "@/theme/colors";
 import { type Transaction, type TransactionDraft, type TransactionType, type Tag } from "@/types";
-import { typeColor, typeFill, typeLabelFull } from "@/utils/formats";
+
 import { type UiCopy } from "@/i18n";
 import { useModalTransition } from "@/components/ui/useModalTransition";
 import { useKeyboardOffset } from "@/components/ui/useKeyboardOffset";
@@ -114,10 +114,6 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
     const formatted = `${sign}${currencySymbol} ${Math.abs(total).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     return { total, error, formatted };
   }, [currencySymbol, lineItems]);
-
-  const typeOptions = useMemo(() => TRANSACTION_TYPES.map((type) => ({
-    label: typeLabelFull(type, copy), value: type, color: typeColor(type, colors), softBg: typeFill(type, colors),
-  })), [colors, copy]);
 
   const isExpense = formDraft.type.startsWith("GASTO");
   const totalColor = totalState.error
@@ -227,8 +223,8 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
             <Text style={[styles.recordTitle, { color: colors.text }]}>
               <MaterialCommunityIcons name="calculator-variant" size={19} color={colors.info} /> {editingTx ? copy.editRecord : copy.newRecord}
             </Text>
-            <Pressable style={[styles.closeBtn, { backgroundColor: colors.input }]} onPress={close}>
-              <MaterialCommunityIcons name="close" size={22} color={colors.text} />
+            <Pressable style={styles.closeBtn} onPress={close}>
+              <MaterialCommunityIcons name="close" size={22} color={colors.muted} />
             </Pressable>
           </View>
           {tagsOpenFor && tagsReady && (
@@ -257,23 +253,21 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
             </Pressable>
             <CalendarPicker visible={calVisible} value={formDraft.date} onSelect={(date: string) => setFormDraft((current) => ({ ...current, date }))} onClose={() => setCalVisible(false)} colors={colors} copy={copy} />
             <Text style={[styles.label, { color: colors.text }]}>{copy.type}</Text>
-            <Select
+            <TypeSelector
               value={formDraft.type}
-              options={typeOptions}
-              onSelect={(type: string) => {
+              onSelect={(type: TransactionType) => {
                 setTagsOpenFor(null);
                 setValidationError("");
                 setFormDraft((current) => ({
                   ...current,
-                  type: type as TransactionType,
+                  type,
                   lineItems: type.startsWith("GASTO")
                     ? (current.lineItems || [])
                     : (current.lineItems || []).map((li) => ({ ...li, tags: [] })),
                 }));
               }}
               colors={colors}
-              placeholder={copy.selectType}
-              style={{ marginBottom: 18 }}
+              copy={copy}
             />
             <Text style={[styles.label, { color: colors.text }]}>{singleLine ? (copy.detail || "Detalle") : (copy.concepto || "Concepto")}</Text>
             <TextInput
@@ -289,14 +283,11 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
 
             <View style={{ marginTop: 20, marginBottom: 8, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
               <Text style={[styles.label, { color: colors.text, marginBottom: 0 }]}>
-                {copy.amount} <Text style={{ color: colors.muted, fontSize: 13 }}>({copy.amountHelp})</Text>
+                {copy.amount}
               </Text>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-                <Text style={{ fontSize: 12, fontWeight: "600", color: colors.muted }}>Líneas</Text>
-                <View style={{ paddingHorizontal: 7, paddingVertical: 2, borderRadius: 8, backgroundColor: colors.primarySoft }}>
-                  <Text style={{ fontSize: 12, fontWeight: "700", color: colors.primary }}>{lineItems.length}</Text>
-                </View>
-              </View>
+              <Pressable style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: colors.primary, alignItems: "center", justifyContent: "center" }} onPress={addLineItem}>
+                <MaterialCommunityIcons name="plus" size={16} color={colors.onPrimary} />
+              </Pressable>
             </View>
 
             {lineItems.map((item) => {
@@ -335,7 +326,7 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
                       ) : unusedTags.length > 0 ? (
                         <Pressable
                           ref={(ref) => { tagAddRefs.current[item.id] = ref; }}
-                          style={[styles.addTagInlineBtn, { borderColor: colors.muted }]}
+                          style={[styles.addTagInlineBtn, { backgroundColor: colors.input }]}
                           onPress={() => openTagsOverlay(item.id)}
                         >
                           <MaterialCommunityIcons name="tag-plus-outline" size={14} color={colors.muted} />
@@ -392,14 +383,6 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
                 </View>
               );
             })}
-
-            <Pressable
-              style={[styles.addLineItemBtn, { borderColor: colors.muted }]}
-              onPress={addLineItem}
-            >
-              <MaterialCommunityIcons name="plus-circle-outline" size={20} color={colors.muted} />
-              <Text style={[styles.addLineItemText, { color: colors.muted }]}>Agregar monto</Text>
-            </Pressable>
 
             {showCreateTag && (
               <CreateTagForm
