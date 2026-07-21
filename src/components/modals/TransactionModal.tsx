@@ -1,7 +1,7 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
-import { Alert, Animated, BackHandler, Keyboard, ScrollView, StyleSheet, Pressable, View } from "react-native";
+import { Alert, Animated, BackHandler, Keyboard, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import type { TextInput as NativeTextInput } from "react-native";
 import { BlurView } from "expo-blur";
-import type { TextInput as RNTextInput } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { isValidTransactionDraft, TRANSACTION_TYPES } from "@/domain/bucksLogic";
 import { computeLineItemsTotal, getBlankDraft } from "@/utils/transactions";
@@ -13,28 +13,26 @@ import { Z_INDEX_MODAL } from "@/theme/constants";
 import { Select } from "@/components/ui/Select";
 import { CalendarPicker } from "@/components/ui/CalendarPicker";
 import { type Palette } from "@/theme/colors";
-import { type LineItemDraft, type Transaction, type TransactionDraft, type TransactionType, type Tag } from "@/types";
+import { type Transaction, type TransactionDraft, type TransactionType, type Tag } from "@/types";
 import { typeColor, typeFill, typeLabelFull } from "@/utils/formats";
 import { type UiCopy } from "@/i18n";
 import { useModalTransition } from "@/components/ui/useModalTransition";
 import { useKeyboardOffset } from "@/components/ui/useKeyboardOffset";
-import { findTagById, saveTags, slugifyTagLabel, tagTextColor, DEFAULT_TAG_COLOR } from "@/utils/tags";
-import { ColorPicker } from "@/components/ui/ColorPicker";
+import { findTagById, tagTextColor } from "@/utils/tags";
 import { NumericKeypad } from "@/components/ui/NumericKeypad";
 import { AmountInput } from "@/components/ui/AmountInput";
 import { Text, TextInput } from "@/components/ui/AppText";
+import { TagOverlay } from "@/components/modals/TagOverlay";
+import { CreateTagForm } from "@/components/modals/CreateTagForm";
+import { useLineItemsState } from "@/hooks/useLineItemsState";
+import { useTagOverlay } from "@/hooks/useTagOverlay";
 
 export type TransactionModalHandle = {
   open: (draft: TransactionDraft, editingTx?: Transaction | null) => void;
 };
 
-function makeLineItemId(index: number): string {
-  return `li-${index + 1}`;
-}
-
 export const TransactionModal = forwardRef<TransactionModalHandle, {
-  colors: Palette;
-  copy: UiCopy; currencySymbol: string; tags: Tag[];
+  colors: Palette; copy: UiCopy; currencySymbol: string; tags: Tag[];
   onSubmit: (draft: TransactionDraft, editingTx: Transaction | null) => boolean;
   onAddTag?: (tag: Tag) => void;
 }>(function TransactionModal({ colors, copy, currencySymbol, tags, onSubmit, onAddTag }, ref) {
@@ -42,29 +40,37 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
   const [formDraft, setFormDraft] = useState(getBlankDraft);
   const [editingTx, setEditingTx] = useState<Transaction | null>(null);
   const [calVisible, setCalVisible] = useState(false);
-  const [tagsOpenFor, setTagsOpenFor] = useState<string | null>(null);
-  const [tagsFrame, setTagsFrame] = useState({ left: 0, top: 0, width: 0, maxHeight: 0 });
-  const [tagsReady, setTagsReady] = useState(false);
-  const [showCreateTag, setShowCreateTag] = useState(false);
-  const [createTagLabel, setCreateTagLabel] = useState("");
-  const [createTagColor, setCreateTagColor] = useState(DEFAULT_TAG_COLOR);
-  const [creatingTagFor, setCreatingTagFor] = useState<string | null>(null);
-  const [activeAmountId, setActiveAmountId] = useState<string | null>(null);
-  // UI-only cursor position per line item. Not persisted to Sheets.
-  // Survives switching between line items, cleared on modal close.
-  const [cursors, setCursors] = useState<Record<string, number>>({});
-  const activeAmountIdRef = useRef<string | null>(null);
-  useEffect(() => { activeAmountIdRef.current = activeAmountId; }, [activeAmountId]);
   const kbHeight = useKeyboardOffset(visible);
-  const [validationError, setValidationError] = useState("");
   const modalRef = useRef<View>(null);
   const scrollRef = useRef<ScrollView>(null);
   const scrollHostRef = useRef<View>(null);
+  const inputRefs = useRef<Record<string, NativeTextInput | null>>({});
+  const amountInputRefs = useRef<Record<string, NativeTextInput | null>>({});
   const tagAddRefs = useRef<Record<string, View | null>>({});
-  const inputRefs = useRef<Record<string, View | null>>({});
-  const amountInputRefs = useRef<Record<string, RNTextInput | null>>({});
   const focusedKey = useRef<string | null>(null);
   const focusHandledRef = useRef(false);
+  const submittingRef = useRef(false);
+  const pendingSubmit = useRef<{ draft: TransactionDraft; editingTx: Transaction | null } | null>(null);
+
+  const {
+    cursors, setCursors,
+    activeAmountId, setActiveAmountId,
+    activeAmountIdRef,
+    validationError, setValidationError,
+    lineItems, singleLine,
+    setLineItem, addLineItem, removeLineItem, toggleTag,
+  } = useLineItemsState(formDraft, setFormDraft, amountInputRefs);
+  const {
+    tagsOpenFor, setTagsOpenFor,
+    tagsReady,
+    tagsFrame,
+    showCreateTag, setShowCreateTag,
+    createTagLabel, setCreateTagLabel,
+    createTagColor, setCreateTagColor,
+    setCreatingTagFor,
+    dismissTags, openTagsOverlay, handleCreateTag,
+    startCreateTagFlow, closeTagOverlay,
+  } = useTagOverlay({ tags, onAddTag, setFormDraft, modalRef, tagAddRefs });
 
   useEffect(() => {
     if (kbHeight === 0) { focusHandledRef.current = false; return; }
@@ -83,36 +89,25 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
             scrollRef.current?.scrollTo({ y: Math.max(0, y - 24), animated: true });
           },
           () => {
-            target.measure((_x, y) => {
+            target.measure((_x: number, y: number) => {
               scrollRef.current?.scrollTo({ y: Math.max(0, y - 24), animated: true });
             });
           },
         );
       } catch {
-        target.measure((_x, y) => {
+        target.measure((_x: number, y: number) => {
           scrollRef.current?.scrollTo({ y: Math.max(0, y - 24), animated: true });
         });
       }
     });
   }, [kbHeight]);
-  const submittingRef = useRef(false);
-  const pendingSubmit = useRef<{ draft: TransactionDraft; editingTx: Transaction | null } | null>(null);
+
   const transition = useModalTransition(visible, 14, 0.99, () => {
     const pending = pendingSubmit.current;
     pendingSubmit.current = null;
     if (pending) onSubmit(pending.draft, pending.editingTx);
   });
 
-  const lineItems = useMemo(() => formDraft.lineItems || [], [formDraft.lineItems]);
-  const singleLine = lineItems.length === 1;
-  useEffect(() => {
-    if (activeAmountId && !lineItems.some((li) => li.id === activeAmountId)) {
-      setActiveAmountId(null);
-    }
-  }, [lineItems, activeAmountId]);
-  useEffect(() => {
-    if (activeAmountId !== null) Keyboard.dismiss();
-  }, [activeAmountId]);
   const totalState = useMemo(() => {
     const { total, error } = computeLineItemsTotal(lineItems);
     const sign = total > 0 ? "+ " : total < 0 ? "- " : "";
@@ -129,25 +124,39 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
     ? colors.expense
     : totalState.total > 0 ? colors.income : totalState.total < 0 ? colors.expense : colors.text;
 
+  const handleRemoveLineItem = useCallback((id: string) => {
+    removeLineItem(id);
+    if (tagsOpenFor === id) closeTagOverlay();
+  }, [removeLineItem, tagsOpenFor, closeTagOverlay]);
+
+  const handleToggleTag = useCallback((lineItemId: string, tagId: string) => {
+    toggleTag(lineItemId, tagId);
+    closeTagOverlay();
+    requestAnimationFrame(() => {
+      const target = inputRefs.current[`desc-${lineItemId}`];
+      if (target && typeof (target as unknown as { focus?: () => void }).focus === "function") {
+        (target as unknown as { focus: () => void }).focus();
+      }
+    });
+  }, [toggleTag, closeTagOverlay]);
+
   const close = useCallback(() => {
     Keyboard.dismiss();
     setVisible(false);
     setCalVisible(false);
-    setTagsOpenFor(null);
-    setTagsReady(false);
+    closeTagOverlay();
     setShowCreateTag(false);
     setCreateTagLabel("");
     setActiveAmountId(null);
     setCursors({});
-  }, []);
+  }, [closeTagOverlay, setShowCreateTag, setCreateTagLabel, setActiveAmountId, setCursors]);
 
   useImperativeHandle(ref, () => ({
-    open(nextDraft, nextEditingTx = null) {
+    open(nextDraft: TransactionDraft, nextEditingTx: Transaction | null = null) {
       setFormDraft(nextDraft);
       setEditingTx(nextEditingTx);
       setCalVisible(false);
-      setTagsOpenFor(null);
-      setTagsReady(false);
+      closeTagOverlay();
       setShowCreateTag(false);
       setCreateTagLabel("");
       setActiveAmountId(null);
@@ -155,7 +164,7 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
       submittingRef.current = false;
       setVisible(true);
     },
-  }), []);
+  }), [closeTagOverlay, setShowCreateTag, setCreateTagLabel, setActiveAmountId, setValidationError]);
 
   useEffect(() => {
     if (!visible) return;
@@ -168,142 +177,11 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
       return true;
     });
     return () => subscription.remove();
-  }, [close, visible]);
+  }, [close, visible, activeAmountIdRef, setActiveAmountId]);
 
-  const dismissTags = useCallback(() => {
-    if (tagsOpenFor) {
-      setTagsOpenFor(null);
-      setTagsReady(false);
-    }
-  }, [tagsOpenFor]);
-
-  function openTagsOverlay(lineItemId: string) {
-    Keyboard.dismiss();
-    if (tagsOpenFor === lineItemId) {
-      setTagsOpenFor(null);
-      setTagsReady(false);
-      return;
-    }
-    setTagsReady(false);
-    setTagsOpenFor(lineItemId);
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        const ref = tagAddRefs.current[lineItemId];
-        if (!ref) return;
-        ref.measureInWindow((_x, y, _w, height) => {
-          if (!modalRef.current) return;
-          modalRef.current.measureInWindow((_mx, _my, modalWidth, modalHeight) => {
-            const maxH = Math.min(200, Math.max(100, modalHeight - 100));
-            const below = y - _my + height + 4;
-            const top = below + maxH <= modalHeight - 10 ? below : Math.max(70, y - _my - maxH - 4);
-            setTagsFrame({
-              left: 14,
-              top,
-              width: Math.min(modalWidth - 28, 310),
-              maxHeight: Math.min(maxH, modalHeight - top - 8),
-            });
-            setTagsReady(true);
-          });
-        });
-      });
-    });
-  }
-
-  function setLineItem(id: string, patch: Partial<LineItemDraft>) {
-    setValidationError("");
-    setFormDraft((current) => ({
-      ...current,
-      lineItems: (current.lineItems || []).map((li) => (li.id === id ? { ...li, ...patch } : li)),
-    }));
-  }
-
-  function addLineItem() {
-    setValidationError("");
-    const newId = makeLineItemId((formDraft.lineItems || []).length);
-    setFormDraft((current) => {
-      const existing = current.lineItems || [];
-      let nextLineItems = existing;
-      let nextConcepto = current.concepto;
-      if (existing.length === 1 && existing[0].description) {
-        if (!nextConcepto) nextConcepto = existing[0].description;
-        nextLineItems = [{ ...existing[0], description: "" }];
-      }
-      return {
-        ...current,
-        concepto: nextConcepto,
-        lineItems: [...nextLineItems, { id: newId, amount: "", description: "", tags: [] }],
-      };
-    });
-    setActiveAmountId(newId);
-    requestAnimationFrame(() => {
-      amountInputRefs.current[newId]?.focus();
-      Keyboard.dismiss();
-    });
-  }
-
-  function removeLineItem(id: string) {
-    setFormDraft((current) => {
-      if ((current.lineItems || []).length <= 1) return current;
-      const next = (current.lineItems || []).filter((li) => li.id !== id).map((li, i) => ({ ...li, id: makeLineItemId(i) }));
-      if (next.length === 1 && next[0].description) {
-        return {
-          ...current,
-          concepto: next[0].description,
-          lineItems: [{ ...next[0], description: "" }],
-        };
-      }
-      return { ...current, lineItems: next };
-    });
-    if (tagsOpenFor === id) { setTagsOpenFor(null); setTagsReady(false); }
-    setActiveAmountId((current) => (current === id ? null : current));
-    setCursors((prev) => {
-      if (!(id in prev)) return prev;
-      const { [id]: _drop, ...rest } = prev;
-      return rest;
-    });
-  }
-
-  function toggleTag(lineItemId: string, tagId: string) {
-    setFormDraft((current) => {
-      const currentItems = current.lineItems || [];
-      return {
-        ...current,
-        lineItems: currentItems.map((li) => {
-          if (li.id !== lineItemId) return li;
-          const ts = li.tags || [];
-          return { ...li, tags: ts.includes(tagId) ? ts.filter((t) => t !== tagId) : [tagId] };
-        }),
-      };
-    });
-    setTagsOpenFor(null);
-    setTagsReady(false);
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        const target = inputRefs.current[`desc-${lineItemId}`];
-        if (target && typeof (target as unknown as { focus?: () => void }).focus === "function") {
-          (target as unknown as { focus: () => void }).focus();
-        }
-      });
-    });
-  }
-
-  const handleCreateTag = useCallback(() => {
-    const label = createTagLabel.trim();
-    if (!label || !creatingTagFor) return;
-    const newId = slugifyTagLabel(label);
-    const newTag: Tag = { id: newId, label, color: createTagColor };
-    saveTags([...tags, newTag]).catch(() => {});
-    onAddTag?.(newTag);
-    setFormDraft((current) => ({
-      ...current,
-      lineItems: (current.lineItems || []).map((li) =>
-        li.id === creatingTagFor ? { ...li, tags: [...(li.tags || []), newId] } : li,
-      ),
-    }));
-    setShowCreateTag(false);
-    setCreatingTagFor(null);
-    setCreateTagLabel("");
-  }, [createTagLabel, createTagColor, creatingTagFor, tags, onAddTag]);
+  const handleCreateTagWrapper = useCallback(() => {
+    handleCreateTag();
+  }, [handleCreateTag]);
 
   function submit() {
     if (submittingRef.current) return;
@@ -372,7 +250,7 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
             <Text style={[styles.label, { color: colors.text }]}>{copy.date}</Text>
             <Pressable
               style={{ backgroundColor: colors.input, borderColor: colors.border, borderRadius: 10, paddingHorizontal: 12, minHeight: 42, flexDirection: "row", alignItems: "center", gap: 10, borderWidth: 1, marginBottom: 12 }}
-              onPress={() => { Keyboard.dismiss(); setTagsOpenFor(null); setCalVisible(true); }}
+              onPress={() => { Keyboard.dismiss(); closeTagOverlay(); setCalVisible(true); }}
             >
               <Text style={{ color: colors.text, fontWeight: "600", flex: 1 }}>{formDraft.date || copy.selectDate}</Text>
               <MaterialCommunityIcons name="calendar" size={20} color={colors.info} />
@@ -466,7 +344,7 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
                       ) : null
                     )}
                     {lineItems.length > 1 && (
-                      <Pressable style={[styles.removeLineItemBtn, { backgroundColor: colors.expenseSoft }]} onPress={() => removeLineItem(item.id)}>
+                      <Pressable style={[styles.removeLineItemBtn, { backgroundColor: colors.expenseSoft }]} onPress={() => handleRemoveLineItem(item.id)}>
                         <MaterialCommunityIcons name="close" size={18} color={colors.expense} />
                       </Pressable>
                     )}
@@ -524,34 +402,16 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
             </Pressable>
 
             {showCreateTag && (
-              <View style={{ backgroundColor: colors.input, borderRadius: 12, padding: 12, gap: 10, marginTop: 4 }}>
-                <Text style={{ fontSize: 12, fontWeight: "600", color: colors.primary, textTransform: "uppercase" }}>{copy.createTag}</Text>
-                <TextInput
-                  value={createTagLabel}
-                  onChangeText={setCreateTagLabel}
-                  placeholder={copy.tagsNewPlaceholder || "Nombre de etiqueta"}
-                  placeholderTextColor={colors.muted}
-                  keyboardType="default"
-                  style={{ borderRadius: 8, paddingHorizontal: 10, minHeight: 38, fontWeight: "600", backgroundColor: colors.card, color: colors.text }}
-                  onSubmitEditing={handleCreateTag}
-                  autoFocus
-                />
-                <ColorPicker color={createTagColor} onChange={setCreateTagColor} compact />
-                <View style={{ flexDirection: "row", gap: 8 }}>
-                  <Pressable
-                    style={{ flex: 1, borderRadius: 8, paddingVertical: 9, alignItems: "center", backgroundColor: colors.border }}
-                    onPress={() => { setShowCreateTag(false); setCreatingTagFor(null); }}
-                  >
-                    <Text style={{ fontSize: 13, fontWeight: "600", color: colors.muted }}>{copy.cancel}</Text>
-                  </Pressable>
-                  <Pressable
-                    style={{ flex: 1, borderRadius: 8, paddingVertical: 9, alignItems: "center", backgroundColor: colors.primary }}
-                    onPress={handleCreateTag}
-                  >
-                    <Text style={{ fontSize: 13, fontWeight: "700", color: colors.onPrimary }}>{copy.add}</Text>
-                  </Pressable>
-                </View>
-              </View>
+              <CreateTagForm
+                createTagLabel={createTagLabel}
+                setCreateTagLabel={setCreateTagLabel}
+                createTagColor={createTagColor}
+                setCreateTagColor={setCreateTagColor}
+                onCreate={handleCreateTagWrapper}
+                onCancel={() => { setShowCreateTag(false); setCreatingTagFor(null); }}
+                colors={colors}
+                copy={copy}
+              />
             )}
 
             {!!validationError && (
@@ -587,7 +447,7 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
             onChange={(v, c) => {
               if (activeAmountId) {
                 setLineItem(activeAmountId, { amount: v });
-                setCursors((prev) => ({ ...prev, [activeAmountId]: c }));
+                setCursors((prev) => ({ ...prev, [activeAmountId!]: c }));
               }
             }}
             onDone={() => setActiveAmountId(null)}
@@ -595,40 +455,17 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
           />
 
           {tagsOpenFor && tagsReady && isExpense && (
-            <View key={`tags-${tags.length}`} style={[styles.tagsOverlay, { left: tagsFrame.left, top: tagsFrame.top, width: tagsFrame.width, maxHeight: tagsFrame.maxHeight, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: 10, overflow: "hidden" }]}>
-              <ScrollView contentContainerStyle={{ padding: 8 }} keyboardShouldPersistTaps="always" showsVerticalScrollIndicator={false}>
-                {availableTags.length > 0 && (
-                  <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 8 }}>
-                    {availableTags.map((tag) => (
-                      <Pressable
-                        key={tag.id}
-                        style={[styles.selectOptionRow, { width: "48%", backgroundColor: colors.input }]}
-                        onPress={() => toggleTag(tagsOpenFor!, tag.id)}
-                      >
-                        <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: tag.color }} />
-                        <Text numberOfLines={1} style={[styles.selectOptionLabel, { color: colors.text }]}>{tag.label}</Text>
-                      </Pressable>
-                    ))}
-                  </View>
-                )}
-                <View style={{ borderTopWidth: availableTags.length > 0 ? 0.5 : 0, borderColor: colors.border, paddingTop: 8 }}>
-                  <Pressable
-                    style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingVertical: 6 }}
-                    onPress={() => {
-                      setCreatingTagFor(tagsOpenFor);
-                      setTagsOpenFor(null);
-                      setTagsReady(false);
-                      setShowCreateTag(true);
-                      setCreateTagLabel("");
-                      requestAnimationFrame(() => scrollRef.current?.scrollToEnd({ animated: true }));
-                    }}
-                  >
-                    <MaterialCommunityIcons name="tag-plus-outline" size={16} color={colors.primary} />
-                    <Text style={{ fontSize: 13, fontWeight: "600", color: colors.primary }}>{copy.createTag || "Crear etiqueta"}</Text>
-                  </Pressable>
-                </View>
-              </ScrollView>
-            </View>
+            <TagOverlay
+              availableTags={availableTags}
+              onToggleTag={(tagId) => handleToggleTag(tagsOpenFor!, tagId)}
+              onCreateTagClick={() => {
+                startCreateTagFlow();
+                requestAnimationFrame(() => scrollRef.current?.scrollToEnd({ animated: true }));
+              }}
+              colors={colors}
+              copy={copy}
+              frame={tagsFrame}
+            />
           )}
 
         </Animated.View>

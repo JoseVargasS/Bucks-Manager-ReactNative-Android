@@ -4,7 +4,6 @@ import {
   useMemo,
   useRef,
   useState,
-  type ReactNode,
 } from "react";
 import {
   Animated,
@@ -13,7 +12,6 @@ import {
   Pressable,
   View,
   StyleSheet,
-  type ViewStyle,
 } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { formatDateToISO, MONTH_NAMES } from "@/domain/bucksLogic";
@@ -21,51 +19,14 @@ import { type Palette } from "@/theme/colors";
 import { UI_COPY, type UiCopy } from "@/i18n";
 import { useModalTransition } from "./useModalTransition";
 import { Text } from "./AppText";
-
-const MONTH_ABBR = [
-  "ene.",
-  "feb.",
-  "mar.",
-  "abr.",
-  "may.",
-  "jun.",
-  "jul.",
-  "ago.",
-  "sep.",
-  "oct.",
-  "nov.",
-  "dic.",
-];
-const MONTH_ABBR_EN = [
-  "Jan",
-  "Feb",
-  "Mar",
-  "Apr",
-  "May",
-  "Jun",
-  "Jul",
-  "Aug",
-  "Sep",
-  "Oct",
-  "Nov",
-  "Dec",
-];
-const MONTH_NAMES_EN = [
-  "January",
-  "February",
-  "March",
-  "April",
-  "May",
-  "June",
-  "July",
-  "August",
-  "September",
-  "October",
-  "November",
-  "December",
-];
-const DAY_LABELS = ["L", "M", "X", "J", "V", "S", "D"];
-const DAY_LABELS_EN = ["M", "T", "W", "T", "F", "S", "S"];
+import {
+  DAY_LABELS,
+  DAY_LABELS_EN,
+  MONTH_ABBR,
+  MONTH_ABBR_EN,
+  MONTH_NAMES_EN,
+} from "./calendarData";
+import { PickerSheet, PickerRow, PickerChip } from "./calendarComponents";
 
 const s = StyleSheet.create({
   overlay: { alignItems: "center", justifyContent: "center" },
@@ -124,14 +85,6 @@ const s = StyleSheet.create({
     borderTopWidth: 1,
   },
   footerBtn: { fontWeight: "700", fontSize: 14 },
-  sheetOverlay: { alignItems: "center", justifyContent: "center" },
-  sheetCard: {
-    borderRadius: 16,
-    elevation: 12,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 12,
-  },
   sheetScroll: { paddingVertical: 8 },
   yearLabel: {
     fontSize: 13,
@@ -140,16 +93,6 @@ const s = StyleSheet.create({
     marginBottom: 12,
   },
   yearMonthGrid: { flexDirection: "row", flexWrap: "wrap" },
-  pickerRow: {
-    paddingVertical: 11,
-    paddingHorizontal: 20,
-    marginHorizontal: 12,
-    marginVertical: 2,
-    borderRadius: 10,
-    alignItems: "center",
-  },
-  chipCell: { width: "33.33%", paddingVertical: 8, alignItems: "center" },
-  chipInner: { paddingVertical: 8, paddingHorizontal: 10, borderRadius: 12 },
 });
 
 export const CalendarPicker = memo(function CalendarPicker({
@@ -578,126 +521,4 @@ export const CalendarPicker = memo(function CalendarPicker({
   );
 });
 
-function PickerSheet({
-  children,
-  onClose,
-  colors,
-  width,
-  maxHeight,
-  contentStyle,
-}: {
-  children: ReactNode;
-  onClose: () => void;
-  colors: Palette;
-  width: ViewStyle["width"];
-  maxHeight?: number;
-  contentStyle?: ViewStyle;
-}) {
-  return (
-    <View
-      style={[
-        StyleSheet.absoluteFill,
-        s.sheetOverlay,
-        { backgroundColor: colors.overlay },
-      ]}
-    >
-      <Pressable
-        style={StyleSheet.absoluteFill}
-        onPress={onClose}
-      />
-      <View
-        style={[
-          s.sheetCard,
-          { backgroundColor: colors.card, shadowColor: colors.shadow, width },
-          maxHeight ? { maxHeight } : null,
-          contentStyle,
-        ]}
-      >
-        {children}
-      </View>
-    </View>
-  );
-}
 
-function PickerRow({
-  label,
-  selected,
-  colors,
-  fontSize = 14,
-  onPress,
-}: {
-  label: string;
-  selected: boolean;
-  colors: Palette;
-  fontSize?: number;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable
-      onPress={onPress}
-      style={[
-        s.pickerRow,
-        { backgroundColor: selected ? colors.primarySoft : "transparent" },
-      ]}
-    >
-      <Text
-        style={{
-          color: selected ? colors.primary : colors.text,
-          fontSize,
-          fontWeight: selected ? "700" : "500",
-        }}
-      >
-        {label}
-      </Text>
-    </Pressable>
-  );
-}
-
-function PickerChip({
-  label,
-  selected,
-  disabled,
-  colors,
-  onPress,
-}: {
-  label: string;
-  selected: boolean;
-  disabled: boolean;
-  colors: Palette;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable
-      onPress={() => {
-        if (!disabled) onPress();
-      }}
-      disabled={disabled}
-      style={s.chipCell}
-    >
-      <View
-        style={[
-          s.chipInner,
-          {
-            backgroundColor: selected ? colors.primary : "transparent",
-            opacity: disabled ? 0.3 : 1,
-          },
-        ]}
-      >
-        <Text
-          numberOfLines={1}
-          style={{
-            color: disabled
-              ? colors.disabled
-              : selected
-                ? colors.onPrimary
-                : colors.text,
-            fontSize: 13,
-            fontWeight: selected ? "700" : "500",
-          }}
-        >
-          {label}
-        </Text>
-      </View>
-    </Pressable>
-  );
-}
