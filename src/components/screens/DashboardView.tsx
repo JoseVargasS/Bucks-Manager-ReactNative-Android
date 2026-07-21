@@ -1,5 +1,6 @@
-import { Fragment, memo, useMemo, useCallback, useRef, useState } from "react";
-import { ScrollView, View } from "react-native";
+import { Fragment, memo, useMemo, useCallback, useEffect, useRef, useState } from "react";
+import { Animated, Easing, ScrollView, View } from "react-native";
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 
 import { formatMoney, calculateMonthSummary, aggregateExpensesByTag, aggregateIncomesByTag, type PieSlice } from "@/domain/bucksLogic";
 import { base } from "@/styles/baseStyles";
@@ -17,6 +18,8 @@ import { Text } from "@/components/ui/AppText";
 import { useTagMaps } from "@/hooks/useTagMaps";
 import { TransactionRow, type TagButtonRef } from "@/components/screens/TransactionRow";
 import { PeriodControls } from "@/components/layout/PeriodControls";
+import { DashboardBubble } from "@/components/ui/DashboardBubble";
+import { useModalTransition } from "@/components/ui/useModalTransition";
 
 export const DashboardView = memo(function DashboardView({
   colors,
@@ -56,6 +59,41 @@ export const DashboardView = memo(function DashboardView({
   const { tagColorMap, tagLabelMap } = useTagMaps(tagsList);
   const [dashBreakdownTab, setDashBreakdownTab] = useState("expense");
   const tagButtonRefs = useRef<Record<number, TagButtonRef | null>>({});
+
+  const [bubbleKind, setBubbleKind] = useState<"income" | "expense" | "balance" | null>(null);
+  const [bubbleFrame, setBubbleFrame] = useState({ x: 0, y: 0, width: 0, height: 0 });
+  const bubbleTransition = useModalTransition(Boolean(bubbleKind), 6, 0.95, () => setBubbleKind(null));
+  const incomeCardRef = useRef<View>(null);
+  const expenseCardRef = useRef<View>(null);
+  const balanceCardRef = useRef<View>(null);
+
+  const handleOpenBubble = useCallback((kind: "income" | "expense" | "balance") => {
+    const refMap = { income: incomeCardRef, expense: expenseCardRef, balance: balanceCardRef };
+    refMap[kind].current?.measureInWindow((x: number, y: number, width: number, height: number) => {
+      setBubbleFrame({ x, y, width, height });
+      setBubbleKind(kind);
+    });
+  }, []);
+
+  const prevMonth = month === 0 ? 11 : month - 1;
+  const prevYear = month === 0 ? year - 1 : year;
+  const prevMonthName = UI_MONTH_NAMES[copy.languageCode === "en" ? "en" : "es"][prevMonth];
+  const prevMonthKey = `${prevMonthName} ${prevYear}`;
+  const prevMonthTransactions = useMemo(
+    () => allTransactions.filter((tx) => {
+      const d = tx.rawDateMs != null ? new Date(tx.rawDateMs) : new Date(tx.rawDate);
+      return d.getMonth() === prevMonth && d.getFullYear() === prevYear;
+    }),
+    [allTransactions, prevMonth, prevYear],
+  );
+  const prevSummary = useMemo<SummaryRow>(
+    () => {
+      const emptyFreq: Record<string, number> = {};
+      return calculateMonthSummary(prevMonthTransactions, emptyFreq, prevMonthKey);
+    },
+    [prevMonthTransactions, prevMonthKey],
+  );
+
   const localizedMonthNames = copy.languageCode === "en" ? UI_MONTH_NAMES.en : UI_MONTH_NAMES.es;
   const monthKey = `${localizedMonthNames[month]} ${year}`;
   const monthTransactions = useMemo(
@@ -108,7 +146,18 @@ export const DashboardView = memo(function DashboardView({
     [onOpenDetail],
   );
 
+  const cardAnim = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.timing(cardAnim, {
+      toValue: 1,
+      duration: 400,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+  }, [cardAnim]);
+
   return (
+    <>
     <ScrollView
       showsVerticalScrollIndicator={false}
       contentContainerStyle={[
@@ -142,49 +191,39 @@ export const DashboardView = memo(function DashboardView({
         >
           {`${copy.dashboardSubtitle} · ${monthKey}`}
         </Text>
-        <View style={[styles.statsGrid, styles.statsGridMobile, { paddingHorizontal: 0 }]}>
-          <StatCard
-            title={copy.freqIncome}
-            value={formatMoney(summary.freqIncome, currencySymbol)}
-            tone="income"
-            icon="cash"
-            colors={colors}
-          />
-          <StatCard
-            title={copy.nonFreqIncome}
-            value={formatMoney(summary.nonFreqIncome, currencySymbol)}
-            tone="income"
-            icon="trending-up"
-            colors={colors}
-          />
-          <StatCard
-            title={copy.freqExpense}
-            value={formatMoney(summary.freqExpense, currencySymbol)}
-            tone="expense"
-            icon="credit-card"
-            colors={colors}
-          />
-          <StatCard
-            title={copy.nonFreqExpense}
-            value={formatMoney(summary.nonFreqExpense, currencySymbol)}
-            tone="expense"
-            icon="trending-down"
-            colors={colors}
-          />
-          <StatCard
-            title={copy.totalExpense}
-            value={formatMoney(summary.totalExpense, currencySymbol)}
-            tone="warn"
-            icon="basket"
-            colors={colors}
-          />
-          <StatCard
-            title={copy.balance}
-            value={formatMoney(summary.netMonthly, currencySymbol)}
-            tone="balance"
-            icon="wallet"
-            colors={colors}
-          />
+        <View style={{ gap: 8 }}>
+          <Animated.View style={{ flexDirection: "row", gap: 8, opacity: cardAnim, transform: [{ translateY: cardAnim.interpolate({ inputRange: [0, 1], outputRange: [12, 0] }) }] }}>
+            <View ref={incomeCardRef} collapsable={false} style={{ flex: 1 }}>
+              <StatCard
+                title={copy.income}
+                value={formatMoney(summary.totalIncome, currencySymbol)}
+                tone="income"
+                icon="cash"
+                colors={colors}
+                onPress={() => handleOpenBubble("income")}
+              />
+            </View>
+            <View ref={expenseCardRef} collapsable={false} style={{ flex: 1 }}>
+              <StatCard
+                title={copy.expensesLabel}
+                value={formatMoney(summary.totalExpense, currencySymbol)}
+                tone="expense"
+                icon="credit-card"
+                colors={colors}
+                onPress={() => handleOpenBubble("expense")}
+              />
+            </View>
+          </Animated.View>
+          <Animated.View ref={balanceCardRef} collapsable={false} style={{ opacity: cardAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 1] }), transform: [{ translateY: cardAnim.interpolate({ inputRange: [0, 1], outputRange: [16, 0] }) }] }}>
+            <StatCard
+              title={copy.balance}
+              value={formatMoney(summary.netMonthly, currencySymbol)}
+              tone="balance"
+              icon="wallet"
+              colors={colors}
+              onPress={() => handleOpenBubble("balance")}
+            />
+          </Animated.View>
         </View>
       </View>
 
@@ -307,5 +346,156 @@ export const DashboardView = memo(function DashboardView({
         )}
       </View>
     </ScrollView>
+
+      <DashboardBubble
+        visible={bubbleTransition.modalVisible}
+        frame={bubbleFrame}
+        containerStyle={bubbleTransition.containerStyle}
+        panelStyle={bubbleTransition.panelStyle}
+        colors={colors}
+        onClose={() => setBubbleKind(null)}
+      >
+        {bubbleKind === "income" && (() => {
+          const total = summary.totalIncome;
+          const freqPct = total > 0 ? Math.round(summary.freqIncome / total * 100) : 0;
+          const nonFreqPct = total > 0 ? Math.round(summary.nonFreqIncome / total * 100) : 0;
+          return (
+            <>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 8 }}>
+                <MaterialCommunityIcons name="cash" size={18} color={colors.income} />
+                <Text style={{ fontSize: 14, fontWeight: "600", color: colors.text }}>{copy.income}</Text>
+              </View>
+              <Text style={{ fontSize: 20, fontWeight: "700", color: colors.income, fontVariant: ["tabular-nums"], marginBottom: 12 }}>
+                {formatMoney(total, currencySymbol)}
+              </Text>
+              <View style={{ height: 6, borderRadius: 3, backgroundColor: colors.input, overflow: "hidden", flexDirection: "row", marginBottom: 12 }}>
+                {freqPct > 0 && <View style={{ flex: freqPct, backgroundColor: colors.income }} />}
+                {nonFreqPct > 0 && <View style={{ flex: nonFreqPct, backgroundColor: colors.incomeSoft }} />}
+              </View>
+              <View style={{ gap: 4 }}>
+                <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6, flex: 1 }}>
+                    <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: colors.income }} />
+                    <Text style={{ fontSize: 13, color: colors.muted, flex: 1 }} numberOfLines={1}>{copy.freqIncomeFull}</Text>
+                  </View>
+                  <Text style={{ fontSize: 13, fontWeight: "600", color: colors.text, fontVariant: ["tabular-nums"] }}>{freqPct}%</Text>
+                </View>
+                <Text style={{ fontSize: 14, fontWeight: "600", color: colors.text, fontVariant: ["tabular-nums"], marginBottom: 8, marginLeft: 14 }}>
+                  {formatMoney(summary.freqIncome, currencySymbol)}
+                </Text>
+                <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6, flex: 1 }}>
+                    <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: colors.incomeSoft }} />
+                    <Text style={{ fontSize: 13, color: colors.muted, flex: 1 }} numberOfLines={1}>{copy.nonFreqIncomeFull}</Text>
+                  </View>
+                  <Text style={{ fontSize: 13, fontWeight: "600", color: colors.text, fontVariant: ["tabular-nums"] }}>{nonFreqPct}%</Text>
+                </View>
+                <Text style={{ fontSize: 14, fontWeight: "600", color: colors.text, fontVariant: ["tabular-nums"], marginLeft: 14 }}>
+                  {formatMoney(summary.nonFreqIncome, currencySymbol)}
+                </Text>
+              </View>
+            </>
+          );
+        })()}
+
+        {bubbleKind === "expense" && (() => {
+          const total = Math.abs(summary.totalExpense);
+          const freqVal = Math.abs(summary.freqExpense);
+          const nonFreqVal = Math.abs(summary.nonFreqExpense);
+          const freqPct = total > 0 ? Math.round(freqVal / total * 100) : 0;
+          const nonFreqPct = total > 0 ? Math.round(nonFreqVal / total * 100) : 0;
+          return (
+            <>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 8 }}>
+                <MaterialCommunityIcons name="credit-card" size={18} color={colors.expense} />
+                <Text style={{ fontSize: 14, fontWeight: "600", color: colors.text }}>{copy.expensesLabel}</Text>
+              </View>
+              <Text style={{ fontSize: 20, fontWeight: "700", color: colors.expense, fontVariant: ["tabular-nums"], marginBottom: 12 }}>
+                {formatMoney(summary.totalExpense, currencySymbol)}
+              </Text>
+              <View style={{ height: 6, borderRadius: 3, backgroundColor: colors.input, overflow: "hidden", flexDirection: "row", marginBottom: 12 }}>
+                {freqPct > 0 && <View style={{ flex: freqPct, backgroundColor: colors.expense }} />}
+                {nonFreqPct > 0 && <View style={{ flex: nonFreqPct, backgroundColor: colors.warnSoft }} />}
+              </View>
+              <View style={{ gap: 4 }}>
+                <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6, flex: 1 }}>
+                    <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: colors.expense }} />
+                    <Text style={{ fontSize: 13, color: colors.muted, flex: 1 }} numberOfLines={1}>{copy.freqExpenseFull}</Text>
+                  </View>
+                  <Text style={{ fontSize: 13, fontWeight: "600", color: colors.text, fontVariant: ["tabular-nums"] }}>{freqPct}%</Text>
+                </View>
+                <Text style={{ fontSize: 14, fontWeight: "600", color: colors.text, fontVariant: ["tabular-nums"], marginBottom: 8, marginLeft: 14 }}>
+                  {formatMoney(summary.freqExpense, currencySymbol)}
+                </Text>
+                <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6, flex: 1 }}>
+                    <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: colors.warnSoft }} />
+                    <Text style={{ fontSize: 13, color: colors.muted, flex: 1 }} numberOfLines={1}>{copy.nonFreqExpenseFull}</Text>
+                  </View>
+                  <Text style={{ fontSize: 13, fontWeight: "600", color: colors.text, fontVariant: ["tabular-nums"] }}>{nonFreqPct}%</Text>
+                </View>
+                <Text style={{ fontSize: 14, fontWeight: "600", color: colors.text, fontVariant: ["tabular-nums"], marginLeft: 14 }}>
+                  {formatMoney(summary.nonFreqExpense, currencySymbol)}
+                </Text>
+              </View>
+            </>
+          );
+        })()}
+
+        {bubbleKind === "balance" && (() => {
+          const savingsRate = summary.totalIncome > 0
+            ? `${Math.round(summary.netMonthly / summary.totalIncome * 100)}%`
+            : "—";
+          const prev = prevSummary.netMonthly;
+          const current = summary.netMonthly;
+          const change = prev !== 0 ? Math.round((current - prev) / Math.abs(prev) * 100) : (current !== 0 ? 100 : 0);
+          const vsPrev = prev !== 0 ? (change >= 0 ? `+${change}%` : `${change}%`) : "—";
+          const vsPrevPositive = prev !== 0 ? change >= 0 : current >= 0;
+          return (
+            <>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 8 }}>
+                <MaterialCommunityIcons name="wallet" size={18} color={colors.info} />
+                <Text style={{ fontSize: 14, fontWeight: "600", color: colors.text }}>{copy.balance}</Text>
+              </View>
+              <Text style={{ fontSize: 20, fontWeight: "700", color: summary.netMonthly >= 0 ? colors.income : colors.expense, fontVariant: ["tabular-nums"], marginBottom: 12 }}>
+                {formatMoney(current, currencySymbol)}
+              </Text>
+              <View style={{ gap: 8 }}>
+                <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                  <Text style={{ fontSize: 13, color: colors.muted }}>{copy.income}</Text>
+                  <Text style={{ fontSize: 13, fontWeight: "600", color: colors.income, fontVariant: ["tabular-nums"] }}>
+                    {formatMoney(summary.totalIncome, currencySymbol)}
+                  </Text>
+                </View>
+                <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                  <Text style={{ fontSize: 13, color: colors.muted }}>{copy.expensesLabel}</Text>
+                  <Text style={{ fontSize: 13, fontWeight: "600", color: colors.expense, fontVariant: ["tabular-nums"] }}>
+                    {formatMoney(summary.totalExpense, currencySymbol)}
+                  </Text>
+                </View>
+                <View style={{ height: 1, backgroundColor: colors.border }} />
+                <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                  <Text style={{ fontSize: 13, color: colors.muted }}>{copy.savingsRate}</Text>
+                  <Text style={{ fontSize: 13, fontWeight: "600", color: colors.text, fontVariant: ["tabular-nums"] }}>
+                    {savingsRate}
+                  </Text>
+                </View>
+                <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                  <Text style={{ fontSize: 13, color: colors.muted }}>{copy.vsPrevMonth}</Text>
+                  <Text style={{
+                    fontSize: 13, fontWeight: "600",
+                    color: vsPrevPositive ? colors.income : colors.expense,
+                    fontVariant: ["tabular-nums"],
+                  }}>
+                    {vsPrev}
+                  </Text>
+                </View>
+              </View>
+            </>
+          );
+        })()}
+      </DashboardBubble>
+    </>
   );
 });

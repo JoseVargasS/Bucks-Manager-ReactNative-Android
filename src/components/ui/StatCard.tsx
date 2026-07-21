@@ -6,11 +6,11 @@ import { type Palette } from "@/theme/colors";
 import { type MaterialIconName } from "@/types";
 import { Text } from "./AppText";
 
-export const StatCard = memo(function StatCard({ title, value, icon, tone, colors, action }: { title: string; value: string; icon: MaterialIconName; tone: "income" | "expense" | "warn" | "balance"; colors: Palette; action?: () => void }) {
+export const StatCard = memo(function StatCard({ title, value, icon, tone, colors, action, onPress }: { title: string; value: string; icon: MaterialIconName; tone: "income" | "expense" | "warn" | "balance"; colors: Palette; action?: () => void; onPress?: () => void }) {
   const color = tone === "income" ? colors.income : tone === "warn" ? colors.warn : tone === "balance" ? colors.info : colors.expense;
   const softBg = tone === "income" ? colors.incomeSoft : tone === "warn" ? colors.warnSoft : tone === "balance" ? colors.infoSoft : colors.expenseSoft;
   return (
-    <View style={[styles.statCard, { backgroundColor: colors.card }]}>
+    <Pressable onPress={onPress} style={[styles.statCard, { backgroundColor: colors.card }]}>
       <View style={[styles.statIcon, { backgroundColor: softBg }]}>
         <MaterialCommunityIcons name={icon} size={20} color={color} />
       </View>
@@ -23,6 +23,6 @@ export const StatCard = memo(function StatCard({ title, value, icon, tone, color
           <MaterialCommunityIcons name="pencil" size={15} color={colors.muted} />
         </Pressable>
       )}
-    </View>
+    </Pressable>
   );
 });
