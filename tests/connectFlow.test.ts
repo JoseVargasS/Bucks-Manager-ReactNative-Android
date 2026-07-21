@@ -20,10 +20,10 @@ jest.mock("@react-native-google-signin/google-signin", () => ({
   GoogleSignin: { getTokens: jest.fn(() => ({ accessToken: "mock-token" })) },
 }));
 
-import { findCompatibleSheets, createBucksSpreadsheet } from "@/api/googleWorkspace";
-
+import { findCompatibleSheets, createBucksSpreadsheet, saveTransaction } from "@/api/googleWorkspace";
 const mockFind = findCompatibleSheets as jest.Mock;
 const mockCreate = createBucksSpreadsheet as jest.Mock;
+const mockSaveTx = saveTransaction as jest.Mock;
 
 import {
   combineTransactions,
@@ -145,6 +145,15 @@ describe("findOrCreateSpreadsheet", () => {
 });
 
 describe("scheduleBackgroundUpload", () => {
+  function makeDeps() {
+    return {
+      syncQueueRef: { current: Promise.resolve() },
+      setPendingSync: jest.fn(),
+      pendingSyncRef: { current: false },
+      reloadFromGoogle: jest.fn().mockResolvedValue(undefined),
+    };
+  }
+
   test("queues transactions via syncQueue", async () => {
     let resolveQueue: () => void;
     const queuePromise = new Promise<void>((r) => { resolveQueue = r; });
@@ -165,6 +174,49 @@ describe("scheduleBackgroundUpload", () => {
 
     expect(reloadFromGoogle).toHaveBeenCalled();
   });
+
+  test("returns early when token is empty", async () => {
+    const { GoogleSignin } = jest.requireMock("@react-native-google-signin/google-signin");
+    GoogleSignin.getTokens.mockResolvedValueOnce({ accessToken: "" });
+    const deps = makeDeps();
+
+    scheduleBackgroundUpload([makeTx()], "sheet-1", deps);
+    await new Promise((r) => setTimeout(r, 10));
+
+    expect(deps.setPendingSync).not.toHaveBeenCalled();
+  });
+
+  test("continues on saveTransaction failure", async () => {
+    mockSaveTx.mockRejectedValueOnce(new Error("sheet write failed"));
+    const deps = makeDeps();
+
+    scheduleBackgroundUpload([makeTx()], "sheet-1", deps);
+    await new Promise((r) => setTimeout(r, 10));
+
+    expect(deps.reloadFromGoogle).toHaveBeenCalled();
+  });
+
+  test("resets pendingSync on chain error", async () => {
+    mockSaveTx.mockResolvedValue(undefined);
+    const deps = makeDeps();
+    deps.reloadFromGoogle.mockRejectedValueOnce(new Error("reload failed"));
+
+    scheduleBackgroundUpload([makeTx()], "sheet-1", deps);
+    await new Promise((r) => setTimeout(r, 10));
+
+    expect(deps.pendingSyncRef.current).toBe(false);
+  });
+
+  test("handles rejected initial queue promise", async () => {
+    const syncQueueRef = { current: Promise.reject(new Error("prior failure")) };
+    const deps = makeDeps();
+    deps.syncQueueRef = syncQueueRef;
+
+    scheduleBackgroundUpload([makeTx()], "sheet-1", deps);
+    await new Promise((r) => setTimeout(r, 10));
+
+    expect(deps.setPendingSync).toHaveBeenCalled();
+  });
 });
 
 describe("handleOfflineAfterConnect", () => {
@@ -175,18 +227,125 @@ describe("handleOfflineAfterConnect", () => {
     reloadFromGoogle: jest.fn(),
   };
 
+  function makeFin() {
+    return {
+      applyFinancialState: jest.fn(),
+      persistFinancialState: jest.fn(),
+      freqIncomeRef: { current: {} },
+    };
+  }
+
+  function makeTags() {
+    return {
+      tagsListRef: { current: [] as Tag[] },
+      setTagsList: jest.fn(),
+    };
+  }
+
+  function makeHelpers() {
+    return { tagColors: ["#888"], language: "es" as const };
+  }
+
+  function makeSessionSetters() {
+    return { setConnectionStatus: jest.fn(), setOffline: jest.fn() };
+  }
+
+  const emptyRemoteStatsRef = { current: { count: 0, txs: [] as Transaction[] } };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
   test("returns early when no offline transactions", async () => {
-    const sessionSetters = { setConnectionStatus: jest.fn(), setOffline: jest.fn() };
+    const sessionSetters = makeSessionSetters();
     await handleOfflineAfterConnect(
       [], false, "sheet-1",
-      { applyFinancialState: jest.fn(), persistFinancialState: jest.fn(), freqIncomeRef: { current: {} } },
-      { tagsListRef: { current: [] }, setTagsList: jest.fn() },
-      { tagColors: [], language: "es" },
+      makeFin(), makeTags(), makeHelpers(),
       deps,
       sessionSetters,
       { current: null },
-      { current: { count: 0, txs: [] } },
+      emptyRemoteStatsRef,
     );
+    expect(sessionSetters.setOffline).toHaveBeenCalledWith(false);
+  });
+
+  test("applies financial state and uploads when isNewSheet is true", async () => {
+    const tx = makeTx({ rowId: 7, tags: [] });
+    const fin = makeFin();
+    const tags = makeTags();
+    const helpers = makeHelpers();
+    const sessionSetters = makeSessionSetters();
+
+    await handleOfflineAfterConnect(
+      [tx], true, "new-sheet",
+      fin, tags, helpers,
+      deps, sessionSetters,
+      { current: null },
+      emptyRemoteStatsRef,
+    );
+
+    expect(fin.applyFinancialState).toHaveBeenCalled();
+    expect(fin.persistFinancialState).toHaveBeenCalled();
+    expect(sessionSetters.setOffline).toHaveBeenCalledWith(false);
+  });
+
+  test("calls onMerge when mergePromptRef is set", async () => {
+    const tx = makeTx({ rowId: 8, tags: [] });
+    const remoteTx = makeTx({ rowId: 9, rawDate: "2026-02-01T12:00:00.000Z" });
+    const fin = makeFin();
+    const tags = makeTags();
+    const helpers = makeHelpers();
+    const sessionSetters = makeSessionSetters();
+    let mergeCallback: (() => void) | null = null;
+
+    await handleOfflineAfterConnect(
+      [tx], false, "sheet-1",
+      fin, tags, helpers,
+      deps, sessionSetters,
+      {
+        current: (cfg) => {
+          mergeCallback = cfg.onMerge;
+          cfg.onMerge();
+        },
+      },
+      { current: { count: 1, txs: [remoteTx] } },
+    );
+
+    expect(mergeCallback).not.toBeNull();
+    expect(fin.applyFinancialState).toHaveBeenCalled();
+  });
+
+  test("calls onRemoteOnly when mergePrompt signals remote-only", async () => {
+    const tx = makeTx({ rowId: 10, tags: [] });
+    const sessionSetters = makeSessionSetters();
+
+    await handleOfflineAfterConnect(
+      [tx], false, "sheet-1",
+      makeFin(), makeTags(), makeHelpers(),
+      deps, sessionSetters,
+      {
+        current: (cfg) => {
+          cfg.onRemoteOnly();
+        },
+      },
+      { current: { count: 1, txs: [] } },
+    );
+
+    expect(sessionSetters.setOffline).toHaveBeenCalledWith(false);
+  });
+
+  test("continues when mergePromptRef is null", async () => {
+    const tx = makeTx({ rowId: 11, tags: [] });
+    const sessionSetters = makeSessionSetters();
+
+    await handleOfflineAfterConnect(
+      [tx], false, "sheet-1",
+      makeFin(), makeTags(), makeHelpers(),
+      deps, sessionSetters,
+      { current: null },
+      { current: { count: 2, txs: [] } },
+    );
+
     expect(sessionSetters.setOffline).toHaveBeenCalledWith(false);
   });
 });

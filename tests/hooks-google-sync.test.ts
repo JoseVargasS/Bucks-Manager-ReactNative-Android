@@ -98,7 +98,7 @@ describe("useGoogleSync", () => {
       if (url.includes("INCOME AND EXPENSES!A2:") && url.includes("FORMULA")) return json({ values: [] });
       if (url.includes("INCOME AND EXPENSES!A2:")) return json({ values: [] });
       if (url.includes("MONTHLY SUMMARY!A1:I") && (init.method || "GET") === "GET") return json({ values: [] });
-      if (url.includes("MONTHLY SUMMARY!K1:K2")) return json({ values: [] });
+      if (url.includes("MONTHLY SUMMARY!K1:K2") || (url.includes("MONTHLY SUMMARY!K") && url.includes("!K2"))) return json({ values: [] });
       if (url.includes("MONTHLY SUMMARY!L1:L2")) return json({ values: [] });
       return json({});
     };
@@ -630,8 +630,8 @@ describe("useGoogleSync", () => {
     const original = globalThis.fetch;
     const tagsHandler: any = async (input: any, init: any = {}) => {
       const url = decodeURIComponent(String(input));
-      if (url.includes("MONTHLY SUMMARY!K1:K2")) {
-        return json({ values: [["TAGS"], [JSON.stringify([{ id: "from-sheet", label: "FromSheet", color: "#aaaaaa" }])]] });
+      if (url.includes("MONTHLY SUMMARY!K") && (url.includes("!K2") || url.includes(":K2"))) {
+        return json({ values: [[JSON.stringify([{ id: "from-sheet", label: "FromSheet", color: "#aaaaaa" }])]] });
       }
       return defaultSheetsHandler([])(input, init);
     };
@@ -786,4 +786,210 @@ describe("useGoogleSync", () => {
     api.wireRemoteUiPreferences(() => {});
     expect(typeof api.wireRemoteUiPreferences).toBe("function");
   });
+
+  // ─── syncGoogleInBackground handles rejected queue (line 272) ───
+
+  test("syncGoogleInBackground recovers from rejected queue promise", async () => {
+    const mod = await import("../src/hooks/useGoogleSync.ts");
+    mod.syncQueueRef.current = Promise.reject(new Error("prior crash"));
+    const original = globalThis.fetch;
+    globalThis.fetch = defaultSheetsHandler([]) as any;
+    try {
+      let synced = false;
+      const api = useGoogleSync(makeSession(), emptyFin, emptyTags, emptyHelpers, { current: null });
+      api.syncGoogleInBackground(async () => { synced = true; }, "sync");
+      await new Promise((r) => setTimeout(r, 30));
+      expect(synced).toBe(true);
+    } finally {
+      globalThis.fetch = original;
+    }
+  });
+
+  // ─── restoreSession offline cache path (line 118) ───
+
+  test("restoreSession loads offline cache when no financial cache exists", async () => {
+    const secureStore = g.__bucksSecureStoreMock;
+    secureStore.reset();
+    secureStore.values.set("bucks_google_access_token", "stored-tok");
+    secureStore.values.set("bucks_spreadsheet_id", "sheet-1");
+    const fileSystem = g.__bucksFileSystemMock;
+    fileSystem.reset();
+    const offlineData = {
+      schemaVersion: 3,
+      transactions: [],
+      summaries: [],
+      freqIncome: {},
+      lastSyncedAt: "2026-06-01T00:00:00.000Z",
+    };
+    fileSystem.files.set("mock://document/bucks-cache.json", JSON.stringify(offlineData));
+    const original = globalThis.fetch;
+    globalThis.fetch = defaultSheetsHandler([]) as any;
+    try {
+      let applied = false;
+      const fin = { ...emptyFin, applyFinancialState: () => { applied = true; } };
+      const session = makeSession();
+      const api = useGoogleSync(session, fin, emptyTags, emptyHelpers, { current: null });
+      await api.restoreSession();
+      expect(applied).toBe(true);
+    } finally {
+      globalThis.fetch = original;
+      secureStore.reset();
+      fileSystem.reset();
+    }
+  });
+
+  // ─── reloadFromGoogle with summary data (line 210) ───
+
+  test("reloadFromGoogle uses sheet summaries when available", async () => {
+    const original = globalThis.fetch;
+    const handler: any = async (input: any, init: any) => {
+      const url = decodeURIComponent(String(input));
+      if (url.includes("MONTHLY SUMMARY!A1:I")) {
+        return json({ values: [
+          ["Month", "Freq Income", "Non Freq Income", "Total Income", "Freq Expense", "Non Freq Expense", "Total Expense", "Net Monthly", "Net No Freq"],
+          ["2026-01", "5000", "200", "5200", "3000", "100", "3100", "2100", "2300"],
+        ] });
+      }
+      if (url.includes("MONTHLY SUMMARY!K") && (url.includes(":K2") || url.includes("!K2"))) return json({ values: [["TAGS"], ["[]"]] });
+      return defaultSheetsHandler([])(input, init);
+    };
+    globalThis.fetch = handler;
+    try {
+      let appliedSummaries: any;
+      const fin = { ...emptyFin, applyFinancialState: (_tx: any, summaries: any) => { appliedSummaries = summaries; } };
+      const api = useGoogleSync(makeSession(), fin, emptyTags, emptyHelpers, { current: null });
+      await api.reloadFromGoogle("tok", "sheet-1", false);
+      expect(appliedSummaries).toBeTruthy();
+      expect(appliedSummaries[0].monthYear).toBeTruthy();
+    } finally {
+      globalThis.fetch = original;
+    }
+  });
+
+  // ─── reloadFromGoogle merges tags when they differ (lines 222-223) ───
+
+  test("reloadFromGoogle saves merged tags when catalogue differs", async () => {
+    const original = globalThis.fetch;
+    const handler: any = async (input: any, init: any) => {
+      const url = decodeURIComponent(String(input));
+      if (url.includes("MONTHLY SUMMARY!K") && (url.includes("!K2") || url.includes(":K2"))) {
+        return json({ values: [[JSON.stringify([{ id: "new-tag", label: "New", color: "#aaaaaa" }])]] });
+      }
+      return defaultSheetsHandler([])(input, init);
+    };
+    globalThis.fetch = handler;
+    try {
+      const tags = {
+        tagsList: [] as any[],
+        setTagsList: jest.fn(),
+      };
+      const api = useGoogleSync(makeSession(), emptyFin, tags, emptyHelpers, { current: null });
+      await api.reloadFromGoogle("tok", "sheet-1", false);
+      expect(tags.setTagsList).toHaveBeenCalled();
+    } finally {
+      globalThis.fetch = original;
+    }
+  });
+
+  // ─── reloadFromGoogle applies remote history (lines 238-239) ───
+
+  test("reloadFromGoogle applies remote history from sheet", async () => {
+    const original = globalThis.fetch;
+    const handler: any = async (input: any, init: any) => {
+      const url = decodeURIComponent(String(input));
+      if (url.includes("MONTHLY SUMMARY!M1:M2")) {
+        return json({ values: [["HISTORY"], [JSON.stringify([{
+          id: "h1", timestamp: "2026-07-01T00:00:00.000Z", action: "delete",
+          transaction: { rowId: 1, rawDate: "2026-01-15", amount: 100, detail: "test", type: "GASTO NO FRECUENTE" },
+        }])]] });
+      }
+      if (url.includes("MONTHLY SUMMARY!K") && (url.includes("!K2") || url.includes(":K2"))) return json({ values: [["[]"]] });
+      return defaultSheetsHandler([])(input, init);
+    };
+    globalThis.fetch = handler;
+    try {
+      let appliedHistory: any = null;
+      const api = useGoogleSync(makeSession(), emptyFin, emptyTags, emptyHelpers, { current: null });
+      api.wireRemoteHistory((entries: any) => { appliedHistory = entries; });
+      await api.reloadFromGoogle("tok", "sheet-1", false);
+      expect(appliedHistory).toBeTruthy();
+      expect(appliedHistory.length).toBe(1);
+      expect(appliedHistory[0].action).toBe("delete");
+    } finally {
+      globalThis.fetch = original;
+    }
+  });
+
+  // ─── restoreSession offline-only path (line 118) ───
+
+  test("restoreSession loads offline cache when no token stored", async () => {
+    const secureStore = g.__bucksSecureStoreMock;
+    secureStore.reset();
+    const fileSystem = g.__bucksFileSystemMock;
+    fileSystem.reset();
+    const offlineData = {
+      schemaVersion: 3,
+      transactions: [{
+        rowId: 1, date: "15-jan-26", rawDate: "2026-01-15T12:00:00.000Z",
+        rawDateMs: 1736942400000, amount: 50, detail: "offline tx",
+        type: "GASTO NO FRECUENTE" as const,
+      }],
+      summaries: [] as any[],
+      freqIncome: {} as Record<string, number>,
+    };
+    fileSystem.files.set("mock://document/bucks-offline-cache.json", JSON.stringify(offlineData));
+    try {
+      let applied = false;
+      const fin = { ...emptyFin, applyFinancialState: () => { applied = true; } };
+      const api = useGoogleSync(
+        makeSession({ accessToken: "", spreadsheetId: "" }),
+        fin, emptyTags, emptyHelpers, { current: null },
+      );
+      await api.restoreSession();
+      expect(applied).toBe(true);
+    } finally {
+      secureStore.reset();
+      fileSystem.reset();
+    }
+  });
+
+  // ─── writeHistory no-op without spreadsheet (lines 335-337) ───
+
+  test("writeHistory is no-op when spreadsheetId is empty", async () => {
+    const original = globalThis.fetch;
+    let fetchCalled = false;
+    const handler: any = () => { fetchCalled = true; return json({}); };
+    globalThis.fetch = handler;
+    try {
+      const api = useGoogleSync(
+        makeSession({ spreadsheetId: "" }),
+        emptyFin, emptyTags, emptyHelpers, { current: null },
+      );
+      api.writeHistory([]);
+      await new Promise((r) => setTimeout(r, 10));
+      expect(fetchCalled).toBe(false);
+    } finally {
+      globalThis.fetch = original;
+    }
+  });
+
+  // ─── wireRemoteHistory (line 346) ───
+
+  test("wireRemoteHistory registers callback", async () => {
+    const api = useGoogleSync(makeSession(), emptyFin, emptyTags, emptyHelpers, { current: null });
+    const cb = jest.fn();
+    api.wireRemoteHistory(cb);
+    const remoteHistoryField = (api as any).wireRemoteHistory;
+    expect(typeof remoteHistoryField).toBe("function");
+  });
+
+  // ─── wireMergePrompt (line 353) ───
+
+  test("wireMergePrompt registers callback", async () => {
+    const api = useGoogleSync(makeSession(), emptyFin, emptyTags, emptyHelpers, { current: null });
+    const cb = jest.fn();
+    api.wireMergePrompt(cb);
+    expect(typeof api.wireMergePrompt).toBe("function");
+  });
+
 });

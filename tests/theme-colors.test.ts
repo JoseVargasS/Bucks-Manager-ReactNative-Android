@@ -2,11 +2,13 @@ import type { ColorSchemePreference } from "../src/theme/colors";
 
 describe("themeColors", () => {
   let getPalette: typeof import("../src/theme/colors.ts").getPalette;
+  let getPaletteCacheStats: typeof import("../src/theme/colors.ts").getPaletteCacheStats;
   let dark: typeof import("../src/theme/colors.ts").dark;
 
   beforeAll(async () => {
     const mod = await import("../src/theme/colors.ts");
     getPalette = mod.getPalette;
+    getPaletteCacheStats = mod.getPaletteCacheStats;
     dark = mod.dark;
   });
 
@@ -143,6 +145,24 @@ describe("themeColors", () => {
     for (const key of requiredKeys) {
       expect(key in palette).toBeTruthy();
     }
+  });
+
+  test("getPalette evicts oldest when cache overflows", () => {
+    const schemes: ColorSchemePreference[] = [
+      "cyprus", "ocean", "vulcanico", "tiffany", "charcoalline", "truepink",
+      "silver", "milky", "sky", "turmeric", "bridal", "obsidian",
+    ];
+    for (const s of schemes) {
+      getPalette("dark", s);
+      getPalette("light", s);
+    }
+    const before = getPaletteCacheStats();
+    expect(before.size).toBe(24);
+
+    const overflowed = getPalette("fallback" as "dark", "cyprus");
+    expect(overflowed.bg).toBeDefined();
+    const after = getPaletteCacheStats();
+    expect(after.size).toBe(24);
   });
 
   test("getPalette re-orders cache on access (LRU promotion)", () => {

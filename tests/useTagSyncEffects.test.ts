@@ -90,6 +90,73 @@ describe("useTagSyncEffects", () => {
     });
   });
 
+  test("handles loadTags rejection gracefully", async () => {
+    mockLoadTags.mockRejectedValue(new Error("fail"));
+    const setTagsList = jest.fn();
+    const replaceTransactions = jest.fn();
+
+    renderHook(() =>
+      useTagSyncEffects("es", replaceTransactions, "tok", "sid", baseTags, setTagsList),
+    );
+
+    await waitFor(() => {
+      expect(mockLoadTags).toHaveBeenCalled();
+    });
+  });
+
+  test("cleans deleted tags from transactions in second effect", async () => {
+    const txs = [makeTx({ tags: ["default-comida", "default-salud"] })];
+    let currentTxs = [...txs];
+    const replaceTransactions = jest.fn().mockImplementation(
+      (updater: (prev: Transaction[]) => Transaction[]) => { currentTxs = updater(currentTxs); },
+    );
+    const setTagsList = jest.fn();
+
+    mockLoadTags.mockResolvedValue(baseTags);
+
+    const { rerender } = await renderHook(
+      (props: { tagsList: Tag[]; accessToken: string | null; spreadsheetId: string | null }) =>
+        useTagSyncEffects("es", replaceTransactions, props.accessToken, props.spreadsheetId, props.tagsList, setTagsList),
+      { initialProps: { tagsList: baseTags, accessToken: "tok", spreadsheetId: "sid" } },
+    );
+
+    await waitFor(() => { expect(mockLoadTags).toHaveBeenCalled(); });
+
+    const reducedTags = [baseTags[0]];
+    rerender({ tagsList: reducedTags, accessToken: "tok", spreadsheetId: "sid" });
+
+    await waitFor(() => {
+      expect(currentTxs[0].tags).toEqual(["default-comida"]);
+    });
+  });
+
+  test("handles removeTagsFromAllRows rejection gracefully", async () => {
+    mockRemoveTags.mockRejectedValue(new Error("API error"));
+    const txs = [makeTx({ tags: ["default-comida", "default-salud"] })];
+    let currentTxs = [...txs];
+    const replaceTransactions = jest.fn().mockImplementation(
+      (updater: (prev: Transaction[]) => Transaction[]) => { currentTxs = updater(currentTxs); },
+    );
+    const setTagsList = jest.fn();
+
+    mockLoadTags.mockResolvedValue(baseTags);
+
+    const { rerender } = await renderHook(
+      (props: { tagsList: Tag[]; accessToken: string | null; spreadsheetId: string | null }) =>
+        useTagSyncEffects("es", replaceTransactions, props.accessToken, props.spreadsheetId, props.tagsList, setTagsList),
+      { initialProps: { tagsList: baseTags, accessToken: "tok", spreadsheetId: "sid" } },
+    );
+
+    await waitFor(() => { expect(mockLoadTags).toHaveBeenCalled(); });
+
+    const reducedTags = [baseTags[0]];
+    rerender({ tagsList: reducedTags, accessToken: "tok", spreadsheetId: "sid" });
+
+    await waitFor(() => {
+      expect(mockRemoveTags).toHaveBeenCalledWith("tok", "sid", ["default-salud"]);
+    });
+  });
+
   test("does not call removeTagsFromAllRows when accessToken is null", async () => {
     const replaceTransactions = jest.fn();
     const setTagsList = jest.fn();
