@@ -105,12 +105,16 @@ function cacheGet(key: string): Palette | undefined {
 }
 
 function cacheSet(key: string, value: Palette): void {
-  if (paletteCache.has(key)) paletteCache.delete(key);
+  paletteCache.delete(key);
   if (paletteCache.size >= PALETTE_CACHE_LIMIT) {
     const oldest = paletteCache.keys().next().value;
-    if (oldest !== undefined) paletteCache.delete(oldest);
+    paletteCache.delete(oldest as string);
   }
   paletteCache.set(key, value);
+}
+
+export function getPaletteCacheStats(): { size: number; limit: number } {
+  return { size: paletteCache.size, limit: PALETTE_CACHE_LIMIT };
 }
 
 export function getPalette(
