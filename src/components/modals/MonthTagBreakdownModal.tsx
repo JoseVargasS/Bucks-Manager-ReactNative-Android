@@ -12,7 +12,7 @@ import { type Tag, type Transaction } from "@/types";
 import { aggregateExpensesByTag, aggregateIncomesByTag, type PieSlice } from "@/domain/bucksLogic";
 import { type UiCopy } from "@/i18n";
 import { useModalTransition } from "@/components/ui/useModalTransition";
-import { PieChart } from "@/components/ui/PieChart";
+import { PieChart, SliceRow, type MergedSlice } from "@/components/ui/PieChart";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { Text } from "@/components/ui/AppText";
 
@@ -60,6 +60,21 @@ export const MonthTagBreakdownModal = forwardRef<
   const activeData = breakdownTab === "expenses" ? expenseData : incomeData;
   const activeEmptyLabel = breakdownTab === "expenses" ? copy.noTagsData : copy.incomeBreakdownEmpty;
 
+  const [selectedKey, setSelectedKey] = useState<string | null>(null);
+
+  const fm = useMemo(
+    () => (v: number) => `${currencySymbol}${v.toFixed(0)}`,
+    [currencySymbol],
+  );
+
+  const mergedData = useMemo<MergedSlice[]>(
+    () =>
+      [...activeData]
+        .sort((a, b) => b.value - a.value)
+        .map((s, i) => ({ ...s, key: `${i}` })),
+    [activeData],
+  );
+
   const close = useCallback(() => setVisible(false), []);
 
   useImperativeHandle(ref, () => ({
@@ -100,7 +115,7 @@ export const MonthTagBreakdownModal = forwardRef<
             <MaterialCommunityIcons name="close" size={22} color={colors.text} />
           </Pressable>
         </View>
-        <ScrollView style={styles.scroll} contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
+        <View style={styles.body}>
           <SegmentedControl
             options={tabOptions}
             selected={breakdownTab}
@@ -109,18 +124,43 @@ export const MonthTagBreakdownModal = forwardRef<
           />
           <View style={{ height: 10 }} />
           {activeData.length > 0 ? (
-            <PieChart
-              data={activeData}
-              colors={colors}
-              currencySymbol={currencySymbol}
-              totalLabel={copy.total}
-            />
+            <>
+              <PieChart
+                data={activeData}
+                colors={colors}
+                currencySymbol={currencySymbol}
+                totalLabel={copy.total}
+                chartOnly
+                selectedKey={selectedKey}
+                onSelectKey={setSelectedKey}
+              />
+              <View style={{ height: Math.min(mergedData.length, 6) * 36 }}>
+                <ScrollView
+                  style={{ flex: 1 }}
+                  showsVerticalScrollIndicator={false}
+                  contentContainerStyle={{ gap: 2, paddingHorizontal: 4 }}
+                >
+                  {mergedData.map((slice) => (
+                    <SliceRow
+                      key={slice.key}
+                      slice={slice}
+                      selected={slice.key === selectedKey}
+                      dimmed={selectedKey !== null && slice.key !== selectedKey}
+                      color={slice.color}
+                      colors={colors}
+                      fm={fm}
+                      onPress={setSelectedKey}
+                    />
+                  ))}
+                </ScrollView>
+              </View>
+            </>
           ) : (
             <Text style={[styles.emptyText, { color: colors.muted, fontSize: 14 }]}>
               {activeEmptyLabel}
             </Text>
           )}
-        </ScrollView>
+        </View>
       </Animated.View>
     </Animated.View>
   );

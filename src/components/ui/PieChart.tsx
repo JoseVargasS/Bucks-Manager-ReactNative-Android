@@ -9,7 +9,7 @@ import { useChartFade } from "./chartFade";
 
 const AnimPath = Animated.createAnimatedComponent(Path);
 
-type MergedSlice = PieSlice & { key: string };
+export type MergedSlice = PieSlice & { key: string };
 
 const CX = 130;
 const CY = 115;
@@ -61,7 +61,7 @@ function trimLabel(text: string, max: number) {
   return `${text.slice(0, Math.max(1, max - 1))}…`;
 }
 
-const SliceRow = memo(function SliceRow({
+export const SliceRow = memo(function SliceRow({
   slice,
   selected,
   dimmed,
@@ -156,12 +156,18 @@ export const PieChart = memo(function PieChart({
   currencySymbol,
   formatValue,
   totalLabel = "total",
+  chartOnly,
+  selectedKey: externalSelectedKey,
+  onSelectKey,
 }: {
   data: PieSlice[];
   colors: Palette;
   currencySymbol: string;
   formatValue?: (v: number) => string;
   totalLabel?: string;
+  chartOnly?: boolean;
+  selectedKey?: string | null;
+  onSelectKey?: (key: string | null) => void;
 }) {
   const fm = useMemo(
     () => formatValue || ((v: number) => `${currencySymbol}${v.toFixed(0)}`),
@@ -189,7 +195,10 @@ export const PieChart = memo(function PieChart({
     });
   }, [merged]);
 
-  const [selectedKey, setSelectedKey] = useState<string | null>(null);
+  const [internalSelectedKey, setInternalSelectedKey] = useState<string | null>(null);
+  const isControlled = externalSelectedKey !== undefined;
+  const selectedKey = isControlled ? externalSelectedKey : internalSelectedKey;
+
   const selectedIndex = useMemo(
     () =>
       selectedKey === null
@@ -199,15 +208,31 @@ export const PieChart = memo(function PieChart({
   );
 
   const handleSelect = useCallback((key: string) => {
-    setSelectedKey((prev) => (prev === key ? null : key));
-  }, []);
+    if (isControlled) {
+      onSelectKey?.(selectedKey === key ? null : key);
+    } else {
+      setInternalSelectedKey((prev) => (prev === key ? null : key));
+    }
+  }, [isControlled, selectedKey, onSelectKey]);
 
-  const clearSelection = useCallback(() => setSelectedKey(null), []);
+  const clearSelection = useCallback(() => {
+    if (isControlled) {
+      onSelectKey?.(null);
+    } else {
+      setInternalSelectedKey(null);
+    }
+  }, [isControlled, onSelectKey]);
 
   useEffect(() => {
     if (selectedKey === null) return;
-    if (selectedIndex === -1) setSelectedKey(null);
-  }, [selectedKey, selectedIndex]);
+    if (selectedIndex === -1) {
+      if (isControlled) {
+        onSelectKey?.(null);
+      } else {
+        setInternalSelectedKey(null);
+      }
+    }
+  }, [selectedKey, selectedIndex, isControlled, onSelectKey]);
 
   const opacitiesRef = useChartFade(merged.length, selectedIndex, data);
   const opacities = opacitiesRef.current;
@@ -405,20 +430,22 @@ export const PieChart = memo(function PieChart({
         </Svg>
       </Pressable>
 
-      <View style={{ width: "100%", gap: 2, paddingHorizontal: 8 }}>
-        {arcs.map((a) => (
-          <SliceRow
-            key={a.slice.key}
-            slice={a.slice}
-            selected={a.slice.key === selectedKey}
-            dimmed={hasSelection && a.slice.key !== selectedKey}
-            color={a.slice.color}
-            colors={colors}
-            fm={fm}
-            onPress={handleSelect}
-          />
-        ))}
-      </View>
+      {!chartOnly && (
+        <View style={{ width: "100%", gap: 2, paddingHorizontal: 8 }}>
+          {arcs.map((a) => (
+            <SliceRow
+              key={a.slice.key}
+              slice={a.slice}
+              selected={a.slice.key === selectedKey}
+              dimmed={hasSelection && a.slice.key !== selectedKey}
+              color={a.slice.color}
+              colors={colors}
+              fm={fm}
+              onPress={handleSelect}
+            />
+          ))}
+        </View>
+      )}
     </View>
   );
 });

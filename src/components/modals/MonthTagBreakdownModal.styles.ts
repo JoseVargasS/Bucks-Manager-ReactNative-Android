@@ -10,7 +10,6 @@ export const monthTagBreakdownStyles = StyleSheet.create({
     alignSelf: "center",
     overflow: "hidden",
   },
-  scroll: { flexShrink: 1 },
   body: { gap: 12, padding: 16 },
   header: {
     flexDirection: "row",
