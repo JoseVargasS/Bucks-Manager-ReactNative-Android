@@ -141,6 +141,16 @@ export const DashboardView = memo(function DashboardView({
     [allTransactions],
   );
 
+  const savingsRate = summary.totalIncome > 0
+    ? `${Math.round(summary.netMonthly / summary.totalIncome * 100)}%`
+    : "—";
+  const prev = prevSummary.netMonthly;
+  const balanceChange = prev !== 0
+    ? Math.round((summary.netMonthly - prev) / Math.abs(prev) * 100)
+    : (summary.netMonthly !== 0 ? 100 : 0);
+  const vsPrev = prev !== 0 ? (balanceChange >= 0 ? `+${balanceChange}%` : `${balanceChange}%`) : "—";
+  const vsPrevPositive = prev !== 0 ? balanceChange >= 0 : summary.netMonthly >= 0;
+
   const handleDetail = useCallback(
     (tx: Transaction) => onOpenDetail(tx),
     [onOpenDetail],
@@ -193,36 +203,53 @@ export const DashboardView = memo(function DashboardView({
         </Text>
         <View style={{ gap: 8 }}>
           <Animated.View style={{ flexDirection: "row", gap: 8, opacity: cardAnim, transform: [{ translateY: cardAnim.interpolate({ inputRange: [0, 1], outputRange: [12, 0] }) }] }}>
-            <View ref={incomeCardRef} collapsable={false} style={{ flex: 1 }}>
-              <StatCard
-                title={copy.income}
-                value={formatMoney(summary.totalIncome, currencySymbol)}
-                tone="income"
-                icon="cash"
-                colors={colors}
-                onPress={() => handleOpenBubble("income")}
-              />
+            <View style={{ flex: 1, gap: 8 }}>
+              <View ref={incomeCardRef} collapsable={false}>
+                <StatCard
+                  title={copy.income}
+                  value={formatMoney(summary.totalIncome, currencySymbol)}
+                  tone="income"
+                  icon="cash"
+                  colors={colors}
+                  onPress={() => handleOpenBubble("income")}
+                />
+              </View>
+              <View ref={expenseCardRef} collapsable={false}>
+                <StatCard
+                  title={copy.expensesLabel}
+                  value={formatMoney(summary.totalExpense, currencySymbol)}
+                  tone="expense"
+                  icon="credit-card"
+                  colors={colors}
+                  onPress={() => handleOpenBubble("expense")}
+                />
+              </View>
             </View>
-            <View ref={expenseCardRef} collapsable={false} style={{ flex: 1 }}>
+            <View ref={balanceCardRef} collapsable={false} style={{ flex: 1 }}>
               <StatCard
-                title={copy.expensesLabel}
-                value={formatMoney(summary.totalExpense, currencySymbol)}
-                tone="expense"
-                icon="credit-card"
+                title={copy.balance}
+                value={formatMoney(summary.netMonthly, currencySymbol)}
+                tone="balance"
+                icon="wallet"
                 colors={colors}
-                onPress={() => handleOpenBubble("expense")}
-              />
+                onPress={() => handleOpenBubble("balance")}
+              >
+                <View style={{ borderTopWidth: 1, borderTopColor: colors.border, marginTop: 8, paddingTop: 8, gap: 6 }}>
+                  <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                    <Text style={{ fontSize: 12, color: colors.muted }}>{copy.savingsRate}</Text>
+                    <Text style={{ fontSize: 12, fontWeight: "600", color: colors.text, fontVariant: ["tabular-nums"] }}>
+                      {savingsRate}
+                    </Text>
+                  </View>
+                  <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                    <Text style={{ fontSize: 12, color: colors.muted }}>{copy.vsPrevMonth}</Text>
+                    <Text style={{ fontSize: 12, fontWeight: "600", color: vsPrevPositive ? colors.income : colors.expense, fontVariant: ["tabular-nums"] }}>
+                      {vsPrev}
+                    </Text>
+                  </View>
+                </View>
+              </StatCard>
             </View>
-          </Animated.View>
-          <Animated.View ref={balanceCardRef} collapsable={false} style={{ opacity: cardAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 1] }), transform: [{ translateY: cardAnim.interpolate({ inputRange: [0, 1], outputRange: [16, 0] }) }] }}>
-            <StatCard
-              title={copy.balance}
-              value={formatMoney(summary.netMonthly, currencySymbol)}
-              tone="balance"
-              icon="wallet"
-              colors={colors}
-              onPress={() => handleOpenBubble("balance")}
-            />
           </Animated.View>
         </View>
       </View>
@@ -444,21 +471,14 @@ export const DashboardView = memo(function DashboardView({
         })()}
 
         {bubbleKind === "balance" && (() => {
-          const savingsRate = summary.totalIncome > 0
-            ? `${Math.round(summary.netMonthly / summary.totalIncome * 100)}%`
-            : "—";
-          const prev = prevSummary.netMonthly;
           const current = summary.netMonthly;
-          const change = prev !== 0 ? Math.round((current - prev) / Math.abs(prev) * 100) : (current !== 0 ? 100 : 0);
-          const vsPrev = prev !== 0 ? (change >= 0 ? `+${change}%` : `${change}%`) : "—";
-          const vsPrevPositive = prev !== 0 ? change >= 0 : current >= 0;
           return (
             <>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 8 }}>
                 <MaterialCommunityIcons name="wallet" size={18} color={colors.info} />
                 <Text style={{ fontSize: 14, fontWeight: "600", color: colors.text }}>{copy.balance}</Text>
               </View>
-              <Text style={{ fontSize: 20, fontWeight: "700", color: summary.netMonthly >= 0 ? colors.income : colors.expense, fontVariant: ["tabular-nums"], marginBottom: 12 }}>
+              <Text style={{ fontSize: 20, fontWeight: "700", color: current >= 0 ? colors.income : colors.expense, fontVariant: ["tabular-nums"], marginBottom: 12 }}>
                 {formatMoney(current, currencySymbol)}
               </Text>
               <View style={{ gap: 8 }}>
@@ -472,23 +492,6 @@ export const DashboardView = memo(function DashboardView({
                   <Text style={{ fontSize: 13, color: colors.muted }}>{copy.expensesLabel}</Text>
                   <Text style={{ fontSize: 13, fontWeight: "600", color: colors.expense, fontVariant: ["tabular-nums"] }}>
                     {formatMoney(summary.totalExpense, currencySymbol)}
-                  </Text>
-                </View>
-                <View style={{ height: 1, backgroundColor: colors.border }} />
-                <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                  <Text style={{ fontSize: 13, color: colors.muted }}>{copy.savingsRate}</Text>
-                  <Text style={{ fontSize: 13, fontWeight: "600", color: colors.text, fontVariant: ["tabular-nums"] }}>
-                    {savingsRate}
-                  </Text>
-                </View>
-                <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                  <Text style={{ fontSize: 13, color: colors.muted }}>{copy.vsPrevMonth}</Text>
-                  <Text style={{
-                    fontSize: 13, fontWeight: "600",
-                    color: vsPrevPositive ? colors.income : colors.expense,
-                    fontVariant: ["tabular-nums"],
-                  }}>
-                    {vsPrev}
                   </Text>
                 </View>
               </View>
