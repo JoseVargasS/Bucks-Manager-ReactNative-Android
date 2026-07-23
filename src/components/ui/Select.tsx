@@ -41,6 +41,8 @@ export const Select = memo(function Select({ value, options, onSelect, colors, p
     });
   }, [options, value, onSelect, title, placeholder, label]);
 
+  const centerText = hideArrow && !selected?.color;
+
   const animatePress = (toValue: number, duration: number) => {
     pressed.stopAnimation();
     Animated.timing(pressed, { toValue, duration, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start();
@@ -51,7 +53,7 @@ export const Select = memo(function Select({ value, options, onSelect, colors, p
       <View style={style}>
         <Animated.View style={{ opacity: pressed.interpolate({ inputRange: [0, 1], outputRange: [1, 0.82] }), transform: [{ scale: pressed.interpolate({ inputRange: [0, 1], outputRange: [1, 0.985] }) }] }}>
           <Pressable
-            style={[selectStyles.button, { backgroundColor: colors.input, borderColor: colors.border }, buttonStyle]}
+            style={[selectStyles.button, { backgroundColor: colors.input, borderColor: colors.border, justifyContent: centerText ? "center" : "space-between" }, buttonStyle]}
             onPress={handlePress}
             onPressIn={() => animatePress(1, 70)}
             onPressOut={() => animatePress(0, 110)}
@@ -69,6 +71,6 @@ export const Select = memo(function Select({ value, options, onSelect, colors, p
 });
 
 const selectStyles = {
-  button: { borderRadius: 10, paddingHorizontal: 12, minHeight: 42, flexDirection: "row" as const, alignItems: "center" as const, justifyContent: "space-between" as const, gap: 8, borderWidth: 1 },
-  buttonText: { flex: 1, minWidth: 0, fontSize: 15, fontWeight: "600" as const },
+  button: { borderRadius: 10, paddingHorizontal: 12, minHeight: 42, flexDirection: "row" as const, alignItems: "center" as const, gap: 8, borderWidth: 1 },
+  buttonText: { flex: 1, minWidth: 0, fontSize: 15, fontWeight: "600" as const, textAlign: "center" as const },
 };

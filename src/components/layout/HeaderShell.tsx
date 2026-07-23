@@ -8,6 +8,7 @@ import { type Tab } from "@/types";
 import { type UiCopy } from "@/i18n";
 import { Text } from "@/components/ui/AppText";
 import { HeaderActionButton, HeaderFade, HeaderTitleFade } from "@/components/layout/HeaderFades";
+import { BLUR_INTENSITY } from "@/theme/constants";
 
 type HeaderShellProps = {
   tab: Tab;
@@ -55,7 +56,6 @@ function HeaderShellImpl(
         ? copy.summarySubtitle
         : copy.settingsSubtitle;
   const showHeaderFade = tab === "dashboard" || tab === "expenses" || tab === "summary";
-  const blurTint = isDark ? "dark" : "light";
   return (
     <Animated.View
       style={{
@@ -121,7 +121,7 @@ function HeaderShellImpl(
               )}
             </View>
           </View>
-          <BlurView intensity={110} tint={blurTint} style={appShellStyles.headerActionsGroup}>
+          <BlurView intensity={BLUR_INTENSITY} tint={isDark ? "dark" : "light"} style={appShellStyles.headerActionsGroup}>
             <HeaderActionButton
               icon={isDark ? "weather-night" : "white-balance-sunny"}
               iconColor={colors.warn}

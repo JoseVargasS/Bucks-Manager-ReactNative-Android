@@ -22,9 +22,9 @@ import { SummaryMonthlyTable } from "@/components/screens/SummaryMonthlyTable";
 import { SummaryKpiSection } from "@/components/screens/SummaryKpiSection";
 import { useSummaryState } from "@/components/screens/useSummaryState";
 
-export const SummaryView = memo(function SummaryView({ colors, copy, summaries, transactions, freqIncome, tagsList, availableYears, topInset, currencySymbol }: {
+export const SummaryView = memo(function SummaryView({ colors, copy, summaries, transactions, freqIncome, tagsList, availableYears, topInset, currencySymbol, theme }: {
   colors: Palette; copy: UiCopy; summaries: SummaryRow[]; transactions: Transaction[]; freqIncome: Record<string, number>;
-  tagsList: Tag[]; availableYears: number[]; topInset?: number; currencySymbol: string;
+  tagsList: Tag[]; availableYears: number[]; topInset?: number; currencySymbol: string; theme: "dark" | "light";
 }) {
   const state = useSummaryState({ summaries, transactions, freqIncome, tagsList, availableYears, currencySymbol, colors, copy });
   const {
@@ -42,7 +42,7 @@ export const SummaryView = memo(function SummaryView({ colors, copy, summaries, 
         contentContainerStyle={[styles.pageScroll, styles.pageScrollMobile, { gap: 12 }, topInset !== undefined && { paddingTop: topInset }]}
         onScroll={(e) => { const y = e.nativeEvent.contentOffset.y; scrollY.setValue(y); setScrolled(y > 2); }}
       >
-      <SummaryHeader colors={colors} copy={copy} subLabel={subLabel} filterYear={filterYear} yearOptions={yearOptions} setFilterYear={setFilterYear} scrollY={scrollY} />
+      <SummaryHeader colors={colors} copy={copy} subLabel={subLabel} filterYear={filterYear} yearOptions={yearOptions} setFilterYear={setFilterYear} scrollY={scrollY} theme={theme} />
 
       <View style={{ backgroundColor: colors.card, borderRadius: 18, padding: 18, overflow: "hidden" }}>
         <View style={{ position: "absolute", width: 150, height: 150, borderRadius: 75, right: -48, top: -68, backgroundColor: colors.primarySoft }} />
@@ -149,7 +149,7 @@ export const SummaryView = memo(function SummaryView({ colors, copy, summaries, 
       <SummaryStickyHeader
         colors={colors} copy={copy} subLabel={subLabel} filterYear={filterYear}
         yearOptions={yearOptions} setFilterYear={setFilterYear} scrollY={scrollY}
-        scrolled={scrolled} topInset={topInset}
+        scrolled={scrolled} topInset={topInset} theme={theme}
       />
     )}
     <MonthTagBreakdownModal

@@ -5,6 +5,7 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Select } from "@/components/ui/Select";
 import { type Palette } from "@/theme/colors";
 import { type UiCopy, UI_MONTH_NAMES } from "@/i18n";
+import { NAV_BTN_SIZE, NAV_BTN_HEIGHT, NAV_BTN_RADIUS, NAV_GROUP_GAP, NAV_GROUP_PADDING, NAV_GROUP_RADIUS, SELECT_HEIGHT, BLUR_INTENSITY } from "@/theme/constants";
 
 export const PeriodControls = memo(function PeriodControls({
   colors,
@@ -34,15 +35,13 @@ export const PeriodControls = memo(function PeriodControls({
   const monthNames =
     copy.languageCode === "en" ? UI_MONTH_NAMES.en : UI_MONTH_NAMES.es;
 
-  const blurTint = theme === "dark" ? "dark" : "light";
-
   return (
     <View style={styles.periodControls}>
       <View style={styles.periodActions}>
         <View style={styles.selectsWrapper}>
           <BlurView
-            intensity={110}
-            tint={blurTint}
+            intensity={BLUR_INTENSITY}
+            tint={theme}
             style={styles.selectsBlurBg}
           />
           <Select
@@ -81,8 +80,8 @@ export const PeriodControls = memo(function PeriodControls({
           />
         </View>
         <BlurView
-          intensity={110}
-          tint={blurTint}
+          intensity={BLUR_INTENSITY}
+          tint={theme}
           style={[styles.periodNavGroup, styles.blurContainer]}
         >
           <Pressable onPress={goPrevMonth} style={styles.periodNavBtn}>
@@ -114,37 +113,36 @@ export const PeriodControls = memo(function PeriodControls({
 
 const styles = StyleSheet.create({
   periodControls: {
-    paddingHorizontal: 14,
     paddingTop: 2,
     paddingBottom: 0,
     gap: 8,
   },
-  periodActions: { flexDirection: "row", alignItems: "center", gap: 8 },
+  periodActions: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 16 },
   blurContainer: { overflow: "hidden" },
   selectsWrapper: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    borderRadius: 50,
-    height: 46,
+    borderRadius: NAV_GROUP_RADIUS,
+    height: SELECT_HEIGHT,
     overflow: "hidden",
   },
   selectsBlurBg: {
     ...StyleSheet.absoluteFill,
-    borderRadius: 50,
+    borderRadius: NAV_GROUP_RADIUS,
   },
   periodDropdown: { flex: 1, minWidth: 0 },
   periodNavGroup: {
     flexDirection: "row",
     alignItems: "center",
-    borderRadius: 50,
-    padding: 4,
-    gap: 4,
+    borderRadius: NAV_GROUP_RADIUS,
+    padding: NAV_GROUP_PADDING,
+    gap: NAV_GROUP_GAP,
   },
   periodNavBtn: {
-    width: 40,
-    height: 42,
-    borderRadius: 21,
+    width: NAV_BTN_SIZE,
+    height: NAV_BTN_HEIGHT,
+    borderRadius: NAV_BTN_RADIUS,
     alignItems: "center",
     justifyContent: "center",
   },

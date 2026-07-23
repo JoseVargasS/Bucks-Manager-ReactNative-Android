@@ -6,6 +6,16 @@ export const ANIM_TAB_PAGER = 210;
 export const ANIM_HEADER_BTN_IN = 60;
 export const ANIM_HEADER_BTN_OUT = 60;
 
+export const NAV_BTN_SIZE = 40;
+export const NAV_BTN_HEIGHT = 42;
+export const NAV_BTN_RADIUS = 21;
+export const NAV_GROUP_GAP = 4;
+export const NAV_GROUP_PADDING = 4;
+export const NAV_GROUP_RADIUS = 50;
+export const BLUR_INTENSITY = 110;
+export const HEADER_ACTIONS_WIDTH = NAV_BTN_SIZE * 3 + NAV_GROUP_GAP * 2 + NAV_GROUP_PADDING * 2;
+export const SELECT_HEIGHT = 46;
+
 export const PIN_DELAY_MS = 1500;
 export const PIN_RESET_MS = 1200;
 export const PIN_LENGTH = 4;

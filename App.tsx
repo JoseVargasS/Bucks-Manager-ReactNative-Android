@@ -471,7 +471,8 @@ function AppContent() {
     availableYears: fin.availableYears,
     currencySymbol,
     tagsList,
-  }), [contentInset, colors, copy, summaries, transactions, freqIncome, fin.availableYears, currencySymbol, tagsList]);
+    theme,
+  }), [contentInset, colors, copy, summaries, transactions, freqIncome, fin.availableYears, currencySymbol, tagsList, theme]);
 
   const settingsProps = useMemo(() => ({
     contentTopInset: contentInset,

@@ -185,6 +185,23 @@ Key project rules:
 - Verify `git status` + `git diff` before writing message
 - Never commit secrets or build artifacts
 
+## Hard Rule
+
+**Do not commit, push, or create pull requests unless the user explicitly tells you to.**
+
+The user will say one of: "commit", "comitea", "commitea", "haz commit", "push", "pr", or "crea el PR". Until you hear that, assume the work is in progress. No commits. No pushes. No PRs.
+
+## What this means
+
+- After you finish implementing a change, stop. Do not stage, commit, or push.
+- If the user says "commitea" (their Spanish shorthand), that counts as explicit permission.
+- If unsure, ask: "¿Commiteo?" (Spanish) / "Commit?" (English).
+- This applies to every agent: opencode, codex, claude, mimo, commandcode, and any other coding agent.
+
+## Why
+
+The user works iteratively. An unsolicited commit creates noise, breaks their flow, and may expose incomplete or experimental code. They control when history is written.
+
 ## UI Direction
 
 Use the mobile GAS workflow as the functional reference, but follow the current native visual system:

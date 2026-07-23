@@ -49,6 +49,7 @@ type SummaryTabProps = {
   availableYears: number[];
   currencySymbol: string;
   tagsList: Tag[];
+  theme: "dark" | "light";
 };
 
 type DashboardTabProps = {
@@ -223,6 +224,7 @@ function TabPageImpl(props: TabPageProps) {
               availableYears={tabProps.availableYears}
               topInset={tabProps.contentTopInset}
               currencySymbol={tabProps.currencySymbol}
+              theme={tabProps.theme}
             />
           </FeatureBoundary>
         ) : (

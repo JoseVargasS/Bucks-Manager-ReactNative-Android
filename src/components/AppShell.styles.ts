@@ -1,4 +1,5 @@
 import { StyleSheet } from "react-native";
+import { NAV_BTN_SIZE, NAV_BTN_HEIGHT, NAV_BTN_RADIUS, NAV_GROUP_GAP, NAV_GROUP_PADDING, NAV_GROUP_RADIUS } from "@/theme/constants";
 
 export const appShellStyles = StyleSheet.create({
   topBar: {
@@ -33,15 +34,15 @@ export const appShellStyles = StyleSheet.create({
   headerActionsGroup: {
     flexDirection: "row",
     alignItems: "center",
-    borderRadius: 50,
-    padding: 4,
-    gap: 4,
+    borderRadius: NAV_GROUP_RADIUS,
+    padding: NAV_GROUP_PADDING,
+    gap: NAV_GROUP_GAP,
     overflow: "hidden",
   },
   headerActionBtn: {
-    width: 40,
-    height: 42,
-    borderRadius: 21,
+    width: NAV_BTN_SIZE,
+    height: NAV_BTN_HEIGHT,
+    borderRadius: NAV_BTN_RADIUS,
     alignItems: "center",
     justifyContent: "center",
   },

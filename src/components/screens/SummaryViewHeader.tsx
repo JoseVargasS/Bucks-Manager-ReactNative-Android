@@ -1,16 +1,18 @@
 import { memo } from "react";
 import { Animated, View } from "react-native";
+import { BlurView } from "expo-blur";
 import { type Palette } from "@/theme/colors";
 import { type UiCopy } from "@/i18n";
 import { Select } from "@/components/ui/Select";
 import { Text } from "@/components/ui/AppText";
+import { HEADER_ACTIONS_WIDTH, SELECT_HEIGHT, BLUR_INTENSITY, NAV_GROUP_RADIUS } from "@/theme/constants";
 
 export const SummaryHeader = memo(function SummaryHeader({
-  colors, copy, subLabel, filterYear, yearOptions, setFilterYear, scrollY,
+  colors, copy, subLabel, filterYear, yearOptions, setFilterYear, scrollY, theme,
 }: {
   colors: Palette; copy: UiCopy; subLabel: string; filterYear: number;
   yearOptions: { label: string; value: string }[];
-  setFilterYear: (v: number) => void; scrollY: Animated.Value;
+  setFilterYear: (v: number) => void; scrollY: Animated.Value; theme: "dark" | "light";
 }) {
   return (
     <Animated.View style={{ opacity: scrollY.interpolate({ inputRange: [0, 5], outputRange: [1, 0], extrapolate: "clamp" }) }}>
@@ -19,24 +21,26 @@ export const SummaryHeader = memo(function SummaryHeader({
           <Text style={{ color: colors.text, fontSize: 18, fontWeight: "700" }}>{copy.annualOverview}</Text>
           <Text style={{ color: colors.muted, fontSize: 13, fontWeight: "500", marginTop: 2 }}>{subLabel}</Text>
         </View>
-        <Select
-          value={String(filterYear)} options={yearOptions}
-          onSelect={(value) => setFilterYear(Number(value))}
-          colors={colors} title={copy.selectYear} style={{ width: 124 }} hideArrow
-          buttonStyle={{ borderRadius: 50, borderColor: "transparent", minHeight: 46 }}
-        />
+        <BlurView intensity={BLUR_INTENSITY} tint={theme} style={{ borderRadius: NAV_GROUP_RADIUS, overflow: "hidden" }}>
+          <Select
+            value={String(filterYear)} options={yearOptions}
+            onSelect={(value) => setFilterYear(Number(value))}
+            colors={colors} title={copy.selectYear} style={{ width: HEADER_ACTIONS_WIDTH }} hideArrow
+            buttonStyle={{ borderRadius: NAV_GROUP_RADIUS, borderColor: "transparent", minHeight: SELECT_HEIGHT, backgroundColor: "transparent" }}
+          />
+        </BlurView>
       </View>
     </Animated.View>
   );
 });
 
 export const SummaryStickyHeader = memo(function SummaryStickyHeader({
-  colors, copy, subLabel, filterYear, yearOptions, setFilterYear, scrollY, scrolled, topInset,
+  colors, copy, subLabel, filterYear, yearOptions, setFilterYear, scrollY, scrolled, topInset, theme,
 }: {
   colors: Palette; copy: UiCopy; subLabel: string; filterYear: number;
   yearOptions: { label: string; value: string }[];
   setFilterYear: (v: number) => void; scrollY: Animated.Value;
-  scrolled: boolean; topInset: number;
+  scrolled: boolean; topInset: number; theme: "dark" | "light";
 }) {
   return (
     <Animated.View
@@ -51,12 +55,14 @@ export const SummaryStickyHeader = memo(function SummaryStickyHeader({
         <Text style={{ color: colors.text, fontSize: 18, fontWeight: "700" }}>{copy.annualOverview}</Text>
         <Text style={{ color: colors.muted, fontSize: 13, fontWeight: "500", marginTop: 2 }}>{subLabel}</Text>
       </View>
-      <Select
-        value={String(filterYear)} options={yearOptions}
-        onSelect={(value) => setFilterYear(Number(value))}
-        colors={colors} title={copy.selectYear} style={{ width: 124 }} hideArrow
-        buttonStyle={{ borderRadius: 50, borderColor: "transparent", minHeight: 46 }}
-      />
+      <BlurView intensity={BLUR_INTENSITY} tint={theme} style={{ borderRadius: NAV_GROUP_RADIUS, overflow: "hidden" }}>
+        <Select
+          value={String(filterYear)} options={yearOptions}
+          onSelect={(value) => setFilterYear(Number(value))}
+          colors={colors} title={copy.selectYear} style={{ width: HEADER_ACTIONS_WIDTH }} hideArrow
+          buttonStyle={{ borderRadius: NAV_GROUP_RADIUS, borderColor: "transparent", minHeight: SELECT_HEIGHT, backgroundColor: "transparent" }}
+        />
+      </BlurView>
     </Animated.View>
   );
 });
