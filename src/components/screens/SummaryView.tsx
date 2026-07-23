@@ -45,7 +45,6 @@ export const SummaryView = memo(function SummaryView({ colors, copy, summaries, 
       <SummaryHeader colors={colors} copy={copy} subLabel={subLabel} filterYear={filterYear} yearOptions={yearOptions} setFilterYear={setFilterYear} scrollY={scrollY} theme={theme} />
 
       <View style={{ backgroundColor: colors.card, borderRadius: 18, padding: 18, overflow: "hidden" }}>
-        <View style={{ position: "absolute", width: 150, height: 150, borderRadius: 75, right: -48, top: -68, backgroundColor: colors.primarySoft }} />
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
           <Text style={{ color: colors.muted, fontSize: 13, fontWeight: "600", textTransform: "uppercase" }}>{isAllYears ? copy.totalBalance : copy.annualBalance}</Text>
         </View>
