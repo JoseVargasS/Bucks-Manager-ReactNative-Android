@@ -100,6 +100,7 @@ export function useSummaryState({
   const positiveMonths = filtered.filter((row) => row.netMonthly >= 0).length;
   const bestMonth = filtered.reduce<SummaryRow | null>((best, row) => !best || row.netMonthly > best.netMonthly ? row : best, null);
   const bestIncomeMonth = filtered.reduce<SummaryRow | null>((best, row) => !best || row.totalIncome > best.totalIncome ? row : best, null);
+  const highestExpenseMonth = filtered.reduce<SummaryRow | null>((max, row) => !max || Math.abs(row.totalExpense) > Math.abs(max.totalExpense) ? row : max, null);
   const avgIncome = totals.income / Math.max(1, filtered.length);
   const avgIncomeThreshold = avgIncome * 0.7;
   const stableMonths = filtered.filter((row) => row.totalIncome >= avgIncomeThreshold).length;
@@ -178,7 +179,7 @@ export function useSummaryState({
     filtered, yearTransactions, monthTransactionsMap,
     tagColorMap, topCategoriesPieData, chartRows,
     totals, savings, averageExpense, positiveMonths,
-    bestMonth, bestIncomeMonth, avgIncome, stableMonths,
+    bestMonth, bestIncomeMonth, highestExpenseMonth, avgIncome, stableMonths,
     incomeBreakdown, expenseBreakdown,
     fm, handleMonthPress, handleBarSelectMonth,
     nonFreqAlert, yearOptions,

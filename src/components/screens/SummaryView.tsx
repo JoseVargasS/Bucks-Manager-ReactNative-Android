@@ -29,7 +29,7 @@ export const SummaryView = memo(function SummaryView({ colors, copy, summaries, 
   const state = useSummaryState({ summaries, transactions, freqIncome, tagsList, availableYears, currencySymbol, colors, copy });
   const {
     filtered, chartRows, totals, savings, averageExpense, positiveMonths, bestMonth, bestIncomeMonth,
-    avgIncome, stableMonths, incomeBreakdown, expenseBreakdown, fm, handleMonthPress, handleBarSelectMonth, nonFreqAlert,
+    highestExpenseMonth, avgIncome, incomeBreakdown, expenseBreakdown, fm, handleMonthPress, handleBarSelectMonth, nonFreqAlert,
     scrollY, scrolled, setScrolled, filterYear, setFilterYear, kpiSegment, setKpiSegment, compSegment, setCompSegment,
     trendMode, setTrendMode, tagBreakdownRef, isAllYears, topCategoriesPieData, yearOptions, kpiSegmentOptions,
     compSegmentOptions, trendSegmentOptions, subLabel,
@@ -48,9 +48,6 @@ export const SummaryView = memo(function SummaryView({ colors, copy, summaries, 
         <View style={{ position: "absolute", width: 150, height: 150, borderRadius: 75, right: -48, top: -68, backgroundColor: colors.primarySoft }} />
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
           <Text style={{ color: colors.muted, fontSize: 13, fontWeight: "600", textTransform: "uppercase" }}>{isAllYears ? copy.totalBalance : copy.annualBalance}</Text>
-          <View style={{ backgroundColor: colors.primarySoft, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999 }}>
-            <Text style={{ color: colors.primary, fontSize: 13, fontWeight: "700", fontVariant: ["tabular-nums"] }}>{isAllYears ? copy.allYears : String(filterYear)}</Text>
-          </View>
         </View>
         <Text numberOfLines={1} style={{ color: totals.net >= 0 ? colors.primary : colors.expense, fontSize: 34, fontWeight: "700", marginTop: 10, fontVariant: ["tabular-nums"] }}>
           {formatMoney(totals.net, currencySymbol, 0)}
@@ -72,8 +69,10 @@ export const SummaryView = memo(function SummaryView({ colors, copy, summaries, 
         colors={colors} copy={copy} kpiSegment={kpiSegment} setKpiSegment={setKpiSegment}
         kpiSegmentOptions={kpiSegmentOptions} fm={fm} totals={totals} savings={savings}
         filtered={filtered} isAllYears={isAllYears} bestIncomeMonth={bestIncomeMonth}
-        monthLabel={monthLabel} avgIncome={avgIncome} stableMonths={stableMonths}
+        monthLabel={monthLabel} avgIncome={avgIncome}
         averageExpense={averageExpense} positiveMonths={positiveMonths}
+        incomeBreakdown={incomeBreakdown} expenseBreakdown={expenseBreakdown}
+        highestExpenseMonth={highestExpenseMonth}
       />
 
       {nonFreqAlert && (

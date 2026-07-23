@@ -8,7 +8,8 @@ import { SegmentedControl } from "@/components/ui/SegmentedControl";
 export function SummaryKpiSection({
   colors, copy, kpiSegment, setKpiSegment, kpiSegmentOptions,
   fm, totals, savings, filtered, isAllYears, bestIncomeMonth, monthLabel,
-  avgIncome, stableMonths, averageExpense, positiveMonths,
+  avgIncome, averageExpense, positiveMonths,
+  incomeBreakdown, expenseBreakdown, highestExpenseMonth,
 }: {
   colors: Palette; copy: UiCopy; kpiSegment: string; setKpiSegment: (v: string) => void;
   kpiSegmentOptions: { key: string; label: string }[];
@@ -16,7 +17,10 @@ export function SummaryKpiSection({
   savings: number; filtered: SummaryRow[]; isAllYears: boolean;
   bestIncomeMonth: SummaryRow | null;
   monthLabel: (row: SummaryRow, lang: string) => string;
-  avgIncome: number; stableMonths: number; averageExpense: number; positiveMonths: number;
+  avgIncome: number; averageExpense: number; positiveMonths: number;
+  incomeBreakdown: { label: string; value: number; color: string }[];
+  expenseBreakdown: { label: string; value: number; color: string }[];
+  highestExpenseMonth: SummaryRow | null;
 }) {
   return (
     <View style={{ backgroundColor: colors.card, borderRadius: 14, padding: 15, gap: 10 }}>
@@ -25,36 +29,36 @@ export function SummaryKpiSection({
         {kpiSegment === "general" && (
           <>
             <View style={{ flexDirection: "row", gap: 8 }}>
-              <Kpi title={copy.income} value={fm(totals.income)} icon="trending-up" color={colors.income} colors={colors} />
-              <Kpi title={copy.expensesLabel} value={fm(totals.expense)} icon="trending-down" color={colors.expense} colors={colors} />
+              <Kpi title={copy.income} value={fm(totals.income)} icon="trending-up" color={colors.income} colors={colors} tooltip={copy.kpiIncome} />
+              <Kpi title={copy.expensesLabel} value={fm(totals.expense)} icon="trending-down" color={colors.expense} colors={colors} tooltip={copy.kpiExpense} />
             </View>
             <View style={{ flexDirection: "row", gap: 8 }}>
-              <Kpi title={copy.savingsRate} value={`${savings}%`} icon="piggy-bank" color={savings >= 0 ? colors.info : colors.expense} colors={colors} />
-              <Kpi title={isAllYears ? copy.positiveYears : copy.positiveMonths} value={filtered.length ? `${positiveMonths}/${filtered.length}` : "—"} icon="check-circle-outline" color={colors.warn} colors={colors} />
+              <Kpi title={copy.savingsRate} value={`${savings}%`} icon="piggy-bank" color={savings >= 0 ? colors.info : colors.expense} colors={colors} tooltip={copy.kpiSavingsRate} />
+              <Kpi title={isAllYears ? copy.positiveYears : copy.positiveMonths} value={filtered.length ? `${positiveMonths}/${filtered.length}` : "—"} icon="check-circle-outline" color={colors.warn} colors={colors} tooltip={copy.kpiPositiveMonths} />
             </View>
           </>
         )}
         {kpiSegment === "income" && (
           <>
             <View style={{ flexDirection: "row", gap: 8 }}>
-              <Kpi title={isAllYears ? copy.bestIncomeYear : copy.bestIncomeMonth} value={bestIncomeMonth ? (isAllYears ? String(Number(bestIncomeMonth.monthYear.split(" ")[1] || 0)) : monthLabel(bestIncomeMonth, copy.languageCode)) : "—"} icon="trophy-outline" color={colors.income} colors={colors} />
-              <Kpi title={copy.avgIncome} value={fm(avgIncome)} icon="cash" color={colors.income} colors={colors} />
+              <Kpi title={isAllYears ? copy.bestIncomeYear : copy.bestIncomeMonth} value={bestIncomeMonth ? (isAllYears ? String(Number(bestIncomeMonth.monthYear.split(" ")[1] || 0)) : monthLabel(bestIncomeMonth, copy.languageCode)) : "—"} icon="trophy-outline" color={colors.income} colors={colors} tooltip={copy.kpiBestIncomeMonth} />
+              <Kpi title={copy.avgIncome} value={fm(avgIncome)} icon="cash" color={colors.income} colors={colors} tooltip={copy.kpiAvgIncome} />
             </View>
             <View style={{ flexDirection: "row", gap: 8 }}>
-              <Kpi title={copy.incomeStability} value={filtered.length ? `${stableMonths}/${filtered.length} ${isAllYears ? copy.stableYears : copy.stableMonths}` : "—"} icon="chart-bar" color={colors.info} colors={colors} />
-              <Kpi title={copy.savingsRate} value={`${savings}%`} icon="piggy-bank" color={savings >= 0 ? colors.info : colors.expense} colors={colors} />
+              <Kpi title={copy.frequent} value={totals.income > 0 ? `${Math.round(incomeBreakdown[0].value / totals.income * 100)}%` : "—"} icon="chart-bar" color={colors.info} colors={colors} tooltip={copy.kpiFrequentIncome} />
+              <Kpi title={copy.income} value={fm(totals.income)} icon="trending-up" color={colors.income} colors={colors} tooltip={copy.kpiTotalIncome} />
             </View>
           </>
         )}
         {kpiSegment === "expense" && (
           <>
             <View style={{ flexDirection: "row", gap: 8 }}>
-              <Kpi title={copy.expensesLabel} value={fm(totals.expense)} icon="trending-down" color={colors.expense} colors={colors} />
-              <Kpi title={isAllYears ? copy.yearlyAverage : copy.monthlyAverage} value={fm(averageExpense)} icon="calendar-month-outline" color={colors.warn} colors={colors} />
+              <Kpi title={copy.expensesLabel} value={fm(totals.expense)} icon="trending-down" color={colors.expense} colors={colors} tooltip={copy.kpiTotalExpense} />
+              <Kpi title={isAllYears ? copy.yearlyAverage : copy.monthlyAverage} value={fm(averageExpense)} icon="calendar-month-outline" color={colors.warn} colors={colors} tooltip={copy.kpiMonthlyAvgExpense} />
             </View>
             <View style={{ flexDirection: "row", gap: 8 }}>
-              <Kpi title={isAllYears ? copy.positiveYears : copy.positiveMonths} value={filtered.length ? `${positiveMonths}/${filtered.length}` : "—"} icon="check-circle-outline" color={colors.warn} colors={colors} />
-              <Kpi title={copy.savingsRate} value={`${savings}%`} icon="piggy-bank" color={savings >= 0 ? colors.info : colors.expense} colors={colors} />
+              <Kpi title={copy.highestExpense} value={highestExpenseMonth ? monthLabel(highestExpenseMonth, copy.languageCode) : "—"} icon="arrow-up-bold-circle-outline" color={colors.warn} colors={colors} tooltip={copy.kpiHighestExpenseMonth} />
+              <Kpi title={copy.frequent} value={totals.expense > 0 ? `${Math.round(Math.abs(expenseBreakdown[0].value) / totals.expense * 100)}%` : "—"} icon="chart-bar" color={colors.info} colors={colors} tooltip={copy.kpiFrequentExpense} />
             </View>
           </>
         )}
