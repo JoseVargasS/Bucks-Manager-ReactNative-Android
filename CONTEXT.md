@@ -10,11 +10,13 @@ Bucks Manager is an Expo/React Native client with no custom backend. Google Sign
 - **`useDebouncedSheetWrites`** — debounces UI preferences, deletion history, and tag catalogue writes at 1500ms through `syncQueue`. Tags are written via `writeTagsCatalog` (full catalogue overwrite), not a merge-only approach, so deletions propagate to the sheet.
 - **`usePickerCallbacks`** — consolidates `OptionSheet` openers for language, currency, font, color scheme, and Google account settings.
 - **`useTabNavigation`** — owns tab state, `tabRef` mirror, pager `Animated.Value`, layout constants, and `changeTab` animation.
-- **`useBootstrap`** — orchestrates `GoogleSignin.configure`, concurrent preference/session/PIN restore, and splash-screen hide.
+- **`useBootstrap`** — orchestrates `GoogleSignin.configure` (wrapped in try/catch), concurrent preference/session/PIN restore raced against an 8s timeout, and splash-screen hide.
 - **`useHistoryPanel`** — owns history-entries state, loads history from SecureStore on mount, and exposes open/close callbacks.
 - **`useTagSyncEffects`** — tag-load and tag-cleanup effects: loads tags, migrates legacy label refs, prunes orphaned tag ids from transactions, and syncs removals to the sheet.
 - **`useConfirmCallbacks`** — typed confirm-dialog dispatcher (`delete`, `deleteSelected`, `removeAccount`, `disconnect`) and open/close helpers.
 - **`useTransactionActions`** — bridges modal refs into action callbacks: `openAdd`, `openEdit`, `applySearchFilters`, `handleTransactionPress`, `openMoveMenu`, `exitSearch`, `openSearch`.
+- **`useAppModals`** — owns the modal refs (transaction, detail, search, option sheet) and the App-level modal state (confirm dialog and merge prompt), plus pass-through of secondary modal visibility. Returns stable `{ refs, openers, closers, state }`.
+- **`useDerivedSyncStatus`** — derives the sync-status text from `authError`/`syncError`/`hasLocalData`/`pendingSync`/`isSyncing`.
 
 The three main pages stay mounted inside one animated pager. Primary interaction modals open through refs so opening them does not require a root visibility-state round trip.
 

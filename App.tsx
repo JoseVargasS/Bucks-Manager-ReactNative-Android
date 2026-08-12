@@ -21,23 +21,10 @@ const styles = StyleSheet.create({
 });
 import { BottomNav } from "@/components/layout/BottomNav";
 import { PinScreen } from "@/components/screens/PinScreen";
-import {
-  TransactionModal,
-  type TransactionModalHandle,
-} from "@/components/modals/TransactionModal";
-import {
-  DetailModal,
-  type DetailModalHandle,
-} from "@/components/modals/DetailModal";
-import {
-  SearchModal,
-  type SearchModalHandle,
-} from "@/components/modals/SearchModal";
-import {
-  OptionSheet,
-  type OptionSheetHandle,
-} from "@/components/modals/OptionSheet";
-import { type ConfirmConfig } from "@/components/modals/ConfirmModal";
+import { TransactionModal } from "@/components/modals/TransactionModal";
+import { DetailModal } from "@/components/modals/DetailModal";
+import { SearchModal } from "@/components/modals/SearchModal";
+import { OptionSheet } from "@/components/modals/OptionSheet";
 
 const ExportModal = lazy(
   () => import("@/components/modals/ExportModal").then((m) => ({ default: m.ExportModal })),
@@ -65,6 +52,8 @@ import {
   COLOR_SCHEME_OPTIONS,
 } from "@/theme/constants";
 import { useFinancialState } from "@/hooks/useFinancialState";
+import { useAppModals } from "@/hooks/useAppModals";
+import { useDerivedSyncStatus } from "@/hooks/useDerivedSyncStatus";
 import { usePreferences, CURRENCY_OPTIONS } from "@/hooks/usePreferences";
 import { useExport } from "@/hooks/useExport";
 import { usePin } from "@/hooks/usePin";
@@ -84,7 +73,7 @@ import { getErrorMessage, isAuthError } from "@/utils/errorHandler";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { ConnectBanner } from "@/components/ui/ConnectBanner";
 import { ConnectingOverlay } from "@/components/ui/ConnectingOverlay";
-import { MergePromptModal, type MergePromptConfig } from "@/components/modals/MergePromptModal";
+import { MergePromptModal } from "@/components/modals/MergePromptModal";
 import { CurrencyPickerModal } from "@/components/modals/CurrencyPickerModal";
 import {
   StartupSplash,
@@ -137,7 +126,6 @@ function AppContent() {
     handlePinSave,
     handlePinVerify,
   } = usePin(copy, errMsg);
-  const closePinSetup = useCallback(() => setPinSetupVisible(false), [setPinSetupVisible]);
 
   // ─── Core state: tags, finance, session, sync ────────────────────
   const [tagsList, setTagsList] = useState<Tag[]>([]);
@@ -244,7 +232,6 @@ function AppContent() {
     openHistory,
     closeHistory,
   } = useHistoryPanel();
-
   // Wire remote history (sheet → local) once on mount.
   useEffect(() => {
     syncApi.wireRemoteHistory((sheetHistory) => {
@@ -265,16 +252,6 @@ function AppContent() {
   }, [applyRemotePreferences]);
 
   // ─── Merge prompt ─────────────────────────────────────────────────
-  const mergeCallbacksRef = useRef<{ onMerge: () => void; onRemoteOnly: () => void } | null>(null);
-  const [mergePrompt, setMergePrompt] = useState<MergePromptConfig | null>(null);
-  useEffect(() => {
-    syncApi.wireMergePrompt((cfg) => {
-      mergeCallbacksRef.current = { onMerge: cfg.onMerge, onRemoteOnly: cfg.onRemoteOnly };
-      setMergePrompt({ localCount: cfg.localCount, remoteCount: cfg.remoteCount });
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   // ─── Export ──────────────────────────────────────────────────────
   const {
     exportVisible,
@@ -285,6 +262,27 @@ function AppContent() {
     closeExport,
     startExport,
   } = useExport(transactions, currencySymbol, copy, errMsg);
+
+  // ─── Modal refs and state ────────────────────────────────────────
+  const modals = useAppModals({
+    exportVisible,
+    openExport,
+    closeExport,
+    historyVisible,
+    openHistory,
+    closeHistory,
+    pinSetupVisible,
+    setPinSetupVisible,
+    tagEditorVisible,
+    openTagEditor,
+    closeTagEditor,
+  });
+
+  // Wire the merge prompt (sheet → local) once on mount.
+  useEffect(() => {
+    syncApi.wireMergePrompt(modals.openers.openMergePrompt);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // ─── Debounced sheet writes ──────────────────────────────────────
   useDebouncedSheetWrites(
@@ -318,7 +316,6 @@ function AppContent() {
   );
 
   // ─── Confirm dialog ──────────────────────────────────────────────
-  const [confirmConfig, setConfirmConfig] = useState<ConfirmConfig | null>(null);
   const {
     requestDisconnectGoogle,
     requestDelete,
@@ -331,7 +328,7 @@ function AppContent() {
     removeGoogleAccount,
     disconnectGoogle,
     selectedRowsLength: selectedRows.length,
-    setConfirmConfig,
+    setConfirmConfig: modals.openers.openConfirm,
   });
 
   // ─── Derived values ──────────────────────────────────────────────
@@ -342,22 +339,14 @@ function AppContent() {
     language === "en"
       ? selectedColorScheme.labelEn
       : selectedColorScheme.labelEs;
-  const syncStatusText = (() => {
-    if (authError) return authError;
-    if (syncError) return hasLocalData ? copy.showingSavedData : syncError;
-    if (pendingSync) return copy.pendingSyncStatus;
-    if (isSyncing)
-      return hasLocalData
-        ? `${copy.showingSavedData} · ${copy.syncing.toLowerCase()}`
-        : copy.syncing;
-    return "";
-  })();
-
-  // ─── Modal refs (before pickers which consume optionSheetRef) ─────
-  const transactionModalRef = useRef<TransactionModalHandle>(null);
-  const detailModalRef = useRef<DetailModalHandle>(null);
-  const searchModalRef = useRef<SearchModalHandle>(null);
-  const optionSheetRef = useRef<OptionSheetHandle>(null);
+  const syncStatusText = useDerivedSyncStatus({
+    authError,
+    syncError,
+    hasLocalData,
+    pendingSync,
+    isSyncing,
+    copy,
+  });
 
   // ─── Picker callbacks ────────────────────────────────────────────
   const {
@@ -367,7 +356,7 @@ function AppContent() {
     openColorSchemePicker,
     openAccountManager,
   } = usePickerCallbacks({
-    optionSheetRef,
+    optionSheetRef: modals.refs.optionSheetRef,
     copy,
     language,
     currencySymbol,
@@ -380,7 +369,7 @@ function AppContent() {
     theme,
     colors,
     runGoogleSignIn,
-    setConfirmConfig,
+    setConfirmConfig: modals.openers.openConfirm,
   });
 
   // ─── Tab navigation ──────────────────────────────────────────────
@@ -406,10 +395,10 @@ function AppContent() {
     exitSearch,
     openSearch,
   } = useTransactionActions({
-    transactionModalRef,
-    detailModalRef,
-    searchModalRef,
-    optionSheetRef,
+    transactionModalRef: modals.refs.transactionModalRef,
+    detailModalRef: modals.refs.detailModalRef,
+    searchModalRef: modals.refs.searchModalRef,
+    optionSheetRef: modals.refs.optionSheetRef,
     clearSelection,
     toggleSelection,
     changeTab,
@@ -677,7 +666,7 @@ function AppContent() {
       </View>
 
       <TransactionModal
-        ref={transactionModalRef}
+        ref={modals.refs.transactionModalRef}
         colors={colors}
         tags={tagsList}
         copy={copy}
@@ -686,7 +675,7 @@ function AppContent() {
         onAddTag={(tag) => setTagsList((prev) => [...prev.filter((t) => t.id !== tag.id), tag])}
       />
       <DetailModal
-        ref={detailModalRef}
+        ref={modals.refs.detailModalRef}
         colors={colors}
         currencySymbol={currencySymbol}
         copy={copy}
@@ -694,10 +683,10 @@ function AppContent() {
         onEdit={openEdit}
         onDelete={requestDelete}
       />
-      <OptionSheet ref={optionSheetRef} colors={colors} />
+      <OptionSheet ref={modals.refs.optionSheetRef} colors={colors} />
       <Suspense fallback={null}>
         <ConfirmModal
-          config={confirmConfig}
+          config={modals.state.confirmConfig}
           colors={colors}
           currencySymbol={currencySymbol}
           copy={copy}
@@ -705,42 +694,42 @@ function AppContent() {
           onConfirm={handleConfirm}
         />
         <HistoryModal
-          visible={historyVisible}
+          visible={modals.state.historyVisible}
           entries={historyEntries}
           colors={colors}
           currencySymbol={currencySymbol}
           copy={copy}
-          onClose={closeHistory}
+          onClose={modals.closers.closeHistory}
           onUndo={mutations.undoDeleteEntry}
         />
         <PinSetupModal
-          visible={pinSetupVisible}
+          visible={modals.state.pinSetupVisible}
           colors={colors}
           copy={copy}
-          onClose={closePinSetup}
+          onClose={modals.closers.closePinSetup}
           onSave={handlePinSave}
         />
         <ExportModal
-          visible={exportVisible}
+          visible={modals.state.exportVisible}
           colors={colors}
           copy={copy}
           config={exportConfig}
           setConfig={setExportConfig}
           minDate={exportMinDate}
-          onClose={closeExport}
+          onClose={modals.closers.closeExport}
           onExport={startExport}
         />
         <TagEditorModal
-          visible={tagEditorVisible}
+          visible={modals.state.tagEditorVisible}
           colors={colors}
           copy={copy}
           tags={tagsList}
           setTags={setTagsList}
-          onClose={closeTagEditor}
+          onClose={modals.closers.closeTagEditor}
         />
       </Suspense>
       <MergePromptModal
-        config={mergePrompt}
+        config={modals.state.mergePrompt}
         colors={colors}
         copy={{
           mergeTitle: "Datos en Drive",
@@ -748,17 +737,9 @@ function AppContent() {
           mergeOption: "Sí, combinar",
           mergeRemoteOnly: "No",
         }}
-        onClose={() => setMergePrompt(null)}
-        onMerge={() => {
-          mergeCallbacksRef.current?.onMerge();
-          setMergePrompt(null);
-          mergeCallbacksRef.current = null;
-        }}
-        onRemoteOnly={() => {
-          mergeCallbacksRef.current?.onRemoteOnly();
-          setMergePrompt(null);
-          mergeCallbacksRef.current = null;
-        }}
+        onClose={modals.closers.closeMergePrompt}
+        onMerge={modals.closers.confirmMerge}
+        onRemoteOnly={modals.closers.remoteOnlyMerge}
       />
       <CurrencyPickerModal
         visible={needsCurrencyPick}
@@ -775,7 +756,7 @@ function AppContent() {
         onClose={() => dismissCurrencyPick()}
       />
       <SearchModal
-        ref={searchModalRef}
+        ref={modals.refs.searchModalRef}
         colors={colors}
         copy={copy}
         currencySymbol={currencySymbol}
