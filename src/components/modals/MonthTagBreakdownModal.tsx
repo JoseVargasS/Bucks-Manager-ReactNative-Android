@@ -12,7 +12,8 @@ import { type Tag, type Transaction } from "@/types";
 import { aggregateExpensesByTag, aggregateIncomesByTag, type PieSlice } from "@/domain/bucksLogic";
 import { type UiCopy } from "@/i18n";
 import { useModalTransition } from "@/components/ui/useModalTransition";
-import { PieChart, SliceRow, type MergedSlice } from "@/components/ui/PieChart";
+import { PieChart, type MergedSlice } from "@/components/ui/PieChart";
+import { PieSliceRow as SliceRow } from "@/components/ui/PieSliceRow";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { Text } from "@/components/ui/AppText";
 

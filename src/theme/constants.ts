@@ -6,6 +6,8 @@ export const ANIM_TAB_PAGER = 210;
 export const ANIM_HEADER_BTN_IN = 60;
 export const ANIM_HEADER_BTN_OUT = 60;
 
+export const RADII = { sm: 8, md: 14, pill: 50 } as const;
+
 export const NAV_BTN_SIZE = 40;
 export const NAV_BTN_HEIGHT = 42;
 export const NAV_BTN_RADIUS = 21;
