@@ -41,7 +41,6 @@ export const bottomNavStyles = StyleSheet.create({
     borderRadius: 17,
     alignItems: "center",
     justifyContent: "center",
-    transform: [{ translateY: -16 }],
   },
   bottomNavLabel: { fontSize: 12, fontWeight: "500" },
 });
