@@ -21,7 +21,6 @@
     "expo": "~56.0.16",
     "expo-blur": "~56.0.4",
     "expo-constants": "~56.0.21",
-    "expo-dev-client": "~56.0.23",
     "expo-file-system": "~56.0.8",
     "expo-font": "~56.0.7",
     "expo-print": "~56.0.4",
@@ -29,7 +28,6 @@
     "expo-sharing": "~56.0.22",
     "expo-splash-screen": "~56.0.13",
     "expo-system-ui": "~56.0.5",
-    "pnpm": "^11.13.0",
     "react": "19.2.3",
     "react-native": "0.85.3",
     "react-native-svg": "15.15.5"
@@ -42,6 +40,7 @@
     "eslint": "^10.7.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.3",
+    "expo-dev-client": "~56.0.23",
     "jest": "^30.4.2",
     "test-renderer": "^1.2.0",
     "ts-jest": "^29.4.11",
