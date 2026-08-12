@@ -456,6 +456,3 @@ export function computeSavingsLinePoints(
   });
 }
 
-// re-exports for backward compat
-export { calculateExpression, normalizeAmountExpression } from "@/utils/expressionParser";
-export { formatDateToISO, formatDateForSheet, parseSpanishDate, getMonthYear, parseCreatedAtMs } from "@/utils/dateUtils";

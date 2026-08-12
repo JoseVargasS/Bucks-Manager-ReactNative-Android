@@ -54,25 +54,6 @@ export const base = StyleSheet.create({
   },
   inputIcon: { position: "absolute", right: 14, top: 12 },
 
-  // Select shared
-  selectMenu: {
-    position: "absolute",
-    borderWidth: 1,
-    borderRadius: 10,
-    overflow: "hidden",
-  },
-  selectMenuList: { flexShrink: 1 },
-  selectMenuContent: { paddingVertical: 4 },
-  selectOptionRow: {
-    minHeight: 36,
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  selectOptionLabel: { flex: 1, minWidth: 0, fontSize: 14, fontWeight: "600" },
-
   // Shared text/layout
   empty: { padding: 18, textAlign: "center", fontWeight: "500" },
   mobileEmptyCard: { borderWidth: 0, borderRadius: 14 },

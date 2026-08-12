@@ -3,10 +3,9 @@ import { Animated, Easing, Pressable, View } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { base } from "@/styles/baseStyles";
 import { bottomNavStyles } from "@/components/layout/BottomNav.styles";
-import { useColors } from "@/theme/ThemeContext";
+import { useColors, useTheme } from "@/theme/ThemeContext";
 
 const styles = { ...base, ...bottomNavStyles };
-import { dark } from "@/theme/colors";
 import { type Tab, type MaterialIconName } from "@/types";
 import { type UiCopy } from "@/i18n";
 import { withAlpha } from "@/utils/helpers";
@@ -46,8 +45,9 @@ export const BottomNav = memo(function BottomNav({
   setTab: (tab: Tab) => void;
   onAdd: () => void;
 }) {
-  const { card, borderStrong, bg } = useColors();
-  const isDark = bg === dark.bg;
+  const { card, borderStrong } = useColors();
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
   const glassSurface = useMemo(
     () => withAlpha(card, isDark ? 0.85 : 0.82),
     [isDark, card],

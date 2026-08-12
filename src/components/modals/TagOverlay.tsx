@@ -1,4 +1,4 @@
-import { ScrollView, Pressable, View } from "react-native";
+import { ScrollView, Pressable, StyleSheet, View } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { type Palette } from "@/theme/colors";
 import { type Tag } from "@/types";
@@ -7,6 +7,17 @@ import { base } from "@/styles/baseStyles";
 import { Text } from "@/components/ui/AppText";
 
 const styles = { ...base, ...recordModalStyles };
+const tagOptionStyles = StyleSheet.create({
+  selectOptionRow: {
+    minHeight: 36,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  selectOptionLabel: { flex: 1, minWidth: 0, fontSize: 14, fontWeight: "600" },
+});
 
 export function TagOverlay({
   availableTags,
@@ -50,11 +61,11 @@ export function TagOverlay({
             {availableTags.map((tag) => (
               <Pressable
                 key={tag.id}
-                style={[styles.selectOptionRow, { width: "48%", backgroundColor: colors.input }]}
+                style={[tagOptionStyles.selectOptionRow, { width: "48%", backgroundColor: colors.input }]}
                 onPress={() => onToggleTag(tag.id)}
               >
                 <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: tag.color }} />
-                <Text numberOfLines={1} style={[styles.selectOptionLabel, { color: colors.text }]}>
+                <Text numberOfLines={1} style={[tagOptionStyles.selectOptionLabel, { color: colors.text }]}>
                   {tag.label}
                 </Text>
               </Pressable>

@@ -8,7 +8,8 @@ import {
 import { printToFileAsync } from "expo-print";
 import { shareAsync } from "expo-sharing";
 import { Alert } from "react-native";
-import { formatDateToISO, formatMoney } from "@/domain/bucksLogic";
+import { formatMoney } from "@/domain/bucksLogic";
+import { formatDateToISO } from "@/utils/dateUtils";
 import { formatCreatedTime } from "@/utils/formats";
 import { buildExportFileName } from "@/utils/helpers";
 import { type Transaction } from "@/types";

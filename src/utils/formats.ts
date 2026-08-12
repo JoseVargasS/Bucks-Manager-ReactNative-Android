@@ -1,4 +1,4 @@
-import { formatDateToISO } from "@/domain/bucksLogic";
+import { formatDateToISO } from "@/utils/dateUtils";
 import { UI_COPY, type UiCopy } from "@/i18n";
 import type { Palette } from "@/theme/colors";
 

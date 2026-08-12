@@ -14,7 +14,8 @@ import {
   StyleSheet,
 } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import { formatDateToISO, MONTH_NAMES } from "@/domain/bucksLogic";
+import { MONTH_NAMES } from "@/domain/bucksLogic";
+import { formatDateToISO } from "@/utils/dateUtils";
 import { type Palette } from "@/theme/colors";
 import { UI_COPY, type UiCopy } from "@/i18n";
 import { useModalTransition } from "./useModalTransition";
