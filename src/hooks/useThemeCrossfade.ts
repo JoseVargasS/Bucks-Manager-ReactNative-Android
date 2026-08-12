@@ -21,7 +21,8 @@ export function useThemeCrossfade(
   saveTheme: (t: ThemeMode) => void,
 ) {
   const themeRef = useRef<Animated.Value | null>(null);
-  if (!themeRef.current) themeRef.current = new Animated.Value(theme === "dark" ? 1 : 0);
+  if (!themeRef.current)
+    themeRef.current = new Animated.Value(theme === "dark" ? 1 : 0);
   const themeProgress = themeRef.current;
   const themeAnimRef = useRef<Animated.CompositeAnimation | null>(null);
 
@@ -61,7 +62,7 @@ export function useThemeCrossfade(
     themeAnimRef.current?.stop();
     themeAnimRef.current = Animated.timing(themeProgress, {
       toValue: target,
-      duration: 180,
+      duration: 50,
       easing: Easing.inOut(Easing.cubic),
       useNativeDriver: false,
     });
