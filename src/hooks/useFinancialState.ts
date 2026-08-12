@@ -163,67 +163,7 @@ export function useFinancialState(tagsList: Tag[]): FinancialState {
 
   // --- Actions ---
 
-  function applyFinancialState(
-    nextTransactions: Transaction[],
-    nextSummaries: SummaryRow[],
-    nextFreqIncome: Record<string, number>,
-    syncedAt: string | null,
-    fromCache = false,
-  ) {
-    const summariesToUse = nextSummaries.length
-      ? nextSummaries
-      : calculateSummaries(nextTransactions, nextFreqIncome);
-    setTransactions(nextTransactions);
-    setSummaries(summariesToUse);
-    setFreqIncome(nextFreqIncome);
-    freqIncomeRef.current = nextFreqIncome;
-    setLastSyncedAt(syncedAt);
-    const nextHasLocalData =
-      nextTransactions.length > 0 || summariesToUse.length > 0;
-    setHasLocalData(nextHasLocalData);
-    hasLocalDataRef.current = nextHasLocalData;
-    if (fromCache || nextTransactions.length) updateInitialPeriod(nextTransactions);
-  }
-
-  function persistFinancialState(
-    nextTransactions: Transaction[],
-    nextSummaries: SummaryRow[],
-    nextFreqIncome: Record<string, number>,
-    syncedAt = lastSyncedAt,
-    sheetId = "",
-  ) {
-    const summariesToUse = nextSummaries.length
-      ? nextSummaries
-      : calculateSummaries(nextTransactions, nextFreqIncome);
-    const nextHasLocalData =
-      nextTransactions.length > 0 || summariesToUse.length > 0;
-    setHasLocalData(nextHasLocalData);
-    hasLocalDataRef.current = nextHasLocalData;
-    if (sheetId) {
-      saveFinancialCache({
-        spreadsheetId: sheetId,
-        transactions: nextTransactions,
-        summaries: summariesToUse,
-        freqIncome: nextFreqIncome,
-        lastSyncedAt: syncedAt,
-      }).catch(() => undefined);
-    } else {
-      saveOfflineCache(nextTransactions, summariesToUse, nextFreqIncome).catch(() => undefined);
-    }
-  }
-
-  function resetFinancial() {
-    setTransactions([]);
-    setSummaries([]);
-    setFreqIncome({});
-    freqIncomeRef.current = {};
-    setHasLocalData(false);
-    hasLocalDataRef.current = false;
-    setLastSyncedAt(null);
-    didSetInitialPeriodRef.current = false;
-  }
-
-  function updateInitialPeriod(source: Transaction[]) {
+  const updateInitialPeriod = useCallback((source: Transaction[]) => {
     if (didSetInitialPeriodRef.current || !source.length) return;
     const today = new Date();
     let latest: Date | null = null;
@@ -238,7 +178,73 @@ export function useFinancialState(tagsList: Tag[]): FinancialState {
       setLoadedMonthCount(1);
     }
     didSetInitialPeriodRef.current = true;
-  }
+  }, []);
+
+  const applyFinancialState = useCallback(
+    (
+      nextTransactions: Transaction[],
+      nextSummaries: SummaryRow[],
+      nextFreqIncome: Record<string, number>,
+      syncedAt: string | null,
+      fromCache = false,
+    ) => {
+      const summariesToUse = nextSummaries.length
+        ? nextSummaries
+        : calculateSummaries(nextTransactions, nextFreqIncome);
+      setTransactions(nextTransactions);
+      setSummaries(summariesToUse);
+      setFreqIncome(nextFreqIncome);
+      freqIncomeRef.current = nextFreqIncome;
+      setLastSyncedAt(syncedAt);
+      const nextHasLocalData =
+        nextTransactions.length > 0 || summariesToUse.length > 0;
+      setHasLocalData(nextHasLocalData);
+      hasLocalDataRef.current = nextHasLocalData;
+      if (fromCache || nextTransactions.length) updateInitialPeriod(nextTransactions);
+    },
+    [updateInitialPeriod],
+  );
+
+  const persistFinancialState = useCallback(
+    (
+      nextTransactions: Transaction[],
+      nextSummaries: SummaryRow[],
+      nextFreqIncome: Record<string, number>,
+      syncedAt = lastSyncedAt,
+      sheetId = "",
+    ) => {
+      const summariesToUse = nextSummaries.length
+        ? nextSummaries
+        : calculateSummaries(nextTransactions, nextFreqIncome);
+      const nextHasLocalData =
+        nextTransactions.length > 0 || summariesToUse.length > 0;
+      setHasLocalData(nextHasLocalData);
+      hasLocalDataRef.current = nextHasLocalData;
+      if (sheetId) {
+        saveFinancialCache({
+          spreadsheetId: sheetId,
+          transactions: nextTransactions,
+          summaries: summariesToUse,
+          freqIncome: nextFreqIncome,
+          lastSyncedAt: syncedAt,
+        }).catch(() => undefined);
+      } else {
+        saveOfflineCache(nextTransactions, summariesToUse, nextFreqIncome).catch(() => undefined);
+      }
+    },
+    [lastSyncedAt],
+  );
+
+  const resetFinancial = useCallback(() => {
+    setTransactions([]);
+    setSummaries([]);
+    setFreqIncome({});
+    freqIncomeRef.current = {};
+    setHasLocalData(false);
+    hasLocalDataRef.current = false;
+    setLastSyncedAt(null);
+    didSetInitialPeriodRef.current = false;
+  }, []);
 
   const selectPeriod = useCallback(
     (nextMonth: number, nextYear: number) => {
