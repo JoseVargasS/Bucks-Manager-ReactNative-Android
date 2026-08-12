@@ -136,6 +136,12 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
     });
   }, [toggleTag, closeTagOverlay]);
 
+  const closeTagFlow = useCallback(() => {
+    closeTagOverlay();
+    setShowCreateTag(false);
+    setCreatingTagFor(null);
+  }, [closeTagOverlay, setShowCreateTag, setCreatingTagFor]);
+
   const close = useCallback(() => {
     Keyboard.dismiss();
     setVisible(false);
@@ -165,6 +171,10 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
   useEffect(() => {
     if (!visible) return;
     const subscription = BackHandler.addEventListener("hardwareBackPress", () => {
+      if (tagsOpenFor || showCreateTag) {
+        closeTagFlow();
+        return true;
+      }
       if (activeAmountIdRef.current !== null) {
         setActiveAmountId(null);
         return true;
@@ -173,7 +183,7 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
       return true;
     });
     return () => subscription.remove();
-  }, [close, visible, activeAmountIdRef, setActiveAmountId]);
+  }, [close, visible, activeAmountIdRef, setActiveAmountId, tagsOpenFor, showCreateTag, closeTagFlow]);
 
   const handleCreateTagWrapper = useCallback(() => {
     handleCreateTag();
@@ -216,7 +226,13 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
         style={[StyleSheet.absoluteFill, styles.modalOverlay, { backgroundColor: colors.overlay, zIndex: Z_INDEX_MODAL, elevation: Z_INDEX_MODAL }, transition.containerStyle]}
       >
         <BlurView intensity={30} tint="dark" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
-        <Pressable style={styles.optionBackdrop} onPress={close} />
+        <Pressable
+          style={styles.optionBackdrop}
+          onPress={() => {
+            if (tagsOpenFor || showCreateTag) closeTagFlow();
+            else close();
+          }}
+        />
 
         <Animated.View ref={modalRef} collapsable={false} style={[styles.recordModal, { backgroundColor: colors.card }, transition.panelStyle]}>
           <View style={[styles.recordHeader, { borderColor: colors.border }]}>
@@ -227,12 +243,6 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
               <MaterialCommunityIcons name="close" size={22} color={colors.muted} />
             </Pressable>
           </View>
-          {tagsOpenFor && tagsReady && (
-            <View
-              style={StyleSheet.absoluteFill}
-              onStartShouldSetResponderCapture={() => { dismissTags(); return false; }}
-            />
-          )}
           <View ref={scrollHostRef} collapsable={false} style={styles.recordScroll}>
           <ScrollView
             ref={scrollRef}
@@ -422,6 +432,13 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
             </View>
           </ScrollView>
           </View>
+
+          {tagsOpenFor && tagsReady && !showCreateTag && (
+            <View
+              style={StyleSheet.absoluteFill}
+              onStartShouldSetResponderCapture={() => { closeTagFlow(); return false; }}
+            />
+          )}
 
           <NumericKeypad
             visible={activeAmountId !== null}
