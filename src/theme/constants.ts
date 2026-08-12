@@ -28,11 +28,10 @@ export const Z_INDEX_SEARCH = 1002;
 
 // Splash uses raw constants because it renders before ThemeProvider mounts.
 // The values match the cyprus dark scheme (new default): a near-black green
-// shell, a sand-mint spinner, and a chalk-white title.
+// shell and a chalk-white title.
 export const SPLASH_BG = "#001a16";
 export const SPLASH_SPINNER = "#9ed9c8";
 export const SPLASH_TEXT = "#f0ede4";
-export const SPLASH_INDICATOR_OFFSET = 72;
 
 export const TOKEN_KEY = "bucks_google_access_token";
 export const SHEET_KEY = "bucks_spreadsheet_id";

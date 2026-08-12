@@ -224,6 +224,18 @@ function AppContent() {
     restorePinState,
   );
 
+  // Retain the splash mounted while it plays its exit fade.
+  const [splashGone, setSplashGone] = useState(false);
+  const hideSplash = useCallback(() => setSplashGone(true), []);
+  const splashWanted =
+    bootstrapping ||
+    accountTransition ||
+    rehydratingCache ||
+    (accessToken && isFirstRemoteLoad && !hasLocalData);
+  useEffect(() => {
+    if (splashWanted) setSplashGone(false);
+  }, [splashWanted]);
+
   // ─── History panel ───────────────────────────────────────────────
   const {
     historyEntries,
@@ -542,13 +554,8 @@ function AppContent() {
   );
 
   // ─── Render ──────────────────────────────────────────────────────
-  if (
-    bootstrapping ||
-    accountTransition ||
-    rehydratingCache ||
-    (accessToken && isFirstRemoteLoad && !hasLocalData)
-  ) {
-    return <StartupSplash />;
+  if (!splashGone) {
+    return <StartupSplash exiting={!splashWanted} onExitComplete={hideSplash} />;
   }
 
   if (pinLoading) {
