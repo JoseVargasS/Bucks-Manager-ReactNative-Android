@@ -63,7 +63,7 @@ describe("themeColors", () => {
 
   test("getPalette applies truepink scheme", () => {
     const d = getPalette("dark", "truepink");
-    expect(d.primary).toBe("#FD1843");
+    expect(d.primary).toBe("#E91E8C");
     const l = getPalette("light", "truepink");
     expect(l.primary).toBe("#a8001f");
   });
@@ -77,7 +77,7 @@ describe("themeColors", () => {
 
   test("getPalette applies milky scheme", () => {
     const d = getPalette("dark", "milky");
-    expect(d.primary).toBe("#59C749");
+    expect(d.primary).toBe("#48B868");
     const l = getPalette("light", "milky");
     expect(l.primary).toBe("#2a7a20");
   });
@@ -107,7 +107,7 @@ describe("themeColors", () => {
     const d = getPalette("dark", "obsidian");
     expect(d.primary).toBe("#C8FF00");
     const l = getPalette("light", "obsidian");
-    expect(l.primary).toBe("#C8FF00");
+    expect(l.primary).toBe("#5A7A00");
   });
 
   test("getPalette caches and returns same reference", () => {

@@ -1,7 +1,7 @@
 import { type ColorSchemePreference, accents } from "./accents";
 export type { ColorSchemePreference };
 
-const SHARED_TAG_COLORS = [
+export const SHARED_TAG_COLORS_DARK = [
   "#f43f5e",
   "#f59e0b",
   "#10b981",
@@ -15,6 +15,74 @@ const SHARED_TAG_COLORS = [
   "#ec4899",
   "#06b6d4",
 ];
+
+function hexToRgb(hex: string): { r: number; g: number; b: number } {
+  const value = hex.replace("#", "");
+  const num = parseInt(value, 16);
+  return {
+    r: (num >> 16) & 255,
+    g: (num >> 8) & 255,
+    b: num & 255,
+  };
+}
+
+function rgbToHsl(r: number, g: number, b: number): { h: number; s: number; l: number } {
+  const rn = r / 255;
+  const gn = g / 255;
+  const bn = b / 255;
+  const max = Math.max(rn, gn, bn);
+  const min = Math.min(rn, gn, bn);
+  const l = (max + min) / 2;
+  const delta = max - min;
+
+  if (delta === 0) return { h: 0, s: 0, l };
+
+  const s = delta / (1 - Math.abs(2 * l - 1));
+  let h: number;
+  if (max === rn) h = ((gn - bn) / delta) % 6;
+  else if (max === gn) h = (bn - rn) / delta + 2;
+  else h = (rn - gn) / delta + 4;
+  h *= 60;
+  if (h < 0) h += 360;
+
+  return { h, s, l };
+}
+
+function hslToRgb(h: number, s: number, l: number): { r: number; g: number; b: number } {
+  const c = (1 - Math.abs(2 * l - 1)) * s;
+  const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+  const m = l - c / 2;
+  let r: number;
+  let g: number;
+  let b: number;
+
+  if (h < 60) { r = c; g = x; b = 0; }
+  else if (h < 120) { r = x; g = c; b = 0; }
+  else if (h < 180) { r = 0; g = c; b = x; }
+  else if (h < 240) { r = 0; g = x; b = c; }
+  else if (h < 300) { r = x; g = 0; b = c; }
+  else { r = c; g = 0; b = x; }
+
+  return {
+    r: Math.round((r + m) * 255),
+    g: Math.round((g + m) * 255),
+    b: Math.round((b + m) * 255),
+  };
+}
+
+function rgbToHex(r: number, g: number, b: number): string {
+  return `#${[r, g, b].map((n) => n.toString(16).padStart(2, "0")).join("")}`;
+}
+
+export function adjustTagColorForLight(hex: string): string {
+  const { r, g, b } = hexToRgb(hex);
+  const { h, s, l } = rgbToHsl(r, g, b);
+  const nextL = Math.max(10, l * 100 - 18) / 100;
+  const rgb = hslToRgb(h, s, nextL);
+  return rgbToHex(rgb.r, rgb.g, rgb.b);
+}
+
+export const SHARED_TAG_COLORS_LIGHT = SHARED_TAG_COLORS_DARK.map(adjustTagColorForLight);
 
 // Base palette when no scheme override is applied. Mirrors the `cyprus`
 // scheme (the new default). cyprus.dark / cyprus.light redeclare every
@@ -49,7 +117,7 @@ export const dark = {
   freqExpenseRow: "rgba(255,156,128,0.13)",
   overlay: "rgba(0,12,10,0.76)",
   shadow: "#000000",
-  tagColors: SHARED_TAG_COLORS,
+  tagColors: SHARED_TAG_COLORS_DARK,
   tagTextLight: "#ffffff",
   tagTextDark: "#18202d",
 };
@@ -82,7 +150,7 @@ const light = {
   freqExpenseRow: "rgba(184,48,32,0.07)",
   overlay: "rgba(8,14,12,0.34)",
   shadow: "#a89878",
-  tagColors: SHARED_TAG_COLORS,
+  tagColors: SHARED_TAG_COLORS_LIGHT,
   tagTextLight: "#ffffff",
   tagTextDark: "#18202d",
 };
