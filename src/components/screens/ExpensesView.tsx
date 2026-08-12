@@ -22,6 +22,9 @@ import { expensesStyles } from "@/components/screens/ExpensesView.styles";
 import { txStyles } from "@/styles/transactionRow";
 
 const styles = { ...base, ...expensesStyles, ...txStyles };
+const AnimatedSectionList = Animated.createAnimatedComponent(
+  SectionList,
+) as unknown as typeof SectionList;
 import { PeriodControls } from "@/components/layout/PeriodControls";
 import { type Palette } from "@/theme/colors";
 import { type Tag, type Transaction } from "@/types";
@@ -220,6 +223,19 @@ export const ExpensesView = memo(function ExpensesView({
   if (!scrollYRef.current) scrollYRef.current = new Animated.Value(0);
   const scrollY = scrollYRef.current;
   const [scrolled, setScrolled] = useState(false);
+  const lastScrollTimestampRef = useRef(0);
+
+  const handleScroll = useCallback(
+    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+      const now = Date.now();
+      if (now - lastScrollTimestampRef.current < 150) return;
+      lastScrollTimestampRef.current = now;
+      const y = e.nativeEvent.contentOffset.y;
+      setScrolled((prev) => (prev !== (y > 10) ? y > 10 : prev));
+    },
+    [],
+  );
+
   const periodBar = useMemo(() => (
     <PeriodControls
       colors={colors}
@@ -350,7 +366,7 @@ export const ExpensesView = memo(function ExpensesView({
 
   return (
     <View style={{ flex: 1 }}>
-      <SectionList
+      <AnimatedSectionList
         style={{ flex: 1 }}
         sections={sections}
         keyExtractor={keyExtractor}
@@ -375,7 +391,7 @@ export const ExpensesView = memo(function ExpensesView({
         onMomentumScrollBegin={closeTagBubble}
         onScroll={Animated.event(
           [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-          { useNativeDriver: false, listener: (e: NativeSyntheticEvent<NativeScrollEvent>) => setScrolled(e.nativeEvent.contentOffset.y > 2) },
+          { useNativeDriver: true, listener: handleScroll },
         )}
       />
 

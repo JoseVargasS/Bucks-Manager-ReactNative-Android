@@ -2,7 +2,8 @@ import { Fragment, memo, useMemo, useCallback, useEffect, useRef, useState } fro
 import { Animated, Easing, ScrollView, View } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 
-import { formatMoney, calculateMonthSummary, aggregateExpensesByTag, aggregateIncomesByTag, type PieSlice } from "@/domain/bucksLogic";
+import { formatMoney, calculateMonthSummary, aggregateExpensesByTag, aggregateIncomesByTag, getTransactionMonthKey, type PieSlice } from "@/domain/bucksLogic";
+import { getMonthYear } from "@/utils/dateUtils";
 import { base } from "@/styles/baseStyles";
 import { dashboardStyles } from "@/components/screens/DashboardView.styles";
 import { txStyles } from "@/styles/transactionRow";
@@ -79,29 +80,35 @@ export const DashboardView = memo(function DashboardView({
   const prevYear = month === 0 ? year - 1 : year;
   const prevMonthName = UI_MONTH_NAMES[copy.languageCode === "en" ? "en" : "es"][prevMonth];
   const prevMonthKey = `${prevMonthName} ${prevYear}`;
-  const prevMonthTransactions = useMemo(
-    () => allTransactions.filter((tx) => {
-      const d = tx.rawDateMs != null ? new Date(tx.rawDateMs) : new Date(tx.rawDate);
-      return d.getMonth() === prevMonth && d.getFullYear() === prevYear;
-    }),
-    [allTransactions, prevMonth, prevYear],
+  const localizedMonthNames = copy.languageCode === "en" ? UI_MONTH_NAMES.en : UI_MONTH_NAMES.es;
+  const monthKey = `${localizedMonthNames[month]} ${year}`;
+
+  const transactionsByMonth = useMemo(() => {
+    const map = new Map<string, Transaction[]>();
+    for (const tx of allTransactions) {
+      const key = getTransactionMonthKey(tx);
+      const list = map.get(key);
+      if (list) list.push(tx);
+      else map.set(key, [tx]);
+    }
+    return map;
+  }, [allTransactions]);
+
+  const monthTransactions = useMemo(
+    () => transactionsByMonth.get(getMonthYear(new Date(year, month, 1))) ?? [],
+    [transactionsByMonth, year, month],
   );
+  const prevMonthTransactions = useMemo(
+    () => transactionsByMonth.get(getMonthYear(new Date(prevYear, prevMonth, 1))) ?? [],
+    [transactionsByMonth, prevYear, prevMonth],
+  );
+
   const prevSummary = useMemo<SummaryRow>(
     () => {
       const emptyFreq: Record<string, number> = {};
       return calculateMonthSummary(prevMonthTransactions, emptyFreq, prevMonthKey);
     },
     [prevMonthTransactions, prevMonthKey],
-  );
-
-  const localizedMonthNames = copy.languageCode === "en" ? UI_MONTH_NAMES.en : UI_MONTH_NAMES.es;
-  const monthKey = `${localizedMonthNames[month]} ${year}`;
-  const monthTransactions = useMemo(
-    () => allTransactions.filter((tx) => {
-      const d = tx.rawDateMs != null ? new Date(tx.rawDateMs) : new Date(tx.rawDate);
-      return d.getMonth() === month && d.getFullYear() === year;
-    }),
-    [allTransactions, month, year],
   );
 
   const summary = useMemo<SummaryRow>(
@@ -129,15 +136,7 @@ export const DashboardView = memo(function DashboardView({
   ], [copy.expenseBreakdown, copy.incomeBreakdown]);
 
   const recentTransactions = useMemo(
-    () =>
-      [...allTransactions]
-        .sort(
-          (a, b) =>
-            (b.rawDateMs ?? Date.parse(b.rawDate)) -
-            (a.rawDateMs ?? Date.parse(a.rawDate)) ||
-            (b.createdAtMs ?? 0) - (a.createdAtMs ?? 0),
-        )
-        .slice(0, 7),
+    () => allTransactions.slice(-7).reverse(),
     [allTransactions],
   );
 
@@ -276,7 +275,7 @@ export const DashboardView = memo(function DashboardView({
           <View style={{ height: 10 }} />
           {activePieData.length > 0 ? (
             <PieChart
-              key={`pie-${allTransactions.length}-${month}-${dashBreakdownTab}`}
+              key={`pie-${month}`}
               data={activePieData}
               colors={colors}
               currencySymbol={currencySymbol}

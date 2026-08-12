@@ -244,8 +244,10 @@ export const PieChart = memo(function PieChart({
     const token = ++sweepToken.current;
     const n = opacities.length;
     let i = 0;
+    let cycles = 0;
     const step = () => {
       if (sweepToken.current !== token) return;
+      if (cycles >= 3) return;
       Animated.timing(opacities[i], {
         toValue: 1,
         duration: 220,
@@ -259,14 +261,15 @@ export const PieChart = memo(function PieChart({
           useNativeDriver: true,
         }).start();
         i = (i + 1) % n;
-        if (sweepToken.current === token) setTimeout(step, 140);
+        if (i === 0) cycles += 1;
+        if (sweepToken.current === token && cycles < 3) setTimeout(step, 140);
       }, 260);
     };
     const initial = setTimeout(step, 380);
     return () => {
       clearTimeout(initial);
     };
-  }, [selectedKey, opacities]);
+  }, [selectedKey, opacities, data]);
 
   const labelPlacements = useMemo(() => {
     const items = arcs
