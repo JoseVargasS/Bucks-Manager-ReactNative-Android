@@ -229,6 +229,7 @@ export function useGoogleSync(
             language: sheetUiPreferences.language,
             currencySymbol: sheetUiPreferences.currencySymbol,
             fontPreference: sheetUiPreferences.fontPreference,
+            fontSizeScale: sheetUiPreferences.fontSizeScale,
             colorScheme: sheetUiPreferences.colorScheme,
             theme: sheetUiPreferences.theme,
           });

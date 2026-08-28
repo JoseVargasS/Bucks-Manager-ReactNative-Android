@@ -14,17 +14,19 @@ const VALID_FONT_PREFERENCES: FontPreference[] = [
   "comicneue", "sora", "patrickhand", "plusjakartasans", "comicsansms",
   "proggysquare",
 ];
+const VALID_FONT_SIZE_SCALES: number[] = [0.85, 0.92, 1.0, 1.08, 1.15];
 
-// Shape persisted to the sheet. v2 = v1 + theme (dark/light).
+// Shape persisted to the sheet. v3 = v2 + fontSizeScale (0.85-1.15).
 // Bump the version key in code and the on-sheet value when adding fields
 // the on-disk shape changes; old data is read best-effort with fallbacks.
 export type UiPreferences = {
-  v: 2;
+  v: 3;
   language: LanguageMode;
   currencySymbol: string;
   fontPreference: FontPreference;
   colorScheme: ColorSchemePreference;
   theme: ThemeMode;
+  fontSizeScale: number;
 };
 
 export function buildUiPreferences(params: {
@@ -33,8 +35,19 @@ export function buildUiPreferences(params: {
   fontPreference: FontPreference;
   colorScheme: ColorSchemePreference;
   theme: ThemeMode;
+  fontSizeScale?: number;
 }): UiPreferences {
-  return { v: 2, ...params };
+  const scale = sanitizeFontSizeScale(params.fontSizeScale);
+  return { v: 3, ...params, fontSizeScale: scale };
+}
+
+function sanitizeFontSizeScale(value: unknown): number {
+  const n = typeof value === "string" ? parseFloat(value) : (value as number);
+  if (VALID_FONT_SIZE_SCALES.includes(n)) return n;
+  // tolerancia a flotantes cercanos (ej 1.08 vs 1.0800001)
+  const rounded = Math.round((n as number) * 100) / 100;
+  if (VALID_FONT_SIZE_SCALES.includes(rounded)) return rounded;
+  return 1.0;
 }
 
 // Read L2 of MONTHLY SUMMARY. Returns null when the cell is empty, the
@@ -88,6 +101,7 @@ export function sanitizeUiPreferences(value: unknown): UiPreferences | null {
   const colorScheme = v.colorScheme;
   const currencySymbol = v.currencySymbol;
   const theme = v.theme;
+  const fontSizeScale = v.fontSizeScale;
   if (!VALID_LANGUAGES.includes(language as LanguageMode)) return null;
   if (!VALID_FONT_PREFERENCES.includes(fontPreference as FontPreference)) return null;
   if (!VALID_COLOR_SCHEMES.includes(colorScheme as ColorSchemePreference)) return null;
@@ -96,13 +110,16 @@ export function sanitizeUiPreferences(value: unknown): UiPreferences | null {
   const resolvedTheme: ThemeMode = validThemes.includes(theme as ThemeMode)
     ? (theme as ThemeMode)
     : "dark";
+  // v2 sin fontSizeScale → migra a 1.0; v3 con escala validada
+  const resolvedScale = sanitizeFontSizeScale(fontSizeScale ?? 1.0);
   return {
-    v: 2,
+    v: 3,
     language: language as LanguageMode,
     fontPreference: fontPreference as FontPreference,
     colorScheme: colorScheme as ColorSchemePreference,
     currencySymbol,
     theme: resolvedTheme,
+    fontSizeScale: resolvedScale,
   };
 }
 
@@ -110,8 +127,9 @@ export const UI_PREFERENCES_INIT_JSON = JSON.stringify(
   buildUiPreferences({
     language: "es",
     currencySymbol: "S/",
-    fontPreference: "dmsans",
+    fontPreference: "inter",
     colorScheme: "sky",
     theme: "dark",
+    fontSizeScale: 1.0,
   }),
 );

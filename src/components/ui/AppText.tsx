@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { forwardRef, memo, useSyncExternalStore } from "react";
 import {
   StyleSheet,
@@ -9,9 +10,13 @@ import {
 import { type FontPreference } from "@/types";
 import { FONT_FAMILIES, FONT_SIZE_SCALE } from "./fontConstants";
 
-let fontFamily = FONT_FAMILIES.dmsans;
-let fontPreference: FontPreference = "dmsans";
+let fontFamily = FONT_FAMILIES.inter;
+let fontPreference: FontPreference = "inter";
 const listeners = new Set<() => void>();
+
+// Global font size scale (segundo store) — 0.85-1.15, default 1.0
+let fontSizeScale = 1;
+const scaleListeners = new Set<() => void>();
 
 export function setAppFontPreference(preference: FontPreference) {
   const next = getAppFontFamily(preference);
@@ -19,6 +24,16 @@ export function setAppFontPreference(preference: FontPreference) {
   fontFamily = next;
   fontPreference = preference;
   listeners.forEach((listener) => listener());
+}
+
+export function setAppFontSizeScale(scale: number) {
+  const next = Number(scale);
+  if (!Number.isFinite(next) || next === fontSizeScale) return;
+  // clampa a rango permitido 0.85-1.15
+  const clamped = Math.max(0.85, Math.min(1.15, Math.round(next * 100) / 100));
+  if (clamped === fontSizeScale) return;
+  fontSizeScale = clamped;
+  scaleListeners.forEach((l) => l());
 }
 
 function getAppFontFamily(preference: FontPreference) {
@@ -30,36 +45,34 @@ function subscribe(listener: () => void) {
   return () => listeners.delete(listener);
 }
 
+function subscribeScale(listener: () => void) {
+  scaleListeners.add(listener);
+  return () => scaleListeners.delete(listener);
+}
+
 export function useAppFontFamily() {
-  return useSyncExternalStore(
-    subscribe,
-    () => fontFamily,
-    () => fontFamily,
-  );
+  return useSyncExternalStore(subscribe, () => fontFamily, () => fontFamily);
 }
 
 function useAppFontPreference() {
-  return useSyncExternalStore(
-    subscribe,
-    () => fontPreference,
-    () => fontPreference,
-  );
+  return useSyncExternalStore(subscribe, () => fontPreference, () => fontPreference);
+}
+
+export function useAppFontSizeScale() {
+  return useSyncExternalStore(subscribeScale, () => fontSizeScale, () => fontSizeScale);
 }
 
 function TextImpl({ style, ...props }: TextProps) {
   const family = useAppFontFamily();
   const preference = useAppFontPreference();
-  const scale = FONT_SIZE_SCALE[preference] || 1;
-  if (scale !== 1) {
+  const globalScale = useAppFontSizeScale();
+  const prefScale = FONT_SIZE_SCALE[preference] || 1;
+  const combined = prefScale * globalScale;
+  if (combined !== 1) {
     const flat = StyleSheet.flatten(style);
     const baseSize = typeof flat?.fontSize === "number" ? flat.fontSize : 16;
-    const adjustedSize = Math.round(baseSize * scale);
-    return (
-      <NativeText
-        {...props}
-        style={[{ fontFamily: family }, style, { fontSize: adjustedSize }]}
-      />
-    );
+    const adjustedSize = Math.round(baseSize * combined);
+    return <NativeText {...props} style={[{ fontFamily: family }, style, { fontSize: adjustedSize }]} />;
   }
   return <NativeText {...props} style={[{ fontFamily: family }, style]} />;
 }
@@ -67,18 +80,14 @@ function TextImpl({ style, ...props }: TextProps) {
 const TextInputImpl = forwardRef<NativeTextInput, TextInputProps>(function TextInputImpl({ style, ...props }, ref) {
   const family = useAppFontFamily();
   const preference = useAppFontPreference();
-  const scale = FONT_SIZE_SCALE[preference] || 1;
-  if (scale !== 1) {
+  const globalScale = useAppFontSizeScale();
+  const prefScale = FONT_SIZE_SCALE[preference] || 1;
+  const combined = prefScale * globalScale;
+  if (combined !== 1) {
     const flat = StyleSheet.flatten(style);
     const baseSize = typeof flat?.fontSize === "number" ? flat.fontSize : 16;
-    const adjustedSize = Math.round(baseSize * scale);
-    return (
-      <NativeTextInput
-        ref={ref}
-        {...props}
-        style={[{ fontFamily: family }, style, { fontSize: adjustedSize }]}
-      />
-    );
+    const adjustedSize = Math.round(baseSize * combined);
+    return <NativeTextInput ref={ref} {...props} style={[{ fontFamily: family }, style, { fontSize: adjustedSize }]} />;
   }
   return <NativeTextInput ref={ref} {...props} style={[{ fontFamily: family }, style]} />;
 });

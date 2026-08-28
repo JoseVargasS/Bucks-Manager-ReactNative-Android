@@ -9,13 +9,14 @@ import { type LanguageMode, type FontPreference, type MaterialIconName, type The
 import {
   detectDeviceLanguage,
 } from "@/utils/helpers";
-import { setAppFontPreference } from "@/components/ui/AppText";
-import { FONT_FAMILIES, FONT_ICONS } from "@/components/ui/fontConstants";
+import { setAppFontPreference, setAppFontSizeScale } from "@/components/ui/AppText";
+import { FONT_FAMILIES, FONT_ICONS, FONT_SIZE_SCALE_LEVELS, DEFAULT_FONT_SIZE_SCALE } from "@/components/ui/fontConstants";
 import { type UiCopy, UI_COPY } from "@/i18n";
 
 const LANGUAGE_KEY = "bucks_language";
 const CURRENCY_SYMBOL_KEY = "bucks_currency_symbol";
 const FONT_KEY = "bucks_font";
+const FONT_SIZE_SCALE_KEY = "bucks_font_size_scale";
 const COLOR_SCHEME_KEY = "bucks_color_scheme";
 const THEME_KEY = "bucks_theme";
 const FONT_PREFERENCES = Object.keys(FONT_FAMILIES) as FontPreference[];
@@ -36,7 +37,14 @@ function sanitizeColorScheme(next: string): ColorSchemePreference {
 function sanitizeFont(next: string): FontPreference {
   return FONT_PREFERENCES.includes(next as FontPreference)
     ? (next as FontPreference)
-    : "dmsans";
+    : "inter";
+}
+function sanitizeFontSizeScale(next: unknown): number {
+  const n = typeof next === "string" ? parseFloat(next) : (next as number);
+  if (FONT_SIZE_SCALE_LEVELS && Object.values(FONT_SIZE_SCALE_LEVELS).includes(n as never)) return n;
+  const rounded = Math.round((n as number) * 100) / 100;
+  if (Object.values(FONT_SIZE_SCALE_LEVELS).includes(rounded as never)) return rounded;
+  return DEFAULT_FONT_SIZE_SCALE;
 }
 function sanitizeCurrency(next: string): string {
   return CURRENCY_OPTIONS_SET.has(next) ? next : "$";
@@ -105,12 +113,14 @@ export type UiPreferencesSnapshot = {
   fontPreference: FontPreference;
   colorScheme: ColorSchemePreference;
   theme: ThemeMode;
+  fontSizeScale: number;
 };
 
 type PreferencesState = {
   language: LanguageMode;
   currencySymbol: string;
   fontPreference: FontPreference;
+  fontSizeScale: number;
   colorScheme: ColorSchemePreference;
   theme: ThemeMode;
   copy: UiCopy;
@@ -119,6 +129,7 @@ type PreferencesState = {
   saveLanguage: (next: string) => void;
   saveCurrencySymbol: (next: string) => void;
   saveFontPreference: (next: string) => void;
+  saveFontSizeScale: (next: number) => void;
   saveColorScheme: (next: string) => void;
   saveTheme: (next: ThemeMode) => void;
   restorePreferences: () => Promise<void>;
@@ -133,7 +144,8 @@ export function usePreferences(): PreferencesState {
   const { setColorScheme, setTheme: setThemeMode } = useTheme();
   const [language, setLanguage] = useState<LanguageMode>(detectDeviceLanguage);
   const [currencySymbol, setCurrencySymbol] = useState("$");
-  const [fontPreference, setFontPreference] = useState<FontPreference>("dmsans");
+  const [fontPreference, setFontPreference] = useState<FontPreference>("inter");
+  const [fontSizeScale, setFontSizeScaleState] = useState<number>(DEFAULT_FONT_SIZE_SCALE);
   const [colorScheme, setColorSchemeState] = useState<ColorSchemePreference>(DEFAULT_COLOR_SCHEME);
   const [theme, setThemeState] = useState<ThemeMode>("dark");
   const [needsCurrencyPick, setNeedsCurrencyPick] = useState(false);
@@ -141,11 +153,12 @@ export function usePreferences(): PreferencesState {
   const copy: UiCopy = UI_COPY[language];
 
   const restorePreferences = useCallback(async () => {
-    const [storedLanguage, storedCurrency, storedFont, storedColorScheme, storedTheme] =
+    const [storedLanguage, storedCurrency, storedFont, storedFontScale, storedColorScheme, storedTheme] =
       await Promise.all([
         getItemAsync(LANGUAGE_KEY),
         getItemAsync(CURRENCY_SYMBOL_KEY),
         getItemAsync(FONT_KEY),
+        getItemAsync(FONT_SIZE_SCALE_KEY),
         getItemAsync(COLOR_SCHEME_KEY),
         getItemAsync(THEME_KEY),
       ]);
@@ -166,8 +179,8 @@ export function usePreferences(): PreferencesState {
       setNeedsCurrencyPick(true);
     }
     const nextFont = storedFont === "system" || FONT_PREFERENCES.includes(storedFont as FontPreference)
-      ? sanitizeFont(storedFont === "system" ? "dmsans" : (storedFont as string))
-      : "dmsans";
+      ? sanitizeFont(storedFont === "system" ? "inter" : (storedFont as string))
+      : "inter";
     if (storedFont !== nextFont) {
       setAppFontPreference(nextFont);
       setFontPreference(nextFont);
@@ -175,6 +188,12 @@ export function usePreferences(): PreferencesState {
     } else {
       setAppFontPreference(nextFont);
       setFontPreference(nextFont);
+    }
+    const nextScale = sanitizeFontSizeScale(storedFontScale);
+    setAppFontSizeScale(nextScale);
+    setFontSizeScaleState(nextScale);
+    if (storedFontScale !== String(nextScale)) {
+      await setItemAsync(FONT_SIZE_SCALE_KEY, String(nextScale));
     }
     const nextColor = sanitizeColorScheme(storedColorScheme || DEFAULT_COLOR_SCHEME);
     setColorScheme(nextColor);
@@ -192,6 +211,7 @@ export function usePreferences(): PreferencesState {
       const nextLanguage = sanitizeLanguage(prefs.language);
       const nextCurrency = sanitizeCurrency(prefs.currencySymbol);
       const nextFont = sanitizeFont(prefs.fontPreference);
+      const nextScale = sanitizeFontSizeScale((prefs as unknown as { fontSizeScale?: number }).fontSizeScale ?? 1.0);
       const nextColor = sanitizeColorScheme(prefs.colorScheme);
       const validThemes: ThemeMode[] = ["dark", "light"];
       const nextTheme: ThemeMode = validThemes.includes(prefs.theme as ThemeMode)
@@ -201,6 +221,8 @@ export function usePreferences(): PreferencesState {
       setCurrencySymbol(nextCurrency);
       setAppFontPreference(nextFont);
       setFontPreference(nextFont);
+      setAppFontSizeScale(nextScale);
+      setFontSizeScaleState(nextScale);
       setColorScheme(nextColor);
       setColorSchemeState(nextColor);
       setThemeMode(nextTheme);
@@ -208,6 +230,7 @@ export function usePreferences(): PreferencesState {
       persistPreference(LANGUAGE_KEY, nextLanguage);
       persistPreference(CURRENCY_SYMBOL_KEY, nextCurrency);
       persistPreference(FONT_KEY, nextFont);
+      persistPreference(FONT_SIZE_SCALE_KEY, String(nextScale));
       persistPreference(COLOR_SCHEME_KEY, nextColor);
       persistPreference(THEME_KEY, nextTheme);
     },
@@ -235,6 +258,13 @@ export function usePreferences(): PreferencesState {
     persistPreference(FONT_KEY, value);
   }, []);
 
+  const saveFontSizeScale = useCallback((next: number) => {
+    const value = sanitizeFontSizeScale(next);
+    setAppFontSizeScale(value);
+    setFontSizeScaleState(value);
+    persistPreference(FONT_SIZE_SCALE_KEY, String(value));
+  }, []);
+
   const saveColorScheme = useCallback((next: string) => {
     const value = sanitizeColorScheme(next);
     setColorScheme(value);
@@ -252,6 +282,7 @@ export function usePreferences(): PreferencesState {
     language,
     currencySymbol,
     fontPreference,
+    fontSizeScale,
     colorScheme,
     theme,
     copy,
@@ -260,6 +291,7 @@ export function usePreferences(): PreferencesState {
     saveLanguage,
     saveCurrencySymbol,
     saveFontPreference,
+    saveFontSizeScale,
     saveColorScheme,
     saveTheme,
     restorePreferences,

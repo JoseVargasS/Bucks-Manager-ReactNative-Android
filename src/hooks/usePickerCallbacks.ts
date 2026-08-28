@@ -5,6 +5,7 @@ import {
   CURRENCY_OPTIONS,
   getFontPickerOptions,
 } from "@/hooks/usePreferences";
+import { FONT_SIZE_SCALE_LEVELS } from "@/components/ui/fontConstants";
 import type { OptionSheetHandle } from "@/components/modals/OptionSheet";
 import type { ConfirmConfig } from "@/components/modals/ConfirmModal";
 import type { UiCopy } from "@/i18n";
@@ -20,9 +21,11 @@ type PickerProps = {
   language: LanguageMode;
   currencySymbol: string;
   fontPreference: FontPreference;
+  fontSizeScale: number;
   saveLanguage: (next: string) => void;
   saveCurrencySymbol: (next: string) => void;
   saveFontPreference: (next: string) => void;
+  saveFontSizeScale: (next: number) => void;
   saveColorScheme: (next: string) => void;
   colorScheme: ColorSchemePreference;
   theme: ThemeMode;
@@ -38,6 +41,7 @@ type PickerCallbacks = {
   openCurrencyPicker: () => void;
   openFontPicker: () => void;
   fontPickerOptions: ReturnType<typeof getFontPickerOptions>;
+  openFontSizePicker: () => void;
   openColorSchemePicker: () => void;
   openAccountManager: () => void;
 };
@@ -56,9 +60,11 @@ export function usePickerCallbacks({
   language,
   currencySymbol,
   fontPreference,
+  fontSizeScale,
   saveLanguage,
   saveCurrencySymbol,
   saveFontPreference,
+  saveFontSizeScale,
   saveColorScheme,
   colorScheme,
   theme,
@@ -105,6 +111,29 @@ export function usePickerCallbacks({
     });
   }, [copy.fontStyle, fontPreference, fontPickerOptions, saveFontPreference, optionSheetRef]);
 
+  const openFontSizePicker = useCallback(() => {
+    const levels: Array<{ key: string; value: number; label: string }> = [
+      { key: "xs", value: FONT_SIZE_SCALE_LEVELS.xs, label: `XS — ${FONT_SIZE_SCALE_LEVELS.xs}` },
+      { key: "s", value: FONT_SIZE_SCALE_LEVELS.s, label: `S — ${FONT_SIZE_SCALE_LEVELS.s}` },
+      { key: "m", value: FONT_SIZE_SCALE_LEVELS.m, label: `M — ${FONT_SIZE_SCALE_LEVELS.m}` },
+      { key: "l", value: FONT_SIZE_SCALE_LEVELS.l, label: `L — ${FONT_SIZE_SCALE_LEVELS.l}` },
+      { key: "xl", value: FONT_SIZE_SCALE_LEVELS.xl, label: `XL — ${FONT_SIZE_SCALE_LEVELS.xl}` },
+    ];
+    optionSheetRef.current?.open({
+      title: copy.fontSize,
+      selectedValue: String(fontSizeScale),
+      options: levels.map((lvl) => ({
+        label: lvl.label,
+        value: String(lvl.value),
+        icon: "format-size" as const,
+      })),
+      onSelect: (v: string) => saveFontSizeScale(parseFloat(v)),
+      preview: { hint: copy.fontSizePreview, example: "S/ 1,234.56" },
+      sliderValues: levels.map((l) => l.value),
+      keepOpenOnSelect: true,
+    });
+  }, [copy.fontSize, copy.fontSizePreview, fontSizeScale, saveFontSizeScale, optionSheetRef]);
+
   const openColorSchemePicker = useCallback(() => {
     optionSheetRef.current?.open({
       title: copy.colorPalette,
@@ -149,6 +178,7 @@ export function usePickerCallbacks({
     openCurrencyPicker,
     openFontPicker,
     fontPickerOptions,
+    openFontSizePicker,
     openColorSchemePicker,
     openAccountManager,
   };

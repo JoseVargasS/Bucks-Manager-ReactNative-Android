@@ -79,12 +79,14 @@ type SettingsTabProps = {
   accountInfo: { name?: string; email?: string } | null;
   currencySymbol: string;
   fontPreference: FontPreference;
+  fontSizeScale: number;
   colorSchemeLabel: string;
   pinEnabled: boolean;
   tagsCount: number;
   onOpenLanguage: () => void;
   onOpenCurrency: () => void;
   onOpenFont: () => void;
+  onOpenFontSize: () => void;
   onOpenColorScheme: () => void;
   onOpenPin: () => void;
   onOpenTags: () => void;
@@ -236,12 +238,14 @@ function TabPageImpl(props: TabPageProps) {
               accountInfo={tabProps.accountInfo}
               currencySymbol={tabProps.currencySymbol}
               fontPreference={tabProps.fontPreference}
+              fontSizeScale={tabProps.fontSizeScale}
               colorSchemeLabel={tabProps.colorSchemeLabel}
               pinEnabled={tabProps.pinEnabled}
               tagsCount={tabProps.tagsCount}
               onOpenLanguage={tabProps.onOpenLanguage}
               onOpenCurrency={tabProps.onOpenCurrency}
               onOpenFont={tabProps.onOpenFont}
+              onOpenFontSize={tabProps.onOpenFontSize}
               onOpenColorScheme={tabProps.onOpenColorScheme}
               onOpenPin={tabProps.onOpenPin}
               onOpenTags={tabProps.onOpenTags}

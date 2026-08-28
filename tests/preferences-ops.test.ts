@@ -206,21 +206,23 @@ describe("preferencesOps", () => {
 
   test("sanitizeUiPreferences drops unknown fields and keeps the rest", () => {
     const result = sanitizeUiPreferences({
-      v: 2,
+      v: 3,
       language: "en",
       currencySymbol: "$",
       fontPreference: "fredoka",
       colorScheme: "truepink",
       theme: "light",
+      fontSizeScale: 1,
       futureFlag: "ignore-me",
     });
     expect(result).toEqual({
-      v: 2,
+      v: 3,
       language: "en",
       currencySymbol: "$",
       fontPreference: "fredoka",
       colorScheme: "truepink",
       theme: "light",
+      fontSizeScale: 1,
     });
   });
 
@@ -233,12 +235,13 @@ describe("preferencesOps", () => {
       colorScheme: "truepink",
     });
     expect(result).toEqual({
-      v: 2,
+      v: 3,
       language: "en",
       currencySymbol: "$",
       fontPreference: "fredoka",
       colorScheme: "truepink",
       theme: "dark",
+      fontSizeScale: 1,
     });
   });
 
@@ -255,7 +258,8 @@ describe("preferencesOps", () => {
       fontPreference: "dmsans",
       colorScheme: "sky",
       theme: "dark",
+      fontSizeScale: 1,
     });
-    expect(prefs.v).toBe(2);
+    expect(prefs.v).toBe(3);
   });
 });

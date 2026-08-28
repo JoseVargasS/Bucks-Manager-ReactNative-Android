@@ -9,19 +9,20 @@ import { type Palette } from "@/theme/colors";
 import { type FontPreference, type MaterialIconName } from "@/types";
 import { type UiCopy } from "@/i18n";
 import { Text } from "@/components/ui/AppText";
+// font size selector handled via SettingsView props; levels defined in fontConstants
 
 export const SettingsView = memo(function SettingsView({
-  colors, copy, accountInfo, language, currencySymbol, fontPreference, pinEnabled,
+  colors, copy, accountInfo, language, currencySymbol, fontPreference, fontSizeScale, pinEnabled,
   colorSchemeLabel, tagsCount,
-  onOpenLanguage, onOpenCurrency, onOpenFont, onOpenColorScheme, onOpenPin, onOpenTags,
+  onOpenLanguage, onOpenCurrency, onOpenFont, onOpenFontSize, onOpenColorScheme, onOpenPin, onOpenTags,
   onSwitch, onDisconnect, onOpenExport,
 }: {
   colors: Palette; copy: UiCopy;
-  language: "es" | "en"; currencySymbol: string; fontPreference: FontPreference;
+  language: "es" | "en"; currencySymbol: string; fontPreference: FontPreference; fontSizeScale: number;
   colorSchemeLabel: string;
   accountInfo: { name?: string; email?: string } | null;
   pinEnabled: boolean; tagsCount: number;
-  onOpenLanguage: () => void; onOpenCurrency: () => void; onOpenFont: () => void;
+  onOpenLanguage: () => void; onOpenCurrency: () => void; onOpenFont: () => void; onOpenFontSize: () => void;
   onOpenColorScheme: () => void;
   onOpenPin: () => void; onOpenTags: () => void;
   onSwitch: () => void; onDisconnect: () => void; onOpenExport: () => void;
@@ -74,6 +75,7 @@ export const SettingsView = memo(function SettingsView({
           <SettingsRow colors={colors} icon="translate" label={copy.language} value={language === "es" ? copy.spanish : copy.english} onPress={onOpenLanguage} />
           <SettingsRow colors={colors} icon="currency-usd" label={copy.currencySymbol} value={currencySymbol} onPress={onOpenCurrency} />
           <SettingsRow colors={colors} icon="format-font" label={copy.fontStyle} value={fontLabel[fontPreference]} onPress={onOpenFont} />
+          <SettingsRow colors={colors} icon="format-size" label={copy.fontSize} value={String(fontSizeScale)} onPress={onOpenFontSize} />
           <SettingsRow colors={colors} icon="palette-outline" label={copy.colorPalette} value={colorSchemeLabel} tone={colors.primary} onPress={onOpenColorScheme} last />
         </View>
       </View>

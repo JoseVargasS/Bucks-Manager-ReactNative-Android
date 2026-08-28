@@ -21,6 +21,7 @@ export function useDebouncedSheetWrites(
     language: string;
     currencySymbol: string;
     fontPreference: string;
+    fontSizeScale: number;
     colorScheme: string;
     theme: string;
   },
@@ -43,6 +44,7 @@ export function useDebouncedSheetWrites(
       prevPrefsRef.current.language === preferences.language &&
       prevPrefsRef.current.currencySymbol === preferences.currencySymbol &&
       prevPrefsRef.current.fontPreference === preferences.fontPreference &&
+      prevPrefsRef.current.fontSizeScale === preferences.fontSizeScale &&
       prevPrefsRef.current.colorScheme === preferences.colorScheme &&
       prevPrefsRef.current.theme === preferences.theme
     ) {
@@ -58,6 +60,7 @@ export function useDebouncedSheetWrites(
     preferences.language,
     preferences.currencySymbol,
     preferences.fontPreference,
+    preferences.fontSizeScale,
     preferences.colorScheme,
     preferences.theme,
     accessToken,
