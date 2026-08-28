@@ -1,4 +1,5 @@
 import { StyleSheet } from "react-native";
+import { RADIUS } from "@/theme/radii";
 
 export const bottomNavStyles = StyleSheet.create({
   bottomNav: {
@@ -12,8 +13,8 @@ export const bottomNavStyles = StyleSheet.create({
   },
   bottomNavGlass: {
     ...StyleSheet.absoluteFill,
-    borderWidth: 0.5,
-    borderRadius: 22,
+    borderWidth: 1,
+    borderRadius: RADIUS["2xl"],
     overflow: "hidden",
   },
   bottomNavContent: {
@@ -30,7 +31,7 @@ export const bottomNavStyles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
     minHeight: 50,
-    borderRadius: 14,
+    borderRadius: RADIUS.xl,
     alignItems: "center",
     justifyContent: "center",
     gap: 3,
@@ -38,7 +39,7 @@ export const bottomNavStyles = StyleSheet.create({
   bottomAddButton: {
     width: 56,
     height: 56,
-    borderRadius: 17,
+    borderRadius: RADIUS.xl,
     alignItems: "center",
     justifyContent: "center",
   },

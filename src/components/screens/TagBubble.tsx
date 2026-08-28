@@ -3,6 +3,7 @@ import { Animated, Modal, Pressable, View, type ViewStyle } from "react-native";
 import { tagTextColor } from "@/utils/tags";
 import { type Palette } from "@/theme/colors";
 import { Text } from "@/components/ui/AppText";
+import { RADIUS } from "@/theme/radii";
 
 export type TagBubble = { x: number; y: number; tags: string[] };
 
@@ -48,7 +49,7 @@ export const TagBubblePopup = memo(function TagBubblePopup({
                   left: data.x,
                   top: data.y,
                   maxWidth: 170,
-                  borderRadius: 12,
+                  borderRadius: RADIUS.lg,
                   padding: 8,
                   backgroundColor: colors.card,
                   shadowColor: colors.shadow,

@@ -7,6 +7,7 @@ import { base } from "@/styles/baseStyles";
 const styles = { ...base, ...recordModalStyles };
 import { type Palette } from "@/theme/colors";
 import { Text } from "@/components/ui/AppText";
+import { RADIUS } from "@/theme/radii";
 
 export function CurrencyPickerModal({
   visible,
@@ -70,7 +71,7 @@ export function CurrencyPickerModal({
                     style={{
                       width: 22,
                       height: 22,
-                      borderRadius: 11,
+                      borderRadius: RADIUS.lg,
                       borderWidth: 2,
                       borderColor: isSelected ? colors.primary : colors.border,
                       alignItems: "center",

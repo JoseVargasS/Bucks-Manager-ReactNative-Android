@@ -1,9 +1,10 @@
 import { StyleSheet } from "react-native";
+import { RADIUS } from "@/theme/radii";
 
 export const recordModalStyles = StyleSheet.create({
   recordModal: {
     borderWidth: 0,
-    borderRadius: 20,
+    borderRadius: RADIUS["2xl"],
     width: "100%",
     maxWidth: 390,
     maxHeight: "90%",
@@ -15,7 +16,7 @@ export const recordModalStyles = StyleSheet.create({
   conceptoInput: {
     height: 42,
     borderWidth: 1,
-    borderRadius: 10,
+    borderRadius: RADIUS.md,
     paddingHorizontal: 12,
     fontSize: 15,
     fontWeight: "600",
@@ -23,7 +24,7 @@ export const recordModalStyles = StyleSheet.create({
   },
   lineItemCard: {
     borderWidth: 1,
-    borderRadius: 12,
+    borderRadius: RADIUS.lg,
     marginBottom: 10,
     overflow: "hidden",
   },
@@ -49,7 +50,7 @@ export const recordModalStyles = StyleSheet.create({
   removeLineItemBtn: {
     width: 26,
     height: 26,
-    borderRadius: 13,
+    borderRadius: RADIUS.pill,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -59,7 +60,7 @@ export const recordModalStyles = StyleSheet.create({
     gap: 4,
     paddingHorizontal: 8,
     paddingVertical: 5,
-    borderRadius: 8,
+    borderRadius: RADIUS.sm,
   },
   addTagInlineText: {
     fontSize: 11,
@@ -72,7 +73,7 @@ export const recordModalStyles = StyleSheet.create({
     maxWidth: 130,
     paddingHorizontal: 8,
     paddingVertical: 5,
-    borderRadius: 8,
+    borderRadius: RADIUS.sm,
   },
   selectedTagLabel: {
     fontSize: 11,
@@ -105,7 +106,7 @@ export const recordModalStyles = StyleSheet.create({
     justifyContent: "center",
     gap: 8,
     paddingVertical: 12,
-    borderRadius: 10,
+    borderRadius: RADIUS.md,
     borderWidth: 1.5,
     borderStyle: "dashed",
   },
@@ -140,7 +141,7 @@ export const recordModalStyles = StyleSheet.create({
   recordCancel: {
     flex: 1,
     height: 52,
-    borderRadius: 12,
+    borderRadius: RADIUS.lg,
     borderWidth: 1,
     flexDirection: "row",
     alignItems: "center",
@@ -150,7 +151,7 @@ export const recordModalStyles = StyleSheet.create({
   recordSubmit: {
     flex: 1,
     height: 52,
-    borderRadius: 12,
+    borderRadius: RADIUS.lg,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",

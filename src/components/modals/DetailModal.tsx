@@ -7,6 +7,7 @@ import { detailStyles } from "@/components/modals/DetailModal.styles";
 
 const styles = { ...base, ...detailStyles };
 import { type Palette } from "@/theme/colors";
+import { RADIUS } from "@/theme/radii";
 import { Z_INDEX_DETAIL } from "@/theme/constants";
 import { type MaterialIconName, type Tag, type Transaction } from "@/types";
 import { formatMoney } from "@/domain/bucksLogic";
@@ -66,7 +67,7 @@ export const DetailModal = forwardRef<DetailModalHandle, { colors: Palette; curr
   const showFirstSection = !!firstSectionValue || firstSectionTags.length > 0;
   const showLineItemsSection = !isSingleLine && !!current?.lineItems?.length;
 
-  return (
+   return (
       <Animated.View
         pointerEvents={transition.modalVisible ? "auto" : "none"}
         accessibilityViewIsModal={visible}
@@ -90,7 +91,7 @@ export const DetailModal = forwardRef<DetailModalHandle, { colors: Palette; curr
                   <MaterialCommunityIcons name={isIncome ? "bank-transfer-in" : "receipt-text-outline"} size={24} color={isIncome ? colors.income : colors.expense} />
                 </View>
                 <View style={styles.detailHeroText}>
-                  <View style={{ alignSelf: "flex-start", borderRadius: 999, paddingHorizontal: 9, paddingVertical: 4, backgroundColor: typeBackground }}>
+                  <View style={{ alignSelf: "flex-start", borderRadius: RADIUS.pill, paddingHorizontal: 9, paddingVertical: 4, backgroundColor: typeBackground }}>
                     <Text style={[styles.detailHeroLabel, { color: typeTone, fontWeight: "700" }]}>{current ? typeLabelFull(current.type, copy) : ""}</Text>
                   </View>
                   <Text numberOfLines={1} style={[styles.detailHeroAmount, { color: isIncome ? colors.income : colors.expense, fontVariant: ["tabular-nums"] }]}>{current ? formatMoney(amount, currencySymbol) : ""}</Text>
@@ -116,7 +117,7 @@ export const DetailModal = forwardRef<DetailModalHandle, { colors: Palette; curr
                         const tagColor = tag.color || colors.muted;
                         const tagLabel = tag.label || id;
                         return (
-                          <View key={id} style={{ maxWidth: "100%", borderRadius: 6, paddingHorizontal: 7, paddingVertical: 3, backgroundColor: tagColor }}>
+                          <View key={id} style={{ maxWidth: "100%", borderRadius: RADIUS.sm, paddingHorizontal: 7, paddingVertical: 3, backgroundColor: tagColor }}>
                             <Text numberOfLines={1} style={{ color: tagTextColor(tagColor, colors), fontSize: 11, fontWeight: "700" }}>{tagLabel}</Text>
                           </View>
                         );
@@ -140,7 +141,7 @@ export const DetailModal = forwardRef<DetailModalHandle, { colors: Palette; curr
                               const tagColor = tag.color || colors.muted;
                               const tagLabel = tag.label || id;
                               return (
-                                <View key={id} style={{ maxWidth: "100%", borderRadius: 6, paddingHorizontal: 7, paddingVertical: 3, backgroundColor: tagColor }}>
+                                <View key={id} style={{ maxWidth: "100%", borderRadius: RADIUS.sm, paddingHorizontal: 7, paddingVertical: 3, backgroundColor: tagColor }}>
                                   <Text numberOfLines={1} style={{ color: tagTextColor(tagColor, colors), fontSize: 11, fontWeight: "700" }}>{tagLabel}</Text>
                                 </View>
                               );

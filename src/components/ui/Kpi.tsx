@@ -5,6 +5,7 @@ import { statCardStyles as styles } from "@/components/ui/StatCard.styles";
 import { type Palette } from "@/theme/colors";
 import { type MaterialIconName } from "@/types";
 import { Text } from "./AppText";
+import { RADIUS } from "@/theme/radii";
 
 const BUBBLE_W = 170;
 const H_MARGIN = 10;
@@ -44,7 +45,7 @@ export const Kpi = memo(function Kpi({ title, value, icon, color, colors, toolti
             onStartShouldSetResponder={() => true}
             style={{
               position: "absolute", left: popupLeft, top: tooltipPos.y,
-              width: BUBBLE_W, borderRadius: 12, padding: 10,
+              width: BUBBLE_W, borderRadius: RADIUS.lg, padding: 10,
               backgroundColor: colors.card,
               shadowColor: colors.shadow, shadowOpacity: 0.2, shadowRadius: 10, elevation: 8,
             }}
@@ -59,4 +60,3 @@ export const Kpi = memo(function Kpi({ title, value, icon, color, colors, toolti
     </>
   );
 });
-

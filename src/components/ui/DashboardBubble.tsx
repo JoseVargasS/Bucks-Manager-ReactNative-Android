@@ -1,6 +1,7 @@
 import { memo, useMemo } from "react";
 import { Animated, Dimensions, Modal, Pressable, type ViewStyle } from "react-native";
 import { type Palette } from "@/theme/colors";
+import { RADIUS } from "@/theme/radii";
 
 type DashboardBubbleProps = {
   visible: boolean;
@@ -40,7 +41,7 @@ export const DashboardBubble = memo(function DashboardBubble({
                 left: popupLeft,
                 top: popupTop,
                 width: POPUP_WIDTH,
-                borderRadius: 14,
+                borderRadius: RADIUS.xl,
                 backgroundColor: colors.card,
                 shadowColor: colors.shadow,
                 shadowOpacity: 0.25,

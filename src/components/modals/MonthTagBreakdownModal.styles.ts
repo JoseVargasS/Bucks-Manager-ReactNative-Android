@@ -1,8 +1,9 @@
 import { StyleSheet } from "react-native";
+import { RADIUS } from "@/theme/radii";
 
 export const monthTagBreakdownStyles = StyleSheet.create({
   modal: {
-    borderRadius: 20,
+    borderRadius: RADIUS["2xl"],
     borderWidth: 0,
     width: "100%",
     maxWidth: 390,
@@ -26,7 +27,7 @@ export const monthTagBreakdownStyles = StyleSheet.create({
   closeBtn: {
     width: 38,
     height: 38,
-    borderRadius: 19,
+    borderRadius: RADIUS["2xl"],
     alignItems: "center",
     justifyContent: "center",
   },

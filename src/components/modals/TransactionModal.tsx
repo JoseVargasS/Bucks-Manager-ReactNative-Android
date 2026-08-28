@@ -9,6 +9,7 @@ import { base } from "@/styles/baseStyles";
 import { recordModalStyles } from "@/components/modals/TransactionModal.styles";
 
 const styles = { ...base, ...recordModalStyles };
+import { RADIUS } from "@/theme/radii";
 import { Z_INDEX_MODAL } from "@/theme/constants";
 import { TypeSelector } from "@/components/ui/TypeSelector";
 import { CalendarPicker } from "@/components/ui/CalendarPicker";
@@ -218,7 +219,7 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
     ? tags.filter((t) => !(overlayItem.tags || []).includes(t.id))
     : [];
 
-  return (
+   return (
       <Animated.View
         pointerEvents={transition.modalVisible ? "auto" : "none"}
         accessibilityViewIsModal={visible}
@@ -255,7 +256,7 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
           >
             <Text style={[styles.label, { color: colors.text }]}>{copy.date}</Text>
             <Pressable
-              style={{ backgroundColor: colors.input, borderColor: colors.border, borderRadius: 10, paddingHorizontal: 12, minHeight: 42, flexDirection: "row", alignItems: "center", gap: 10, borderWidth: 1, marginBottom: 12 }}
+              style={{ backgroundColor: colors.input, borderColor: colors.border, borderRadius: RADIUS.md, paddingHorizontal: 12, minHeight: 42, flexDirection: "row", alignItems: "center", gap: 10, borderWidth: 1, marginBottom: 12 }}
               onPress={() => { Keyboard.dismiss(); closeTagOverlay(); setCalVisible(true); }}
             >
               <Text style={{ color: colors.text, fontWeight: "600", flex: 1 }}>{formDraft.date || copy.selectDate}</Text>
@@ -295,7 +296,7 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
               <Text style={[styles.label, { color: colors.text, marginBottom: 0 }]}>
                 {copy.amount}
               </Text>
-              <Pressable style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: colors.primary, alignItems: "center", justifyContent: "center" }} onPress={addLineItem}>
+              <Pressable style={{ width: 28, height: 28, borderRadius: RADIUS.xl, backgroundColor: colors.primary, alignItems: "center", justifyContent: "center" }} onPress={addLineItem}>
                 <MaterialCommunityIcons name="plus" size={16} color={colors.onPrimary} />
               </Pressable>
             </View>

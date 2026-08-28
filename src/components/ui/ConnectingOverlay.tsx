@@ -3,6 +3,7 @@ import { Animated, View } from "react-native";
 import { BlurView } from "expo-blur";
 import { useColors } from "@/theme/ThemeContext";
 import { Text } from "./AppText";
+import { RADIUS } from "@/theme/radii";
 
 const BAR_WIDTH = 180;
 const BAR_CYCLE_MS = 1400;
@@ -78,7 +79,7 @@ export const ConnectingOverlay = memo(function ConnectingOverlay({
       <View
         style={{
           backgroundColor: card,
-          borderRadius: 20,
+          borderRadius: RADIUS["2xl"],
           paddingVertical: 28,
           paddingHorizontal: 32,
           alignItems: "center",

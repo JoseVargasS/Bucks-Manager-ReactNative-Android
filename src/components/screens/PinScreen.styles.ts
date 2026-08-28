@@ -1,4 +1,5 @@
 import { StyleSheet } from "react-native";
+import { RADIUS } from "@/theme/radii";
 
 const KEY_W = 68;
 const KEY_H = 52;
@@ -25,7 +26,7 @@ export const s = StyleSheet.create({
     width: DOT_SIZE,
     height: DOT_SIZE,
     borderRadius: DOT_SIZE / 2,
-    borderWidth: 2,
+    borderWidth: 1.5,
   },
   errorText: { fontSize: 13, fontWeight: "600", marginBottom: 16 },
   keypad: { gap: 10, alignItems: "center" },
@@ -33,7 +34,7 @@ export const s = StyleSheet.create({
   key: {
     width: KEY_W,
     height: KEY_H,
-    borderRadius: 14,
+    borderRadius: RADIUS.xl,
     alignItems: "center",
     justifyContent: "center",
   },

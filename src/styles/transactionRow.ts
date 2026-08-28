@@ -1,4 +1,5 @@
 import { StyleSheet } from "react-native";
+import { RADIUS } from "@/theme/radii";
 
 export const txStyles = StyleSheet.create({
   groupedTxRow: {
@@ -12,7 +13,7 @@ export const txStyles = StyleSheet.create({
   txIcon: {
     width: 40,
     height: 40,
-    borderRadius: 20,
+    borderRadius: RADIUS["2xl"],
     borderWidth: 0,
     alignItems: "center",
     justifyContent: "center",

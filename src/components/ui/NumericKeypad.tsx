@@ -4,6 +4,7 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { type Palette } from "@/theme/colors";
 import { Text } from "./AppText";
 import { applyBackspace, applyChar } from "./numericKeypadLogic";
+import { RADIUS } from "@/theme/radii";
 
 type Key =
   | { kind: "char"; value: string }
@@ -195,7 +196,7 @@ const styles = StyleSheet.create({
   key: {
     flex: 1,
     height: 46,
-    borderRadius: 10,
+    borderRadius: RADIUS.md,
     borderWidth: 1,
     alignItems: "center",
     justifyContent: "center",

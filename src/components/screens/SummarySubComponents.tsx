@@ -3,10 +3,11 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { type Palette } from "@/theme/colors";
 import { type MaterialIconName } from "@/types";
 import { Text } from "@/components/ui/AppText";
+import { RADIUS } from "@/theme/radii";
 
 export function Insight({ label, value, icon, color, colors }: { label: string; value: string; icon: MaterialIconName; color: string; colors: Palette }) {
   return (
-    <View style={{ flex: 1, minWidth: 0, backgroundColor: colors.input, borderRadius: 13, padding: 12 }}>
+    <View style={{ flex: 1, minWidth: 0, backgroundColor: colors.input, borderRadius: RADIUS.lg, padding: 12 }}>
       <MaterialCommunityIcons name={icon} size={18} color={color} />
       <Text numberOfLines={1} style={{ color: colors.muted, fontSize: 11, fontWeight: "600", textTransform: "uppercase", marginTop: 8 }}>{label}</Text>
       <Text numberOfLines={1} style={{ color: colors.text, fontSize: 15, fontWeight: "700", marginTop: 3, fontVariant: ["tabular-nums"] }}>{value}</Text>
@@ -35,7 +36,7 @@ export function CompositionContent({ items, total, colors, format }: {
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
         <Text numberOfLines={1} style={{ color: colors.text, fontSize: 15, fontWeight: "700", fontVariant: ["tabular-nums"] }}>{format(total)}</Text>
       </View>
-      <View style={{ height: 9, borderRadius: 999, overflow: "hidden", backgroundColor: colors.input, flexDirection: "row" }}>
+      <View style={{ height: 9, borderRadius: RADIUS.pill, overflow: "hidden", backgroundColor: colors.input, flexDirection: "row" }}>
         {items.map((item) => item.value > 0 && <View key={item.label} style={{ flex: item.value / safeTotal, backgroundColor: item.color }} />)}
       </View>
       <View style={{ gap: 8 }}>

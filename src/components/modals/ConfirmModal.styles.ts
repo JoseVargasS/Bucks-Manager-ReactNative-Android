@@ -1,9 +1,10 @@
 import { StyleSheet } from "react-native";
+import { RADIUS } from "@/theme/radii";
 
 export const s = StyleSheet.create({
   body: { padding: 16, gap: 14 },
   previewCard: {
-    borderRadius: 14,
+    borderRadius: RADIUS.xl,
     padding: 14,
     flexDirection: "row",
     alignItems: "center",
@@ -12,7 +13,7 @@ export const s = StyleSheet.create({
   previewIcon: {
     width: 44,
     height: 44,
-    borderRadius: 22,
+    borderRadius: RADIUS["2xl"],
     alignItems: "center",
     justifyContent: "center",
   },

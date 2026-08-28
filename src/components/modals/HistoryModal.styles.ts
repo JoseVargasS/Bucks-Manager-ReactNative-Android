@@ -1,4 +1,5 @@
 import { StyleSheet } from "react-native";
+import { RADIUS } from "@/theme/radii";
 
 export const s = StyleSheet.create({
   body: { paddingHorizontal: 16, paddingBottom: 20 },
@@ -21,7 +22,7 @@ export const s = StyleSheet.create({
   historyIcon: {
     width: 36,
     height: 36,
-    borderRadius: 18,
+    borderRadius: RADIUS["2xl"],
     alignItems: "center",
     justifyContent: "center",
   },
@@ -33,7 +34,7 @@ export const s = StyleSheet.create({
   undoBtn: {
     width: 38,
     height: 38,
-    borderRadius: 12,
+    borderRadius: RADIUS.lg,
     alignItems: "center",
     justifyContent: "center",
   },

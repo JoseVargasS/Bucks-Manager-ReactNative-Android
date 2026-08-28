@@ -1,8 +1,9 @@
 import { StyleSheet } from "react-native";
+import { RADIUS } from "@/theme/radii";
 
 export const expensesStyles = StyleSheet.create({
   searchBanner: {
-    borderRadius: 14,
+    borderRadius: RADIUS.xl,
     borderWidth: 0,
     padding: 12,
     flexDirection: "row",
@@ -16,7 +17,7 @@ export const expensesStyles = StyleSheet.create({
     marginHorizontal: 14,
     marginBottom: 10,
     borderWidth: 0,
-    borderRadius: 14,
+    borderRadius: RADIUS.xl,
     padding: 12,
     flexDirection: "row",
     alignItems: "center",
@@ -28,7 +29,7 @@ export const expensesStyles = StyleSheet.create({
   selectionBtn: {
     width: 42,
     height: 42,
-    borderRadius: 10,
+    borderRadius: RADIUS.md,
     borderWidth: 1,
     alignItems: "center",
     justifyContent: "center",
@@ -43,7 +44,7 @@ export const expensesStyles = StyleSheet.create({
   loadOlderBtn: {
     minHeight: 48,
     borderWidth: 0,
-    borderRadius: 14,
+    borderRadius: RADIUS.xl,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 12,

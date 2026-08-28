@@ -124,7 +124,7 @@ export const ColorPicker = memo(function ColorPicker({
             width: 12,
             height: 14,
             borderRadius: 2,
-            borderWidth: 2,
+            borderWidth: 1.5,
             borderColor: "#fff",
           }}
         />

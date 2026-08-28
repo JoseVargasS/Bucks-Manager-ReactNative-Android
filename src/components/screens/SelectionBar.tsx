@@ -37,7 +37,7 @@ export const SelectionBar = memo(function SelectionBar({
           right: 14,
           bottom: 92,
           overflow: "hidden",
-          borderWidth: 0.5,
+          borderWidth: 1,
           borderColor: withAlpha(colors.borderStrong, colors.bg === dark.bg ? 0.26 : 0.54),
           shadowColor: colors.shadow,
           shadowOpacity: 0.25,

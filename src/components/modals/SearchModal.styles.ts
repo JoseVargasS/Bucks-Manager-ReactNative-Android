@@ -1,4 +1,5 @@
 import { StyleSheet } from "react-native";
+import { RADIUS } from "@/theme/radii";
 
 export const searchModalStyles = StyleSheet.create({
   searchOverlay: { flex: 1, justifyContent: "flex-end" },
@@ -6,14 +7,14 @@ export const searchModalStyles = StyleSheet.create({
     width: "100%",
     maxHeight: "88%",
     borderTopWidth: 0,
-    borderTopLeftRadius: 22,
-    borderTopRightRadius: 22,
+    borderTopLeftRadius: RADIUS["2xl"],
+    borderTopRightRadius: RADIUS["2xl"],
     overflow: "hidden",
   },
   searchGrabber: {
     width: 42,
     height: 4,
-    borderRadius: 999,
+    borderRadius: RADIUS.pill,
     alignSelf: "center",
     marginTop: 9,
     marginBottom: 8,
@@ -29,7 +30,7 @@ export const searchModalStyles = StyleSheet.create({
   searchHeaderIcon: {
     width: 42,
     height: 42,
-    borderRadius: 13,
+    borderRadius: RADIUS.lg,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -39,7 +40,7 @@ export const searchModalStyles = StyleSheet.create({
   optionClose: {
     width: 40,
     height: 40,
-    borderRadius: 12,
+    borderRadius: RADIUS.lg,
     borderWidth: 0,
     alignItems: "center",
     justifyContent: "center",

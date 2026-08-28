@@ -1,5 +1,6 @@
 import { StyleSheet } from "react-native";
 import { NAV_BTN_SIZE, NAV_BTN_HEIGHT, NAV_BTN_RADIUS, NAV_GROUP_GAP, NAV_GROUP_PADDING, NAV_GROUP_RADIUS } from "@/theme/constants";
+import { RADIUS } from "@/theme/radii";
 
 export const appShellStyles = StyleSheet.create({
   topBar: {
@@ -26,7 +27,7 @@ export const appShellStyles = StyleSheet.create({
   headerLogo: {
     width: 40,
     height: 40,
-    borderRadius: 10,
+    borderRadius: RADIUS.md,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -69,7 +70,7 @@ export const appShellStyles = StyleSheet.create({
     top: 10,
     alignSelf: "center",
     zIndex: 30,
-    borderRadius: 999,
+    borderRadius: RADIUS.pill,
     paddingHorizontal: 12,
     paddingVertical: 8,
     marginBottom: 0,

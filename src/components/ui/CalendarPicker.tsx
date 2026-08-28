@@ -28,13 +28,14 @@ import {
   MONTH_NAMES_EN,
 } from "./calendarData";
 import { PickerSheet, PickerRow, PickerChip } from "./calendarComponents";
+import { RADIUS } from "@/theme/radii";
 
 const s = StyleSheet.create({
   overlay: { alignItems: "center", justifyContent: "center" },
   backdrop: {},
   panel: {
     width: 300,
-    borderRadius: 20,
+    borderRadius: RADIUS["2xl"],
     borderWidth: 1,
     overflow: "hidden",
     elevation: 20,
@@ -62,7 +63,7 @@ const s = StyleSheet.create({
   monthPill: {
     width: 52,
     height: 36,
-    borderRadius: 18,
+    borderRadius: RADIUS["2xl"],
     alignItems: "center",
     justifyContent: "center",
   },
@@ -73,7 +74,7 @@ const s = StyleSheet.create({
   dayPill: {
     width: 36,
     height: 36,
-    borderRadius: 18,
+    borderRadius: RADIUS["2xl"],
     alignItems: "center",
     justifyContent: "center",
   },
@@ -521,5 +522,4 @@ export const CalendarPicker = memo(function CalendarPicker({
     </Modal>
   );
 });
-
 

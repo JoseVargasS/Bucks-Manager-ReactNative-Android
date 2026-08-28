@@ -3,6 +3,7 @@ import { Pressable, View } from "react-native";
 import type { Palette } from "@/theme/colors";
 import { Text } from "./AppText";
 import type { MergedSlice } from "./PieChart";
+import { RADIUS } from "@/theme/radii";
 
 export const PieSliceRow = memo(function PieSliceRow({
   slice,
@@ -36,7 +37,7 @@ export const PieSliceRow = memo(function PieSliceRow({
         paddingVertical: 8,
         paddingHorizontal: 10,
         marginHorizontal: -10,
-        borderRadius: 10,
+        borderRadius: RADIUS.md,
         backgroundColor: selected
           ? colors.input
           : pressed

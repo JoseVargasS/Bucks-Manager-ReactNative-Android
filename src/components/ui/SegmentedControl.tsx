@@ -2,6 +2,7 @@ import { memo, useEffect, useRef, useState } from "react";
 import { Animated, Pressable, View, type LayoutChangeEvent } from "react-native";
 import { type Palette } from "@/theme/colors";
 import { Text } from "./AppText";
+import { RADIUS } from "@/theme/radii";
 
 export type SegmentOption = { key: string; label: string };
 
@@ -45,7 +46,7 @@ export const SegmentedControl = memo(function SegmentedControl({
       style={{
         flexDirection: "row",
         backgroundColor: colors.input,
-        borderRadius: 10,
+        borderRadius: RADIUS.md,
         padding: 3,
         gap: 2,
       }}
@@ -58,7 +59,7 @@ export const SegmentedControl = memo(function SegmentedControl({
             bottom: 3,
             width: segmentW,
             backgroundColor: colors.card,
-            borderRadius: 8,
+            borderRadius: RADIUS.sm,
             shadowColor: colors.shadow,
             shadowOffset: { width: 0, height: 1 },
             shadowOpacity: 0.06,
@@ -81,7 +82,7 @@ export const SegmentedControl = memo(function SegmentedControl({
             flex: 1,
             paddingVertical: 7,
             paddingHorizontal: 4,
-            borderRadius: 8,
+            borderRadius: RADIUS.sm,
             alignItems: "center",
             justifyContent: "center",
           }}

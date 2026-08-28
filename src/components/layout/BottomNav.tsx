@@ -10,6 +10,7 @@ import { type Tab, type MaterialIconName } from "@/types";
 import { type UiCopy } from "@/i18n";
 import { withAlpha } from "@/utils/helpers";
 import { Text } from "@/components/ui/AppText";
+import { RADIUS } from "@/theme/radii";
 
 function usePressAnimation(durationIn = 70, durationOut = 110) {
   const pressedRef = useRef<Animated.Value | null>(null);
@@ -185,7 +186,7 @@ const BottomNavItem = memo(function BottomNavItem({
             right: 0,
             bottom: 0,
             left: 0,
-            borderRadius: 14,
+            borderRadius: RADIUS.xl,
             backgroundColor: primarySoft,
             opacity: localActive,
           }}
@@ -198,7 +199,7 @@ const BottomNavItem = memo(function BottomNavItem({
             right: 0,
             bottom: 0,
             left: 0,
-            borderRadius: 14,
+            borderRadius: RADIUS.xl,
             backgroundColor: primarySoft,
             opacity: pressed,
           }}
@@ -271,4 +272,3 @@ const BottomAddButton = memo(function BottomAddButton({ onPress }: { onPress: ()
     </Animated.View>
   );
 });
-

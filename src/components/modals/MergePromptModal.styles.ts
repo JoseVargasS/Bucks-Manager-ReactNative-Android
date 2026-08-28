@@ -1,4 +1,5 @@
 import { StyleSheet } from "react-native";
+import { RADIUS } from "@/theme/radii";
 
 export const mergeStyles = StyleSheet.create({
   body: { padding: 16, gap: 16 },
@@ -8,7 +9,7 @@ export const mergeStyles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 8,
     paddingHorizontal: 14,
-    borderRadius: 12,
+    borderRadius: RADIUS.lg,
   },
   countLabel: { fontSize: 14, fontWeight: "600" },
   countValue: { fontSize: 20, fontWeight: "700", fontVariant: ["tabular-nums"] },

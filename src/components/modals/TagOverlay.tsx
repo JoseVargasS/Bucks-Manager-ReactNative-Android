@@ -5,12 +5,13 @@ import { type Tag } from "@/types";
 import { recordModalStyles } from "@/components/modals/TransactionModal.styles";
 import { base } from "@/styles/baseStyles";
 import { Text } from "@/components/ui/AppText";
+import { RADIUS } from "@/theme/radii";
 
 const styles = { ...base, ...recordModalStyles };
 const tagOptionStyles = StyleSheet.create({
   selectOptionRow: {
     minHeight: 36,
-    borderRadius: 8,
+    borderRadius: RADIUS.sm,
     paddingHorizontal: 10,
     flexDirection: "row",
     alignItems: "center",
@@ -46,7 +47,7 @@ export function TagOverlay({
           backgroundColor: colors.card,
           borderWidth: 1,
           borderColor: colors.border,
-          borderRadius: 10,
+          borderRadius: RADIUS.md,
           overflow: "hidden",
         },
       ]}

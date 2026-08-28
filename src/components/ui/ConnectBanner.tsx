@@ -3,6 +3,7 @@ import { Animated, Pressable } from "react-native";
 import Svg, { Path } from "react-native-svg";
 import { useColors } from "@/theme/ThemeContext";
 import { Text } from "./AppText";
+import { RADIUS } from "@/theme/radii";
 
 const GOOGLE_COLORS = ["#4285F4", "#EA4335", "#FBBC05", "#34A853", "#4285F4"];
 const LOOP_DURATION = 1800;
@@ -89,7 +90,7 @@ export const ConnectBanner = memo(function ConnectBanner({
           style={{
             paddingHorizontal: 14,
             paddingVertical: 9,
-            borderRadius: 20,
+            borderRadius: RADIUS["2xl"],
             backgroundColor: pillColor,
             elevation: 4,
             shadowColor: "#000",
@@ -132,7 +133,7 @@ export const ConnectBanner = memo(function ConnectBanner({
             right: 0,
             bottom: 0,
             borderRadius: 31,
-            borderWidth: 2.5,
+            borderWidth: 1,
             borderColor: pillColor,
           }}
           pointerEvents="none"
@@ -160,11 +161,11 @@ export const ConnectBanner = memo(function ConnectBanner({
             right: -2,
             width: 22,
             height: 22,
-            borderRadius: 11,
+            borderRadius: RADIUS.lg,
             backgroundColor: "#333",
             alignItems: "center",
             justifyContent: "center",
-            borderWidth: 1.5,
+            borderWidth: 1,
             borderColor: card,
           }}
         >

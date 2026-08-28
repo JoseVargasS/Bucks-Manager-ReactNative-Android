@@ -1,8 +1,9 @@
 import { StyleSheet } from "react-native";
+import { RADIUS } from "@/theme/radii";
 
 export const detailStyles = StyleSheet.create({
   detailModal: {
-    borderRadius: 20,
+    borderRadius: RADIUS["2xl"],
     borderWidth: 0,
     width: "100%",
     maxWidth: 390,
@@ -13,7 +14,7 @@ export const detailStyles = StyleSheet.create({
   detailScroll: { flexShrink: 1 },
   detailBody: { gap: 12, padding: 16 },
   detailHero: {
-    borderRadius: 14,
+    borderRadius: RADIUS.xl,
     padding: 14,
     flexDirection: "row",
     alignItems: "center",
@@ -22,7 +23,7 @@ export const detailStyles = StyleSheet.create({
   detailHeroIcon: {
     width: 48,
     height: 48,
-    borderRadius: 24,
+    borderRadius: RADIUS["2xl"],
     alignItems: "center",
     justifyContent: "center",
   },
@@ -38,7 +39,7 @@ export const detailStyles = StyleSheet.create({
     fontWeight: "700",
     fontVariant: ["tabular-nums"],
   },
-  detailDescription: { borderRadius: 12, padding: 14, gap: 7 },
+  detailDescription: { borderRadius: RADIUS.lg, padding: 14, gap: 7 },
   detailSectionLabel: {
     fontSize: 12,
     fontWeight: "600",
@@ -65,7 +66,7 @@ export const detailStyles = StyleSheet.create({
   detailActionBtn: {
     flex: 1,
     height: 48,
-    borderRadius: 12,
+    borderRadius: RADIUS.lg,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",

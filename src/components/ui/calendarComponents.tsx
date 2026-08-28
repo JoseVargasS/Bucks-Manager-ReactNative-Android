@@ -2,6 +2,7 @@ import { type ReactNode } from "react";
 import { Pressable, View, StyleSheet, type ViewStyle } from "react-native";
 import { type Palette } from "@/theme/colors";
 import { Text } from "./AppText";
+import { RADIUS } from "@/theme/radii";
 
 const s = StyleSheet.create({
   sheetOverlay: { alignItems: "center", justifyContent: "center" },
@@ -17,11 +18,11 @@ const s = StyleSheet.create({
     paddingHorizontal: 20,
     marginHorizontal: 12,
     marginVertical: 2,
-    borderRadius: 10,
+    borderRadius: RADIUS.md,
     alignItems: "center",
   },
   chipCell: { width: "33.33%", paddingVertical: 8, alignItems: "center" },
-  chipInner: { paddingVertical: 8, paddingHorizontal: 10, borderRadius: 12 },
+  chipInner: { paddingVertical: 8, paddingHorizontal: 10, borderRadius: RADIUS.lg },
 });
 
 export function PickerSheet({

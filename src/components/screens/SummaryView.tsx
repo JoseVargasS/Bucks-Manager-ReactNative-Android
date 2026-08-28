@@ -21,6 +21,7 @@ import { SummaryHeader, SummaryStickyHeader } from "@/components/screens/Summary
 import { SummaryMonthlyTable } from "@/components/screens/SummaryMonthlyTable";
 import { SummaryKpiSection } from "@/components/screens/SummaryKpiSection";
 import { useSummaryState } from "@/components/screens/useSummaryState";
+import { RADIUS } from "@/theme/radii";
 
 export const SummaryView = memo(function SummaryView({ colors, copy, summaries, transactions, freqIncome, tagsList, availableYears, topInset, currencySymbol, theme }: {
   colors: Palette; copy: UiCopy; summaries: SummaryRow[]; transactions: Transaction[]; freqIncome: Record<string, number>;
@@ -44,7 +45,7 @@ export const SummaryView = memo(function SummaryView({ colors, copy, summaries, 
       >
       <SummaryHeader colors={colors} copy={copy} subLabel={subLabel} filterYear={filterYear} yearOptions={yearOptions} setFilterYear={setFilterYear} scrollY={scrollY} theme={theme} />
 
-      <View style={{ backgroundColor: colors.card, borderRadius: 18, padding: 18, overflow: "hidden" }}>
+      <View style={{ backgroundColor: colors.card, borderRadius: RADIUS["2xl"], padding: 18, overflow: "hidden" }}>
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
           <Text style={{ color: colors.muted, fontSize: 13, fontWeight: "600", textTransform: "uppercase" }}>{isAllYears ? copy.totalBalance : copy.annualBalance}</Text>
         </View>
@@ -75,9 +76,9 @@ export const SummaryView = memo(function SummaryView({ colors, copy, summaries, 
       />
 
       {nonFreqAlert && (
-        <View style={{ backgroundColor: colors.card, borderRadius: 14, padding: 15 }}>
+        <View style={{ backgroundColor: colors.card, borderRadius: RADIUS.xl, padding: 15 }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-            <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: colors.warnSoft, alignItems: "center", justifyContent: "center" }}>
+            <View style={{ width: 36, height: 36, borderRadius: RADIUS["2xl"], backgroundColor: colors.warnSoft, alignItems: "center", justifyContent: "center" }}>
               <MaterialCommunityIcons name="alert-outline" size={18} color={colors.warn} />
             </View>
             <View style={{ flex: 1 }}>
@@ -117,7 +118,7 @@ export const SummaryView = memo(function SummaryView({ colors, copy, summaries, 
       </View>
 
       {tagsList.length > 0 && topCategoriesPieData.length > 0 && (
-        <View style={{ backgroundColor: colors.card, borderRadius: 14, padding: 15 }}>
+        <View style={{ backgroundColor: colors.card, borderRadius: RADIUS.xl, padding: 15 }}>
           <Text style={{ color: colors.text, fontSize: 16, fontWeight: "700", marginBottom: 10 }}>{copy.topCategories}</Text>
           <PieChart
             data={topCategoriesPieData} colors={colors} currencySymbol={currencySymbol}
@@ -127,7 +128,7 @@ export const SummaryView = memo(function SummaryView({ colors, copy, summaries, 
         </View>
       )}
 
-      <View style={{ backgroundColor: colors.card, borderRadius: 14, padding: 15, gap: 10 }}>
+      <View style={{ backgroundColor: colors.card, borderRadius: RADIUS.xl, padding: 15, gap: 10 }}>
         <Text style={{ color: colors.text, fontSize: 16, fontWeight: "700" }}>{copy.composition}</Text>
         <SegmentedControl options={compSegmentOptions} selected={compSegment} onSelect={setCompSegment} colors={colors} />
         {compSegment === "expense" ? (

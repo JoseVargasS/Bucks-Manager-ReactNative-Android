@@ -6,6 +6,7 @@ import { UI_MONTH_NAMES, type UiCopy } from "@/i18n";
 import { Text } from "@/components/ui/AppText";
 import { TransactionRow, type TagButtonRef } from "@/components/screens/TransactionRow";
 import { base } from "@/styles/baseStyles";
+import { RADIUS } from "@/theme/radii";
 
 export const DashboardRecentList = memo(function DashboardRecentList({
   colors,
@@ -49,7 +50,7 @@ export const DashboardRecentList = memo(function DashboardRecentList({
     <View
       style={{
         backgroundColor: colors.card,
-        borderRadius: 14,
+        borderRadius: RADIUS.xl,
       }}
     >
       {transactions.map((tx, index) => {

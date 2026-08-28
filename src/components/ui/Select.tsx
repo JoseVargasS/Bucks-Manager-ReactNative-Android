@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { type Palette } from "@/theme/colors";
+import { RADIUS } from "@/theme/radii";
 import { Text } from "./AppText";
 import { OptionSheet, type OptionSheetHandle } from "@/components/modals/OptionSheet";
 
@@ -71,6 +72,6 @@ export const Select = memo(function Select({ value, options, onSelect, colors, p
 });
 
 const selectStyles = {
-  button: { borderRadius: 10, paddingHorizontal: 12, minHeight: 42, flexDirection: "row" as const, alignItems: "center" as const, gap: 8, borderWidth: 1 },
+  button: { borderRadius: RADIUS.md, paddingHorizontal: 12, minHeight: 42, flexDirection: "row" as const, alignItems: "center" as const, gap: 8, borderWidth: 1 },
   buttonText: { flex: 1, minWidth: 0, fontSize: 15, fontWeight: "600" as const, textAlign: "center" as const },
 };

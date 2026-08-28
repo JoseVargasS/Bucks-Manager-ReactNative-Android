@@ -1,11 +1,12 @@
 import { StyleSheet } from "react-native";
+import { RADIUS } from "@/theme/radii";
 
 export const s = StyleSheet.create({
   body: { padding: 14, gap: 10 },
   addRow: { flexDirection: "row", gap: 8, alignItems: "center" },
   input: {
     flex: 1,
-    borderRadius: 8,
+    borderRadius: RADIUS.sm,
     paddingHorizontal: 12,
     minHeight: 40,
     fontWeight: "600",
@@ -13,7 +14,7 @@ export const s = StyleSheet.create({
   addBtn: {
     width: 40,
     height: 40,
-    borderRadius: 20,
+    borderRadius: RADIUS["2xl"],
     alignItems: "center",
     justifyContent: "center",
   },
@@ -24,10 +25,10 @@ export const s = StyleSheet.create({
     gap: 8,
     paddingVertical: 6,
   },
-  tagDot: { width: 24, height: 24, borderRadius: 12 },
+  tagDot: { width: 24, height: 24, borderRadius: RADIUS.lg },
   editInput: {
     flex: 1,
-    borderRadius: 6,
+    borderRadius: RADIUS.sm,
     paddingHorizontal: 8,
     minHeight: 32,
     fontWeight: "600",

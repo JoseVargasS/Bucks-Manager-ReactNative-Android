@@ -1,4 +1,5 @@
 import { StyleSheet } from "react-native";
+import { RADIUS } from "@/theme/radii";
 
 export const statCardStyles = StyleSheet.create({
   statCard: {
@@ -6,7 +7,7 @@ export const statCardStyles = StyleSheet.create({
     flexBasis: "48%",
     minWidth: 0,
     borderWidth: 0,
-    borderRadius: 14,
+    borderRadius: RADIUS.xl,
     padding: 12,
     position: "relative",
     flexDirection: "row",
@@ -16,7 +17,7 @@ export const statCardStyles = StyleSheet.create({
   statIcon: {
     width: 40,
     height: 40,
-    borderRadius: 20,
+    borderRadius: RADIUS.pill,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -34,7 +35,7 @@ export const statCardStyles = StyleSheet.create({
     fontVariant: ["tabular-nums"],
   },
   editStat: { position: "absolute", right: 10, top: 10 },
-  kpi: { flex: 1, minWidth: 0, borderWidth: 0, borderRadius: 14, padding: 14 },
+  kpi: { flex: 1, minWidth: 0, borderWidth: 0, borderRadius: RADIUS.xl, padding: 14 },
   kpiValue: {
     fontSize: 24,
     fontWeight: "700",

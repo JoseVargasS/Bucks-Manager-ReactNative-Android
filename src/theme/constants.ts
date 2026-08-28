@@ -6,7 +6,7 @@ export const ANIM_TAB_PAGER = 210;
 export const ANIM_HEADER_BTN_IN = 60;
 export const ANIM_HEADER_BTN_OUT = 60;
 
-export const RADII = { sm: 8, md: 14, pill: 50 } as const;
+export const RADII = { sm: 8, md: 10, lg: 12, xl: 14, "2xl": 20, pill: 999 } as const;
 
 export const NAV_BTN_SIZE = 40;
 export const NAV_BTN_HEIGHT = 42;
@@ -27,10 +27,9 @@ export const Z_INDEX_DETAIL = 1001;
 export const Z_INDEX_SEARCH = 1002;
 
 // Splash uses raw constants because it renders before ThemeProvider mounts.
-// The values match the cyprus dark scheme (new default): a near-black green
-// shell and a chalk-white title.
+// Dark shell #001a16 with lime #C8FF00 accent; light pastel is #F0EDE4.
 export const SPLASH_BG = "#001a16";
-export const SPLASH_SPINNER = "#9ed9c8";
+export const SPLASH_SPINNER = "#C8FF00";
 export const SPLASH_TEXT = "#f0ede4";
 
 export const TOKEN_KEY = "bucks_google_access_token";

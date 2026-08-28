@@ -4,6 +4,7 @@ import { type Palette } from "@/theme/colors";
 import { type SummaryRow } from "@/types";
 import { Kpi } from "@/components/ui/Kpi";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
+import { RADIUS } from "@/theme/radii";
 
 export function SummaryKpiSection({
   colors, copy, kpiSegment, setKpiSegment, kpiSegmentOptions,
@@ -23,7 +24,7 @@ export function SummaryKpiSection({
   highestExpenseMonth: SummaryRow | null;
 }) {
   return (
-    <View style={{ backgroundColor: colors.card, borderRadius: 14, padding: 15, gap: 10 }}>
+    <View style={{ backgroundColor: colors.card, borderRadius: RADIUS.xl, padding: 15, gap: 10 }}>
       <SegmentedControl options={kpiSegmentOptions} selected={kpiSegment} onSelect={setKpiSegment} colors={colors} />
       <View style={{ gap: 8 }}>
         {kpiSegment === "general" && (

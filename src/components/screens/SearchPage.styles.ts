@@ -1,4 +1,5 @@
 import { StyleSheet } from "react-native";
+import { RADIUS } from "@/theme/radii";
 
 export const searchPageStyles = StyleSheet.create({
   searchBody: { flexShrink: 1 },
@@ -8,7 +9,7 @@ export const searchPageStyles = StyleSheet.create({
     paddingBottom: 12,
     gap: 10,
   },
-  searchSection: { borderWidth: 0, borderRadius: 14, padding: 12, gap: 10 },
+  searchSection: { borderWidth: 0, borderRadius: RADIUS.xl, padding: 12, gap: 10 },
   searchSectionHeader: { flexDirection: "row", alignItems: "center", gap: 8 },
   searchSectionTitle: {
     fontSize: 13,
@@ -28,7 +29,7 @@ export const searchPageStyles = StyleSheet.create({
     flex: 1,
     minHeight: 52,
     borderWidth: 1,
-    borderRadius: 14,
+    borderRadius: RADIUS.xl,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",

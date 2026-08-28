@@ -5,6 +5,7 @@ import { type Palette } from "@/theme/colors";
 import { type SummaryRow } from "@/types";
 import { type UiCopy } from "@/i18n";
 import { Text } from "@/components/ui/AppText";
+import { RADIUS } from "@/theme/radii";
 
 export const SummaryMonthlyTable = memo(function SummaryMonthlyTable({
   colors, copy, filtered, currencySymbol, monthLabel, fm, handleMonthPress,
@@ -15,7 +16,7 @@ export const SummaryMonthlyTable = memo(function SummaryMonthlyTable({
   handleMonthPress: (row: SummaryRow) => void;
 }) {
   return (
-    <View style={{ backgroundColor: colors.card, borderRadius: 14, overflow: "hidden" }}>
+    <View style={{ backgroundColor: colors.card, borderRadius: RADIUS.xl, overflow: "hidden" }}>
       <View style={{ paddingHorizontal: 16, paddingTop: 16, paddingBottom: 10 }}>
         <Text style={{ color: colors.text, fontSize: 18, fontWeight: "700" }}>{copy.monthlyDetail}</Text>
       </View>
@@ -30,7 +31,7 @@ export const SummaryMonthlyTable = memo(function SummaryMonthlyTable({
             backgroundColor: pressed ? colors.input : "transparent",
           })}
         >
-          <View style={{ width: 44, height: 44, borderRadius: 13, backgroundColor: colors.input, alignItems: "center", justifyContent: "center" }}>
+          <View style={{ width: 44, height: 44, borderRadius: RADIUS.lg, backgroundColor: colors.input, alignItems: "center", justifyContent: "center" }}>
             <Text style={{ color: colors.text, fontSize: 13, fontWeight: "700" }}>{monthLabel(row, copy.languageCode).slice(0, 3).toUpperCase()}</Text>
           </View>
           <View style={{ flex: 1, minWidth: 0 }}>

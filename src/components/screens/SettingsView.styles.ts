@@ -1,4 +1,5 @@
 import { StyleSheet } from "react-native";
+import { RADIUS } from "@/theme/radii";
 
 export const settingsStyles = StyleSheet.create({
   settingsSection: { marginBottom: 22 },
@@ -9,7 +10,7 @@ export const settingsStyles = StyleSheet.create({
     paddingHorizontal: 3,
     letterSpacing: 0,
   },
-  settingsGroup: { borderWidth: 0, borderRadius: 14, overflow: "hidden" },
+  settingsGroup: { borderWidth: 0, borderRadius: RADIUS.xl, overflow: "hidden" },
   settingsRow: {
     minHeight: 52,
     paddingHorizontal: 16,
@@ -21,7 +22,7 @@ export const settingsStyles = StyleSheet.create({
   settingsAvatar: {
     width: 44,
     height: 44,
-    borderRadius: 22,
+    borderRadius: RADIUS["2xl"],
     borderWidth: 0,
     alignItems: "center",
     justifyContent: "center",

@@ -6,6 +6,7 @@ import type { UiCopy } from "@/i18n";
 import { PieChart } from "@/components/ui/PieChart";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { Text } from "@/components/ui/AppText";
+import { RADIUS } from "@/theme/radii";
 
 export const DashboardPieSection = memo(function DashboardPieSection({
   colors,
@@ -36,7 +37,7 @@ export const DashboardPieSection = memo(function DashboardPieSection({
     <View
       style={{
         backgroundColor: colors.card,
-        borderRadius: 14,
+        borderRadius: RADIUS.xl,
         padding: 15,
       }}
     >

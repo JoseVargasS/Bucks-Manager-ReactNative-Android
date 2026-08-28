@@ -4,6 +4,7 @@ import { type Palette } from "@/theme/colors";
 import { type UiCopy } from "@/i18n";
 import type { TransactionType } from "@/types";
 import { Text } from "./AppText";
+import { RADIUS } from "@/theme/radii";
 
 export const TypeSelector = memo(function TypeSelector({
   value, onSelect, colors, copy,
@@ -60,13 +61,13 @@ const SegmentRow = memo(function SegmentRow({
   return (
     <View
       onLayout={(e) => setContainerW(e.nativeEvent.layout.width)}
-      style={{ flexDirection: "row", backgroundColor: colors.input, borderRadius: 10, padding: 3, gap: 2 }}
+      style={{ flexDirection: "row", backgroundColor: colors.input, borderRadius: RADIUS.md, padding: 3, gap: 2 }}
     >
       {segW > 0 && (
         <Animated.View
           style={{
             position: "absolute", top: 3, bottom: 3, width: segW,
-            backgroundColor: colors.card, borderRadius: 8,
+            backgroundColor: colors.card, borderRadius: RADIUS.sm,
             shadowColor: colors.shadow, shadowOffset: { width: 0, height: 1 },
             shadowOpacity: 0.06, shadowRadius: 2, elevation: 1,
             transform: [{ translateX: animIndex.interpolate({ inputRange: options.map((_, i) => i), outputRange }) }],
@@ -79,7 +80,7 @@ const SegmentRow = memo(function SegmentRow({
           <Pressable
             key={opt.key}
             onPress={() => onSelect(opt.key)}
-            style={{ flex: 1, paddingVertical: 7, paddingHorizontal: 4, borderRadius: 8, alignItems: "center", justifyContent: "center" }}
+            style={{ flex: 1, paddingVertical: 7, paddingHorizontal: 4, borderRadius: RADIUS.sm, alignItems: "center", justifyContent: "center" }}
           >
             <Text
               numberOfLines={1}

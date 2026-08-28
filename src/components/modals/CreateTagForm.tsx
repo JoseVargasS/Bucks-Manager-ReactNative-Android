@@ -2,6 +2,7 @@ import { Pressable, View } from "react-native";
 import { type Palette } from "@/theme/colors";
 import { ColorPicker } from "@/components/ui/ColorPicker";
 import { Text, TextInput } from "@/components/ui/AppText";
+import { RADIUS } from "@/theme/radii";
 
 export function CreateTagForm({
   createTagLabel,
@@ -23,7 +24,7 @@ export function CreateTagForm({
   copy: Record<string, string>;
 }) {
   return (
-    <View style={{ backgroundColor: colors.input, borderRadius: 12, padding: 12, gap: 10, marginTop: 4 }}>
+    <View style={{ backgroundColor: colors.input, borderRadius: RADIUS.lg, padding: 12, gap: 10, marginTop: 4 }}>
       <Text style={{ fontSize: 12, fontWeight: "600", color: colors.primary, textTransform: "uppercase" }}>
         {copy.createTag}
       </Text>
@@ -34,7 +35,7 @@ export function CreateTagForm({
         placeholderTextColor={colors.muted}
         keyboardType="default"
         style={{
-          borderRadius: 8,
+          borderRadius: RADIUS.sm,
           paddingHorizontal: 10,
           minHeight: 38,
           fontWeight: "600",
@@ -49,7 +50,7 @@ export function CreateTagForm({
         <Pressable
           style={{
             flex: 1,
-            borderRadius: 8,
+            borderRadius: RADIUS.sm,
             paddingVertical: 9,
             alignItems: "center",
             backgroundColor: colors.border,
@@ -61,7 +62,7 @@ export function CreateTagForm({
         <Pressable
           style={{
             flex: 1,
-            borderRadius: 8,
+            borderRadius: RADIUS.sm,
             paddingVertical: 9,
             alignItems: "center",
             backgroundColor: colors.primary,
