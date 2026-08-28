@@ -18,8 +18,8 @@ export const TypeSelector = memo(function TypeSelector({
     <View style={{ marginBottom: 18, gap: 10 }}>
       <SegmentRow
         options={[
-          { key: "INGRESO", label: copy.income, activeColor: colors.income },
           { key: "GASTO", label: copy.expensesLabel, activeColor: colors.expense },
+          { key: "INGRESO", label: copy.income, activeColor: colors.income },
         ]}
         selected={category}
         onSelect={(key) => onSelect(`${key} ${frequency}` as TransactionType)}
@@ -83,7 +83,7 @@ const SegmentRow = memo(function SegmentRow({
           >
             <Text
               numberOfLines={1}
-              style={{ fontSize: 12, fontWeight: active ? "700" : "500", color: active ? opt.activeColor : colors.muted }}
+              style={{ fontSize: 13, fontWeight: active ? "700" : "500", color: active ? opt.activeColor : colors.muted }}
             >
               {opt.label}
             </Text>

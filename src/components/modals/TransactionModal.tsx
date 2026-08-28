@@ -303,9 +303,7 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
             {lineItems.map((item) => {
               const itemTags = (item.tags || []).flatMap((id) => findTagById(id, tags) ?? []);
               const unusedTags = tags.filter((t) => !itemTags.some((it) => it.id === t.id));
-              const cardBorder = itemTags.length > 0
-                ? (itemTags[0]?.color ?? colors.border)
-                : (item.amount.trim() ? colors.primarySoft : colors.border);
+              const cardBorder = item.amount.trim() ? colors.primarySoft : colors.border;
               return (
                 <View key={item.id} style={[styles.lineItemCard, { backgroundColor: colors.input, borderColor: cardBorder }]}>
                   <View style={styles.lineItemAmountRow}>
