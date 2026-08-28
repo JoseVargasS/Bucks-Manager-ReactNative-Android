@@ -62,7 +62,7 @@ export function useThemeCrossfade(
     themeAnimRef.current?.stop();
     themeAnimRef.current = Animated.timing(themeProgress, {
       toValue: target,
-      duration: 50,
+      duration: 20,
       easing: Easing.inOut(Easing.cubic),
       useNativeDriver: false,
     });
