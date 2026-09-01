@@ -217,21 +217,24 @@ describe("useGoogleSync", () => {
 
   // ─── refreshStoredSession ───
 
-  test("refreshStoredSession handles auth error with cache", async () => {
+  test("refreshStoredSession keeps local cache on auth error with cache", async () => {
     const secureStore = g.__bucksSecureStoreMock;
     secureStore.reset();
     const original = globalThis.fetch;
     globalThis.fetch = defaultSheetsHandler([]) as any;
     try {
       let teardownCalled = false;
+      let offlineValue: boolean | undefined;
       const session = makeSession({
         getWorkspaceAccessToken: async () => { throw Object.assign(new Error("401"), { status: 401 }); },
         teardownSession: () => { teardownCalled = true; },
+        setOffline: (v: boolean) => { offlineValue = v; },
       });
       const api = useGoogleSync(session, emptyFin, emptyTags, { ...emptyHelpers, authErr: () => true }, { current: null });
 
       await api.refreshStoredSession("tok", "sheet-1", true);
-      expect(teardownCalled).toBe(true);
+      expect(teardownCalled).toBe(false);
+      expect(offlineValue).toBe(true);
     } finally {
       globalThis.fetch = original;
       secureStore.reset();

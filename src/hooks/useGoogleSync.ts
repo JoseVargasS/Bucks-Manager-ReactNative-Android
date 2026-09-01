@@ -30,6 +30,9 @@ import {
 // fast edit cannot race with the reconcile read of an earlier edit.
 export const syncQueueRef = { current: Promise.resolve() };
 
+// Max time the session restore may wait on network before releasing the splash.
+const SESSION_REFRESH_TIMEOUT_MS = 8000;
+
 export interface GoogleSyncApi {
   restoreSession: () => Promise<void>;
   refreshStoredSession: (token: string, sheetId: string, hadCache: boolean) => Promise<void>;
@@ -107,6 +110,9 @@ export function useGoogleSync(
           cached.lastSyncedAt,
           true,
         );
+        // ponytail: la cache ya se hidrato; libera el splash y revalida en
+        // background (la app entra al toque aunque la red este lenta).
+        setRehydratingCache(false);
         void refreshStoredSession(token, sheetId, true);
       } else {
         setIsFirstRemoteLoad(true);
@@ -132,42 +138,55 @@ export function useGoogleSync(
     hadCache: boolean,
   ) {
     let activeToken = token;
+    // ponytail: signInSilently/googleFetch cuelgan con red muerta. Se libera el
+    // splash tras SESSION_REFRESH_TIMEOUT_MS aunque la revalidacion siga en
+    // background (aplica datos remotos cuando la red vuelve).
+    const work = (async () => {
+      try {
+        const fresh = await getWorkspaceAccessToken(false);
+        activeToken = fresh.accessToken || token;
+        setAuthError("");
+        setAccessToken(activeToken);
+        syncAccountInfo();
+        await setItemAsync(TOKEN_KEY, activeToken);
+        if (hadCache) {
+          const trashed = await isSheetTrashed(activeToken, sheetId);
+          if (trashed) {
+            teardownSession({ catchErrors: true });
+            return;
+          }
+        }
+        await reloadFromGoogle(activeToken, sheetId, false);
+      } catch (error) {
+        if (authErr(error)) {
+          setAuthError(errMsg(error));
+          if (hadCache) {
+            session.setOffline(true);
+          } else {
+            await disconnectGoogle();
+          }
+        } else if (shouldRescanForSheetError(error)) {
+          if (hadCache) {
+            await Promise.all([
+              deleteItemAsync(SHEET_KEY),
+              deleteFinancialCache(),
+            ]).catch(() => undefined);
+            resetFinancialState();
+          }
+          await connectGoogleWorkspace(activeToken, "", true);
+        } else if (!hadCache) {
+          setSyncError(errMsg(error));
+        }
+      }
+    })();
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const timeout = new Promise<void>((resolve) => {
+      timer = setTimeout(resolve, SESSION_REFRESH_TIMEOUT_MS);
+    });
     try {
-      const fresh = await getWorkspaceAccessToken(false);
-      activeToken = fresh.accessToken || token;
-      setAuthError("");
-      setAccessToken(activeToken);
-      syncAccountInfo();
-      await setItemAsync(TOKEN_KEY, activeToken);
-      if (hadCache) {
-        const trashed = await isSheetTrashed(activeToken, sheetId);
-        if (trashed) {
-          teardownSession({ catchErrors: true });
-          return;
-        }
-      }
-      await reloadFromGoogle(activeToken, sheetId, false);
-    } catch (error) {
-      if (authErr(error)) {
-        setAuthError(errMsg(error));
-        if (hadCache) {
-          teardownSession({ catchErrors: true, clearSheetId: false });
-        } else {
-          await disconnectGoogle();
-        }
-      } else if (shouldRescanForSheetError(error)) {
-        if (hadCache) {
-          await Promise.all([
-            deleteItemAsync(SHEET_KEY),
-            deleteFinancialCache(),
-          ]).catch(() => undefined);
-          resetFinancialState();
-        }
-        await connectGoogleWorkspace(activeToken, "", true);
-      } else if (!hadCache) {
-        setSyncError(errMsg(error));
-      }
+      await Promise.race([work.catch(() => undefined), timeout]);
     } finally {
+      if (timer) clearTimeout(timer);
       setIsFirstRemoteLoad(false);
       setRehydratingCache(false);
     }
