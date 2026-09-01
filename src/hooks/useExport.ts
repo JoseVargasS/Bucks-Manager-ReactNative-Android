@@ -101,7 +101,7 @@ export function useExport(
           dialogTitle: copy.exportMovements,
         });
       } else {
-        const html = `<html><body><h1>Bucks Manager</h1><table border="1" cellspacing="0" cellpadding="6">${rows
+        const html = `<html><body><h1>Quipu</h1><table border="1" cellspacing="0" cellpadding="6">${rows
           .map(
             (tx) =>
               `<tr><td>${tx.date}</td><td>${formatMoney(tx.amount, currencySymbol)}</td><td>${tx.detail}</td><td>${tx.type}</td><td>${formatCreatedTime(tx.createdAt)}</td></tr>`,

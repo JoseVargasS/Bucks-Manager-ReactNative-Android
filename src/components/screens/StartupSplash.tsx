@@ -93,7 +93,7 @@ export function StartupSplash({ exiting = false, onExitComplete }: Props) {
           ],
         }}
       >
-        Bucks Manager
+        Quipu
       </Animated.Text>
     </View>
   );

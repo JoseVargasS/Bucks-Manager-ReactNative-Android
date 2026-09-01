@@ -1,7 +1,7 @@
 import { StyleSheet, type TextStyle } from "react-native";
 
 /**
- * Sistema tipográfico homogéneo — Bucks Manager
+ * Sistema tipográfico homogéneo — Quipu
  * Basado en impeccable/typeset + React Native Text docs:
  * - 5 tamaños core + 2 display, ratio 1.2-1.25 entre pasos
  * - Pesos: 400 body, 500 metadata, 600 label lista, 700 títulos/amounts

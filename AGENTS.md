@@ -1,4 +1,4 @@
-# AGENTS.md - Bucks Manager Android
+# AGENTS.md - Quipu Android
 
 ## ⚠️ LÉEME PRIMERO — Instrucciones para el agente
 
@@ -15,14 +15,14 @@ Antes de comenzar cualquier tarea, el agente DEBE:
 
 ## Project Overview
 
-Bucks Manager Android is the React Native/Expo Android version of the Bucks Manager Google Apps Script app. It must preserve the mobile GAS workflow and use each user's private Google Sheet as the database. There is no custom backend.
+Quipu Android is the React Native/Expo Android version of the Bucks Manager Google Apps Script app (rebranded as Quipu for launch). It must preserve the mobile GAS workflow and use each user's private Google Sheet as the database. There is no custom backend.
 
 The app is built to scale to thousands of transactions per user across many years of history. All performance, memoization, and split decisions below are written with that growth in mind.
 
 ## Core Rules
 
 - Do not show demo finance data during app startup.
-- If there is no Google session, show the minimal Bucks Manager login screen with only Google sign-in.
+- If there is no Google session, show the minimal Quipu login screen with only Google sign-in.
 - Treat Google Drive data as private user data. Read or write Drive/Sheets only through the app runtime or when the user explicitly authorizes it.
 - Do not commit `.env`, OAuth secrets, spreadsheet IDs, `.expo/`, logs, `dist/`, build outputs, or `node_modules/`.
 - Keep deployment-specific IDs such as `EAS_PROJECT_ID` in `.env` or build environment variables, not hardcoded in source.

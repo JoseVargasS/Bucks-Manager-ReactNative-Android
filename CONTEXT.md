@@ -1,8 +1,8 @@
-# Bucks Manager Android Context
+# Quipu Android Context
 
 ## Runtime Shape
 
-Bucks Manager is an Expo/React Native client with no custom backend. Google Sign-In supplies an access token; one private Google spreadsheet remains the remote source of truth. A local JSON cache makes startup and finance interactions immediate while Sheets revalidation runs in the background.
+Quipu is an Expo/React Native client with no custom backend. Google Sign-In supplies an access token; one private Google spreadsheet remains the remote source of truth. A local JSON cache makes startup and finance interactions immediate while Sheets revalidation runs in the background.
 
 `App.tsx` intentionally owns the cross-cutting runtime state: session restore, preferences, cache hydration, Google synchronization, optimistic writes, pager state, and modal refs. Cross-cutting logic has been extracted into dedicated hooks:
 

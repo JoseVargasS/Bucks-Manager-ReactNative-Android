@@ -7,7 +7,7 @@ The app has no custom backend. Each user signs in with Google and uses a private
 ## Current Flow
 
 1. Open the app.
-2. If there is no Google session, show only the Bucks Manager login screen.
+2. If there is no Google session, show only the Quipu login screen.
 3. Sign in with Google.
 4. Restore the last spreadsheet and its local financial cache when available.
 5. Paint cached transactions immediately and revalidate Google Sheets in the background.

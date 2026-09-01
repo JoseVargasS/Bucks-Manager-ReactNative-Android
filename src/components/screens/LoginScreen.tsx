@@ -14,7 +14,7 @@ export function LoginScreen({ colors, copy, loading, canConnect, onSignIn }: { c
       <View style={[styles.loginMark, { backgroundColor: colors.primary }]}>
         <MaterialCommunityIcons name="sack" size={38} color={colors.onPrimary} />
       </View>
-      <Text style={[styles.loginTitle, { color: colors.text }]}>Bucks Manager</Text>
+      <Text style={[styles.loginTitle, { color: colors.text }]}>Quipu</Text>
       <Text style={{ fontSize: 13, fontWeight: "400", color: colors.muted, marginTop: 6 }}>{copy.loginSubtitle}</Text>
       <Pressable
         testID="google-sign-in"

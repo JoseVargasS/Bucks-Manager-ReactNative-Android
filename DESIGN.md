@@ -1,4 +1,4 @@
-# Bucks Manager Android — Design System
+# Quipu Android — Design System
 
 ## Typography
 
