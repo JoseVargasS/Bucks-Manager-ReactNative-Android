@@ -1,5 +1,5 @@
-import { memo } from "react";
-import { ScrollView, Switch, Pressable, View } from "react-native";
+import { memo, useEffect, useRef } from "react";
+import { Animated, Easing, ScrollView, Pressable, View } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { base } from "@/styles/baseStyles";
 import { settingsStyles } from "@/components/screens/SettingsView.styles";
@@ -89,12 +89,7 @@ export const SettingsView = memo(function SettingsView({
               <Text style={{ fontSize: 14, fontWeight: "600", color: colors.text }}>{copy.pinApp}</Text>
               <Text style={{ fontSize: 11, fontWeight: "500", color: colors.muted, marginTop: 1 }}>{copy.pinAppSub}</Text>
             </View>
-            <Switch
-              value={pinEnabled}
-              onValueChange={onOpenPin}
-              trackColor={{ false: colors.switchTrack, true: colors.primarySoft }}
-              thumbColor={pinEnabled ? colors.primary : colors.disabled}
-            />
+            <SmoothSwitch value={pinEnabled} onValueChange={onOpenPin} colors={colors} />
           </View>
         </View>
       </View>
@@ -119,6 +114,90 @@ export const SettingsView = memo(function SettingsView({
     </ScrollView>
   );
 });
+
+function SmoothSwitch({ value, onValueChange, colors }: { value: boolean; onValueChange: (v: boolean) => void; colors: Palette }) {
+  const anim = useRef(new Animated.Value(value ? 1 : 0)).current;
+  const thumbScale = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    Animated.parallel([
+      Animated.spring(anim, {
+        toValue: value ? 1 : 0,
+        tension: 34,
+        friction: 7,
+        useNativeDriver: false,
+      }),
+      Animated.sequence([
+        Animated.timing(thumbScale, { toValue: 0.88, duration: 100, easing: Easing.out(Easing.quad), useNativeDriver: false }),
+        Animated.spring(thumbScale, { tension: 320, friction: 7, toValue: 1, useNativeDriver: false }),
+      ]),
+    ]).start();
+  }, [value, anim, thumbScale]);
+
+  const trackBg = anim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [colors.switchTrack, colors.primary],
+  });
+  const trackBorder = anim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [colors.border, colors.primary],
+  });
+  const thumbBg = anim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ["#ffffff", colors.onPrimary],
+  });
+  const translateX = anim.interpolate({ inputRange: [0, 1], outputRange: [0, 18] });
+  const trackOpacity = anim.interpolate({ inputRange: [0, 1], outputRange: [0.95, 1] });
+
+  return (
+    <Pressable
+      onPress={() => onValueChange(!value)}
+      hitSlop={8}
+      style={{ paddingVertical: 4 }}
+      accessibilityRole="switch"
+      accessibilityState={{ checked: value }}
+    >
+      <Animated.View
+        style={{
+          width: 44,
+          height: 26,
+          borderRadius: 13,
+          backgroundColor: trackBg as unknown as string,
+          borderWidth: 1,
+          borderColor: trackBorder as unknown as string,
+          opacity: trackOpacity as unknown as number,
+          justifyContent: "center",
+          padding: 2,
+        }}
+      >
+        <Animated.View
+          style={{
+            width: 22,
+            height: 22,
+            borderRadius: 11,
+            backgroundColor: thumbBg as unknown as string,
+            transform: [{ translateX }, { scale: thumbScale }],
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 1 },
+            shadowOpacity: 0.22,
+            shadowRadius: 1.5,
+            elevation: 2,
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <Animated.View style={{ opacity: anim as unknown as number }}>
+            <MaterialCommunityIcons
+              name="check"
+              size={13}
+              color={colors.primary}
+              style={{ opacity: value ? 1 : 0 }}
+            />
+          </Animated.View>
+        </Animated.View>
+      </Animated.View>
+    </Pressable>
+  );
+}
 
 function SettingsRow({ colors, icon, label, value, tone, onPress, last = false }: {
   colors: Palette; icon: MaterialIconName;
