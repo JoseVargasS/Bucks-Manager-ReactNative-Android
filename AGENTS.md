@@ -209,9 +209,11 @@ Use the mobile GAS workflow as the functional reference, but follow the current 
 - Dark theme uses a blue-slate shell, not green-black. Light theme uses soft warm gray backgrounds with white surfaces.
 - In dark theme, primary actions should use the app icon lime (`#C8FF00`) as the brand accent instead of muted indigo. Light theme should feel pastel and warm, with lime/olive accents instead of stark white surfaces or blue controls. Green and red are semantic only for income and expense states.
 - KPI/stat cards use two-column mobile layouts, soft surfaces, 14px radius, and minimal outer borders.
-- Amounts and finance values should use tabular numbers where React Native supports it.
-- Avoid `fontWeight: "900"` as a default. Prefer 700 for titles/primary amounts, 600 for list labels, 500 for metadata, and 400 for body text.
-- Use DM Sans as the default app font to match the GAS version. Keep the additional font choices in Settings and preview each option in its own family.
+- Amounts and finance values must use tabular numbers (`fontVariant: ["tabular-nums"]`).
+- Typography is centralized in `src/theme/typography.ts` (`T` tokens). Do not use arbitrary `fontSize`/`fontWeight` inline. Use semantic tokens: `caption 11/500`, `metadata 12/500`, `label 13/600`, `body 15/400`, `bodyStrong 15/600`, `section 17/700`, `title 19/700`, `pageTitle 26/700`, `amountList 16/700`, `amountHero 20/700`, `amountKpi 24/700`, `amountStat 17/700`. Ratio ~1.2-1.25 between steps, fixed scale for app UI (not fluid clamp).
+- Weights allowed: `700` titles/amounts, `600` list labels, `500` metadata/inputs, `400` body. Never `900` (and avoid `300/100` except display fonts).
+- Default font is `Inter` (via `src/components/ui/fontConstants.ts` and `AppText` store). `InterVariable` is preferred variable alternative. Keep additional families in Settings but preview each in its own family. `AppText` (`Text`/`TextInput`) is the only entry for `fontFamily`; do not import `NativeText` or hardcode `fontFamily` outside `fontConstants`/`typography`.
+- All `Text` must come from `@/components/ui/AppText` (which injects `fontFamily` and global scale). `BarChart`/`SavingsLineChart` SVG texts must use `useAppFontFamily()` + `T.chartLabel/chartValue`.
 - Keep borders for affordance on inputs, selects, destructive/secondary buttons, and internal row separators. Avoid border-heavy cards.
 - On the Gastos screen, keep the active period label in the header subtitle so the period dropdowns stay high and compact.
 - Bottom navigation should stay compact and translucent/floating, with a squircle add button protruding slightly above its container without making the bar taller or clipping the button, plus a subtle active indicator.

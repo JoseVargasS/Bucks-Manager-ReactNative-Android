@@ -202,8 +202,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   keyText: {
-    fontSize: 22,
-    fontWeight: "500",
+    fontSize: 20,
+    fontWeight: "600",
     fontVariant: ["tabular-nums"],
   },
 });

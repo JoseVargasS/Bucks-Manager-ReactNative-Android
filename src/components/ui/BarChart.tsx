@@ -6,6 +6,7 @@ import { MONTH_NAMES, formatMoney } from "@/domain/bucksLogic";
 import { UI_MONTH_NAMES } from "@/i18n";
 import { type Palette } from "@/theme/colors";
 import { type SummaryRow } from "@/types";
+import { T } from "@/theme/typography";
 import { useAppFontFamily } from "./AppText";
 import { useChartFade } from "./chartFade";
 
@@ -77,7 +78,7 @@ export const BarChart = memo(function BarChart({
           <G key={ratio}>
             <Line x1={plotLeft} y1={y} x2={chartWidth - 8} y2={y} stroke={colors.border} strokeWidth={0.75} strokeDasharray="3 5" />
             {(ratio === 0.5 || ratio === 1) && (
-              <SvgText x={2} y={y + 3} fontSize={10} fill={colors.muted} fontFamily={fontFamily} fontWeight="500">{compact(max * ratio)}</SvgText>
+              <SvgText x={2} y={y + 3} fontSize={T.chartLabel.fontSize} fill={colors.muted} fontFamily={fontFamily} fontWeight={String(T.chartLabel.fontWeight)}>{compact(max * ratio)}</SvgText>
             )}
           </G>
         );
@@ -104,15 +105,15 @@ export const BarChart = memo(function BarChart({
             <Rect x={x + barWidth + gap} y={baseY - expenseHeight} width={barWidth} height={expenseHeight} rx={3} fill={colors.expense} opacity={0.88} />
             {showTooltip && (row.totalIncome > 0 || row.totalExpense !== 0) && (
               <>
-                <SvgText x={x + groupWidth / 2} y={baseY - Math.max(incomeHeight, expenseHeight) - 14} fontSize={9} fill={colors.income} fontFamily={fontFamily} textAnchor="middle" fontWeight="700">
+                <SvgText x={x + groupWidth / 2} y={baseY - Math.max(incomeHeight, expenseHeight) - 14} fontSize={T.chartValue.fontSize} fill={colors.income} fontFamily={fontFamily} textAnchor="middle" fontWeight={String(T.chartValue.fontWeight)}>
                   {formatMoney(row.totalIncome, currencySymbol ?? "", 0)}
                 </SvgText>
-                <SvgText x={x + groupWidth / 2} y={baseY - Math.max(incomeHeight, expenseHeight) - 3} fontSize={9} fill={colors.expense} fontFamily={fontFamily} textAnchor="middle" fontWeight="700">
+                <SvgText x={x + groupWidth / 2} y={baseY - Math.max(incomeHeight, expenseHeight) - 3} fontSize={T.chartValue.fontSize} fill={colors.expense} fontFamily={fontFamily} textAnchor="middle" fontWeight={String(T.chartValue.fontWeight)}>
                   {formatMoney(Math.abs(row.totalExpense), currencySymbol ?? "", 0)}
                 </SvgText>
               </>
             )}
-            <SvgText x={x + groupWidth / 2} y={baseY + 17} fontSize={10.5} fill={colors.muted} fontFamily={fontFamily} textAnchor="middle" fontWeight="600">
+            <SvgText x={x + groupWidth / 2} y={baseY + 17} fontSize={T.chartLabel.fontSize} fill={colors.muted} fontFamily={fontFamily} textAnchor="middle" fontWeight={String(T.label.fontWeight)}>
               {labelText}
             </SvgText>
             {isSelectable && (

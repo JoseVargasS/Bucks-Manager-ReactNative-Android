@@ -1,5 +1,6 @@
 import { StyleSheet } from "react-native";
 import { RADIUS } from "@/theme/radii";
+import { T } from "@/theme/typography";
 
 /** Shared styles used across multiple components — radios y sombras usan tokens del tema */
 export const base = StyleSheet.create({
@@ -33,7 +34,7 @@ export const base = StyleSheet.create({
     justifyContent: "space-between",
     gap: 10,
   },
-  recordTitle: { flex: 1, minWidth: 0, fontSize: 19, fontWeight: "700" },
+  recordTitle: { flex: 1, minWidth: 0, ...T.title },
   closeBtn: {
     width: 42,
     height: 42,
@@ -44,24 +45,22 @@ export const base = StyleSheet.create({
   },
 
   // Form shared
-  label: { fontSize: 13, fontWeight: "600", marginBottom: 6 },
+  label: { ...T.label, marginBottom: 6 },
   input: {
     borderWidth: 1,
     borderRadius: RADIUS.md,
     paddingVertical: 11,
     paddingHorizontal: 12,
-    fontSize: 15,
-    fontWeight: "500",
+    ...T.input,
   },
   inputIcon: { position: "absolute", right: 14, top: 12 },
 
   // Shared text/layout
-  empty: { padding: 18, textAlign: "center", fontWeight: "500" },
+  empty: { padding: 18, textAlign: "center", ...T.metadata },
   mobileEmptyCard: { borderWidth: 0, borderRadius: RADIUS.xl },
   sectionTitle: {
     alignSelf: "flex-start",
-    fontSize: 17,
-    fontWeight: "700",
+    ...T.section,
     marginBottom: 12,
   },
 
@@ -76,7 +75,7 @@ export const base = StyleSheet.create({
   },
   cancelBtn: { borderRadius: RADIUS.sm, paddingVertical: 12, paddingHorizontal: 14 },
   saveBtn: { borderRadius: RADIUS.sm, paddingVertical: 12, paddingHorizontal: 18 },
-  saveText: { fontWeight: "700" },
+  saveText: { ...T.label, fontWeight: "700" },
 
   // Financial text – tabular numbers for consistent digit widths
   financialText: {

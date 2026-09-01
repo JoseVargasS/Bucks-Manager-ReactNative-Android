@@ -5,6 +5,7 @@ import { type UiCopy } from "@/i18n";
 import type { TransactionType } from "@/types";
 import { Text } from "./AppText";
 import { RADIUS } from "@/theme/radii";
+import { withAlpha } from "@/utils/helpers";
 
 export const TypeSelector = memo(function TypeSelector({
   value, onSelect, colors, copy,
@@ -15,12 +16,15 @@ export const TypeSelector = memo(function TypeSelector({
   const category = value.startsWith("INGRESO") ? "INGRESO" : "GASTO";
   const frequency = value.includes("NO") ? "NO FRECUENTE" : "FRECUENTE";
 
+  const isIncome = category === "INGRESO";
+  const incomeBg = withAlpha(colors.income, 0.14);
+  const expenseBg = withAlpha(colors.expense, 0.14);
   return (
     <View style={{ marginBottom: 18, gap: 10 }}>
       <SegmentRow
         options={[
-          { key: "GASTO", label: copy.expensesLabel, activeColor: colors.expense },
-          { key: "INGRESO", label: copy.income, activeColor: colors.income },
+          { key: "GASTO", label: copy.expensesLabel, bg: expenseBg, fg: colors.expense },
+          { key: "INGRESO", label: copy.income, bg: incomeBg, fg: colors.income },
         ]}
         selected={category}
         onSelect={(key) => onSelect(`${key} ${frequency}` as TransactionType)}
@@ -28,8 +32,8 @@ export const TypeSelector = memo(function TypeSelector({
       />
       <SegmentRow
         options={[
-          { key: "FRECUENTE", label: copy.frequent, activeColor: category === "INGRESO" ? colors.income : colors.expense },
-          { key: "NO FRECUENTE", label: copy.nonFrequent, activeColor: category === "INGRESO" ? colors.income : colors.warn },
+          { key: "FRECUENTE", label: copy.frequent, bg: isIncome ? incomeBg : expenseBg, fg: isIncome ? colors.income : colors.expense },
+          { key: "NO FRECUENTE", label: copy.nonFrequent, bg: isIncome ? incomeBg : expenseBg, fg: isIncome ? colors.income : colors.expense },
         ]}
         selected={frequency}
         onSelect={(key) => onSelect(`${category} ${key}` as TransactionType)}
@@ -42,7 +46,7 @@ export const TypeSelector = memo(function TypeSelector({
 const SegmentRow = memo(function SegmentRow({
   options, selected, onSelect, colors,
 }: {
-  options: { key: string; label: string; activeColor: string }[];
+  options: { key: string; label: string; bg: string; fg: string }[];
   selected: string;
   onSelect: (key: string) => void;
   colors: Palette;
@@ -57,6 +61,7 @@ const SegmentRow = memo(function SegmentRow({
 
   const segW = containerW > 0 ? (containerW - 6 - (options.length - 1) * 2) / options.length : 0;
   const outputRange = options.map((_, i) => 3 + i * (segW + 2));
+  const selectedBg = options[selIndex]?.bg ?? colors.card;
 
   return (
     <View
@@ -67,9 +72,7 @@ const SegmentRow = memo(function SegmentRow({
         <Animated.View
           style={{
             position: "absolute", top: 3, bottom: 3, width: segW,
-            backgroundColor: colors.card, borderRadius: RADIUS.sm,
-            shadowColor: colors.shadow, shadowOffset: { width: 0, height: 1 },
-            shadowOpacity: 0.06, shadowRadius: 2, elevation: 1,
+            backgroundColor: selectedBg, borderRadius: RADIUS.sm,
             transform: [{ translateX: animIndex.interpolate({ inputRange: options.map((_, i) => i), outputRange }) }],
           }}
         />
@@ -84,7 +87,7 @@ const SegmentRow = memo(function SegmentRow({
           >
             <Text
               numberOfLines={1}
-              style={{ fontSize: 13, fontWeight: active ? "700" : "500", color: active ? opt.activeColor : colors.muted }}
+              style={{ fontSize: 14, fontWeight: active ? "700" : "600", color: active ? opt.fg : colors.muted }}
             >
               {opt.label}
             </Text>

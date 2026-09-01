@@ -1,6 +1,7 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
 import { View, Text } from "react-native";
 import { SPLASH_BG, SPLASH_SPINNER, SPLASH_TEXT } from "@/theme/constants";
+import { T } from "@/theme/typography";
 import { UI_COPY } from "@/i18n";
 import { detectDeviceLanguage } from "@/utils/helpers";
 
@@ -24,10 +25,8 @@ export class ErrorBoundary extends Component<Props, State> {
     const C = UI_COPY[detectDeviceLanguage()];
     return (
       <View style={{ flex: 1, justifyContent: "center", alignItems: "center", padding: 24, backgroundColor: SPLASH_BG }}>
-        <Text style={{ color: SPLASH_SPINNER, fontSize: 20, fontWeight: "700" }}>{C.errorTitle}</Text>
-        <Text style={{ color: SPLASH_TEXT, marginTop: 16, textAlign: "center" }}>
-          {C.errorMessage}
-        </Text>
+        <Text style={[{ color: SPLASH_SPINNER }, T.amountHero]}>{C.errorTitle}</Text>
+        <Text style={[{ color: SPLASH_TEXT, marginTop: 16, textAlign: "center" }, T.body]}>{C.errorMessage}</Text>
       </View>
     );
   }
@@ -53,10 +52,8 @@ export class FeatureBoundary extends Component<FeatureBoundaryProps, FeatureBoun
     const C = UI_COPY[detectDeviceLanguage()];
     return (
       <View style={{ flex: 1, justifyContent: "center", alignItems: "center", padding: 24 }}>
-        <Text style={{ color: SPLASH_SPINNER, fontSize: 16, fontWeight: "600" }}>{C.errorTitle}</Text>
-        <Text style={{ color: SPLASH_TEXT, marginTop: 8, textAlign: "center", fontSize: 13 }}>
-          {C.errorMessage}
-        </Text>
+        <Text style={[{ color: SPLASH_SPINNER }, T.section, { fontWeight: "600" as const }]}>{C.errorTitle}</Text>
+        <Text style={[{ color: SPLASH_TEXT, marginTop: 8, textAlign: "center" }, T.label]}>{C.errorMessage}</Text>
       </View>
     );
   }

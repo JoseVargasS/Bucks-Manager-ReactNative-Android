@@ -40,9 +40,11 @@ export const AmountInput = memo(forwardRef<TextInput, {
   );
 }));
 
+import { T } from "@/theme/typography";
+
 const styles = StyleSheet.create({
   input: {
-    fontSize: 15,
+    ...T.input,
     fontWeight: "600",
     fontVariant: ["tabular-nums"],
     padding: 0,

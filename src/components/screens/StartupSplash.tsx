@@ -83,9 +83,10 @@ export function StartupSplash({ exiting = false, onExitComplete }: Props) {
         style={{
           marginTop: 20,
           color: SPLASH_TEXT,
-          fontFamily: "DMSans",
-          fontWeight: "600",
+          fontFamily: "Inter",
+          fontWeight: "700",
           fontSize: 24,
+          letterSpacing: -0.3,
           opacity: text,
           transform: [
             { translateY: text.interpolate({ inputRange: [0, 1], outputRange: [12, 0] }) },

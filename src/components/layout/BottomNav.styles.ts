@@ -1,5 +1,6 @@
 import { StyleSheet } from "react-native";
 import { RADIUS } from "@/theme/radii";
+import { T } from "@/theme/typography";
 
 export const bottomNavStyles = StyleSheet.create({
   bottomNav: {
@@ -43,5 +44,5 @@ export const bottomNavStyles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  bottomNavLabel: { fontSize: 12, fontWeight: "500" },
+  bottomNavLabel: { ...T.metadata },
 });

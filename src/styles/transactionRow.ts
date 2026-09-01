@@ -1,5 +1,6 @@
 import { StyleSheet } from "react-native";
 import { RADIUS } from "@/theme/radii";
+import { T } from "@/theme/typography";
 
 export const txStyles = StyleSheet.create({
   groupedTxRow: {
@@ -19,14 +20,12 @@ export const txStyles = StyleSheet.create({
     justifyContent: "center",
   },
   groupedTxMain: { flex: 1, minWidth: 0 },
-  groupedTxTitle: { fontSize: 15, fontWeight: "600" },
-  groupedTxMeta: { marginTop: 2, fontSize: 13, fontWeight: "400" },
+  groupedTxTitle: { ...T.bodyStrong },
+  groupedTxMeta: { marginTop: 2, ...T.labelMuted },
   groupedTxAmount: {
     maxWidth: 122,
-    fontSize: 16,
-    fontWeight: "700",
+    ...T.amountList,
     textAlign: "right",
-    fontVariant: ["tabular-nums"],
   },
   sectionCardRow: { marginHorizontal: 14 },
   sectionCardFirstRow: { borderTopLeftRadius: 14, borderTopRightRadius: 14 },

@@ -1,5 +1,6 @@
 import { StyleSheet } from "react-native";
 import { RADIUS } from "@/theme/radii";
+import { T } from "@/theme/typography";
 
 export const statCardStyles = StyleSheet.create({
   statCard: {
@@ -23,23 +24,18 @@ export const statCardStyles = StyleSheet.create({
   },
   statContent: { flex: 1, minWidth: 0 },
   statLabel: {
-    fontSize: 12,
-    fontWeight: "500",
+    ...T.metadata,
     textTransform: "uppercase",
-    letterSpacing: 0,
+    letterSpacing: 0.4,
   },
   statValue: {
-    fontSize: 17,
-    fontWeight: "700",
+    ...T.amountStat,
     marginTop: 4,
-    fontVariant: ["tabular-nums"],
   },
   editStat: { position: "absolute", right: 10, top: 10 },
   kpi: { flex: 1, minWidth: 0, borderWidth: 0, borderRadius: RADIUS.xl, padding: 14 },
   kpiValue: {
-    fontSize: 24,
-    fontWeight: "700",
+    ...T.amountKpi,
     marginTop: 6,
-    fontVariant: ["tabular-nums"],
   },
 });

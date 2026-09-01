@@ -1,6 +1,7 @@
 import { StyleSheet } from "react-native";
 import { NAV_BTN_SIZE, NAV_BTN_HEIGHT, NAV_BTN_RADIUS, NAV_GROUP_GAP, NAV_GROUP_PADDING, NAV_GROUP_RADIUS } from "@/theme/constants";
 import { RADIUS } from "@/theme/radii";
+import { T } from "@/theme/typography";
 
 export const appShellStyles = StyleSheet.create({
   topBar: {
@@ -47,10 +48,10 @@ export const appShellStyles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  pageTitle: { fontSize: 26, fontWeight: "700", letterSpacing: 0 },
-  pageTitleMobile: { fontSize: 21 },
-  pageSub: { fontSize: 13, fontWeight: "500" },
-  pageSubMobile: { fontSize: 15 },
+  pageTitle: { ...T.pageTitle },
+  pageTitleMobile: { fontSize: 21, fontWeight: "700" as const },
+  pageSub: { ...T.pageSub },
+  pageSubMobile: { ...T.body, fontWeight: "500" as const },
   headerReadableTextDark: {
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 8,
