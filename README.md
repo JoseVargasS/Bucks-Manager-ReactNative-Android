@@ -1,6 +1,6 @@
-# Bucks Manager Android
+# Quipu — Ahorros & Gastos
 
-React Native/Expo Android version of the Bucks Manager Google Apps Script app.
+React Native/Expo Android version of the Bucks Manager Google Apps Script app. Rebranded as **Quipu** for launch (Play titles: ES `Quipu – Ahorros & Gastos`, EN `Quipu – Money Manager`).
 
 The app has no custom backend. Each user signs in with Google and uses a private Google Sheet as the database.
 

@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "Bucks Manager",
-    "slug": "bucks-manager-android",
+    "name": "Quipu",
+    "slug": "quipu",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon-bucks.png",

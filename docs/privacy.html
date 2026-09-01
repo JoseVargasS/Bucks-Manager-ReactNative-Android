@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Quipu — Política de Privacidad</title>
+<meta name="description" content="Política de privacidad de Quipu — Ahorros & Gastos. Sin backend, tus datos viven en tu Google Sheet privado.">
+<style>
+:root{--bg:#F0EDE4;--card:#ffffff;--text:#1a2622;--muted:#5a6660;--accent:#4A6500;--border:#d4c4a8}
+*{box-sizing:border-box}html{scroll-behavior:smooth}
+body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--text);line-height:1.6}
+.wrap{max-width:780px;margin:0 auto;padding:28px 20px 48px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:28px;box-shadow:0 4px 16px rgba(0,0,0,.06)}
+h1{font-size:28px;margin:0 0 6px;letter-spacing:-.3px}
+.sub{color:var(--muted);margin:0 0 18px;font-size:14px}
+h2{font-size:18px;margin:28px 0 8px}
+p,li{font-size:15px}
+a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
+.badge{display:inline-block;background:rgba(74,101,0,.11);color:var(--accent);padding:6px 10px;border-radius:999px;font-size:12px;font-weight:700;letter-spacing:.3px}
+.toc{background:#eef6d8;border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin:18px 0}
+.toc a{display:block;padding:4px 0;font-size:14px}
+.kv{display:grid;grid-template-columns:140px 1fr;gap:8px;background:#f8fbff;border:1px solid var(--border);border-radius:10px;padding:12px;font-size:14px}
+@media(max-width:640px){.kv{grid-template-columns:1fr}}
+hr{border:none;border-top:1px solid var(--border);margin:20px 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="card">
+<span class="badge">QUIPU — AHORROS & GASTOS</span>
+<h1>Política de Privacidad</h1>
+<p class="sub">Última actualización: 1 de septiembre de 2026 · Contacto: <a href="mailto:quipu@gmail.com">quipu@gmail.com</a></p>
+
+<div class="kv">
+<div><strong>App</strong></div><div>Quipu — Ahorros & Gastos (antes Bucks Manager). Sin backend propio.</div>
+<div><strong>Región</strong></div><div>Pe / LatAm y global. Idiomas: ES / EN.</div>
+<div><strong>Contacto</strong></div><div><a href="mailto:quipu@gmail.com">quipu@gmail.com</a></div>
+</div>
+
+<div class="toc">
+<strong>Contenido</strong>
+<a href="#resumen">1. Resumen</a>
+<a href="#datos">2. Qué datos recolectamos</a>
+<a href="#uso">3. Para qué los usamos</a>
+<a href="#scopes">4. Scopes de Google</a>
+<a href="#almacenamiento">5. Dónde se guardan tus datos</a>
+<a href="#compartir">6. Compartir con terceros</a>
+<a href="#retencion">7. Retención y borrado</a>
+<a href="#seguridad">8. Seguridad</a>
+<a href="#derechos">9. Tus derechos</a>
+<a href="#menores">10. Menores</a>
+<a href="#cambios">11. Cambios</a>
+</div>
+
+<h2 id="resumen">1. Resumen</h2>
+<p>Quipu te ayuda a llevar ingresos y gastos. <strong>No tenemos servidores propios.</strong> Tu información vive en <strong>tu Google Sheet privado</strong> en tu Drive y en el almacenamiento local cifrado de tu celular (<code>SecureStore</code> para token/PIN). No vendemos ni compartimos tus datos.</p>
+
+<h2 id="datos">2. Qué datos recolectamos</h2>
+<ul>
+<li><strong>Cuenta Google:</strong> nombre y email que nos da Google Sign-In (solo para mostrar tu cuenta y asociar tu Sheet).</li>
+<li><strong>Token OAuth y Sheet ID:</strong> guardados localmente con <code>SecureStore</code> y en cache local para funcionar offline.</li>
+<li><strong>Transacciones que tú escribes:</strong> fecha, monto, detalle, tipo (<code>INGRESO/GASTO FRECUENTE/NO FRECUENTE</code>), tags y hora de creación. Quedan en tu Sheet.</li>
+<li><strong>Preferencias cosméticas:</strong> idioma, símbolo de moneda, fuente y paleta (sincronizadas en <code>MONTHLY SUMMARY!L1:L2</code> si activas Sheets).</li>
+<li><strong>PIN local (opcional):</strong> si activas PIN, solo vive cifrado en tu dispositivo, nunca sale.</li>
+</ul>
+<p>No recolectamos ubicación, contactos, ni datos de terceros.</p>
+
+<h2 id="uso">3. Para qué los usamos</h2>
+<ul>
+<li>Autenticarte y conectar tu Drive/Sheets.</li>
+<li>Buscar/crear tu spreadsheet <code>INCOME AND EXPENSES</code> y leer/escribir tus movimientos.</li>
+<li>Mostrar tu balance offline desde cache y reconciliar al reconectar.</li>
+</ul>
+
+<h2 id="scopes">4. Scopes de Google (incrementales)</h2>
+<p>Solo pedimos estos dos <strong>después</strong> de que eliges cuenta (login inicial sin scopes):</p>
+<ul>
+<li><code>https://www.googleapis.com/auth/drive.metadata.readonly</code> — listar/buscar tu Sheet en Drive (solo metadata, no lee archivos arbitrarios).</li>
+<li><code>https://www.googleapis.com/auth/spreadsheets</code> — leer/escribir tu Sheet de finanzas.</li>
+</ul>
+<p>Puedes revocar en <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener">myaccount.google.com/permissions</a> en cualquier momento.</p>
+
+<h2 id="almacenamiento">5. Dónde se guardan tus datos</h2>
+<ul>
+<li><strong>Google Drive / Sheets:</strong> tu spreadsheet <code>INCOME AND EXPENSES</code> (pestañas <code>INCOME AND EXPENSES</code> y <code>MONTHLY SUMMARY</code>) es tu base de datos.</li>
+<li><strong>Dispositivo:</strong> cache JSON local y <code>SecureStore</code> (token, Sheet ID, PIN, historial 30 días y catálogo de tags). La app pinta cache primero y revalida en segundo plano.</li>
+</ul>
+<p>Si mandas tu Sheet a papelera en Drive, la app limpia cache y arranca fresco.</p>
+
+<h2 id="compartir">6. Compartir con terceros</h2>
+<p>No compartimos nada. Solo Google como proveedor de autenticación y almacenamiento (bajo sus políticas). No usamos analytics de terceros ni publicidad.</p>
+
+<h2 id="retencion">7. Retención y borrado</h2>
+<ul>
+<li>Tus transacciones viven mientras mantengas tu Sheet.</li>
+<li>Puedes borrar todo desde la app (Desconectar Google) o borrando el Sheet en Drive y limpiando datos de la app. El PIN se borra al desactivarlo.</li>
+<li>El historial local se purga a los 30 días.</li>
+</ul>
+
+<h2 id="seguridad">8. Seguridad</h2>
+<ul>
+<li>OAuth incremental con <code>GoogleSignin.addScopes()</code> solo antes de leer/escribir Drive/Sheets.</li>
+<li>Tokens en <code>SecureStore</code> (keychain/keystore). Tráfico cifrado en tránsito (HTTPS).</li>
+<li>Mutaciones con cola serializada (<code>syncQueue</code>) y reconciliación para no perder datos offline.</li>
+</ul>
+
+<h2 id="derechos">9. Tus derechos</h2>
+<p>Puedes acceder, rectificar o borrar tus datos borrando filas en tu Sheet o toda la hoja, y revocando acceso. Escríbenos a <a href="mailto:quipu@gmail.com">quipu@gmail.com</a> y respondemos.</p>
+
+<h2 id="menores">10. Menores</h2>
+<p>App para mayores de 13. No dirigida a niños.</p>
+
+<h2 id="cambios">11. Cambios</h2>
+<p>Publicaremos cambios aquí con nueva fecha. Cambios sustanciales se anunciarán en la ficha de Play.</p>
+
+<hr>
+<p style="font-size:13px;color:var(--muted)">Quipu (ex Bucks Manager) · Paquete: <code>com.josev.bucksmanager</code> · Sin backend · Tu Sheet es tu base de datos.</p>
+<p style="font-size:13px"><a href="./terms.html">Términos y Condiciones →</a> · <a href="mailto:quipu@gmail.com">quipu@gmail.com</a></p>
+</div>
+</div>
+</body>
+</html>
