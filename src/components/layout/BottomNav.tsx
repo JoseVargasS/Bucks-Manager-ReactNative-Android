@@ -4,6 +4,7 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { base } from "@/styles/baseStyles";
 import { bottomNavStyles } from "@/components/layout/BottomNav.styles";
 import { useColors, useTheme } from "@/theme/ThemeContext";
+import { ANIM_TAB_PAGER } from "@/theme/constants";
 
 const styles = { ...base, ...bottomNavStyles };
 import { type Tab, type MaterialIconName } from "@/types";
@@ -139,13 +140,25 @@ const BottomNavItem = memo(function BottomNavItem({
     if (active !== prevActive.current) {
       prevActive.current = active;
       localActive.stopAnimation();
-      localActive.setValue(active ? 1 : 0);
+      Animated.timing(localActive, {
+        toValue: active ? 1 : 0,
+        duration: ANIM_TAB_PAGER,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }).start();
     }
   }, [active, localActive]);
 
   const handlePress = useCallback(() => {
     localActive.stopAnimation();
-    if (optimisticActive) localActive.setValue(1);
+    if (optimisticActive) {
+      Animated.timing(localActive, {
+        toValue: 1,
+        duration: ANIM_TAB_PAGER,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }).start();
+    }
     onPress();
   }, [localActive, onPress, optimisticActive]);
 

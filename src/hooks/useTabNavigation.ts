@@ -23,14 +23,22 @@ export function useTabNavigation() {
     (next: Tab) => {
       if (next === tabRef.current) return;
       tabRef.current = next;
+      // setTab commits on the current frame (active states, header title).
+      // The pager slides one frame later, once that render is done, so the JS
+      // thread is free during the animation — starting it synchronously makes
+      // the transition stutter.
       setTab(next);
       pagerTranslateX.stopAnimation();
-      Animated.timing(pagerTranslateX, {
-        toValue: -TAB_ORDER.indexOf(next) * tabWidth,
-        duration: ANIM_TAB_PAGER,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }).start();
+      requestAnimationFrame(() => {
+        if (tabRef.current !== next) return;
+        pagerTranslateX.stopAnimation();
+        Animated.timing(pagerTranslateX, {
+          toValue: -TAB_ORDER.indexOf(next) * tabWidth,
+          duration: ANIM_TAB_PAGER,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }).start();
+      });
     },
     [pagerTranslateX, tabWidth],
   );

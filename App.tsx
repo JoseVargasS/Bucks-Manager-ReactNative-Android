@@ -389,7 +389,6 @@ function AppContent() {
   const tabNav = useTabNavigation();
   const {
     tab,
-    tabRef,
     pagerTranslateX,
     tabWidth,
     headerTopInset,
@@ -747,7 +746,7 @@ function AppContent() {
 
         <BottomNav
           copy={copy}
-          tab={tabRef.current}
+          tab={tab}
           setTab={changeTab}
           onAdd={openAdd}
         />
