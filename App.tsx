@@ -1,11 +1,13 @@
 import { BlurView } from "expo-blur";
 import {
+  hideAsync,
   preventAutoHideAsync,
   setOptions as setSplashOptions,
 } from "expo-splash-screen";
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Animated,
+  AppState,
   Easing,
   View,
   StatusBar as NativeStatusBar,
@@ -26,6 +28,7 @@ import { TransactionModal } from "@/components/modals/TransactionModal";
 import { DetailModal } from "@/components/modals/DetailModal";
 import { SearchModal } from "@/components/modals/SearchModal";
 import { OptionSheet } from "@/components/modals/OptionSheet";
+import { PinSetupModal } from "@/components/modals/PinSetupModal";
 
 const ExportModal = lazy(
   () => import("@/components/modals/ExportModal").then((m) => ({ default: m.ExportModal })),
@@ -35,9 +38,6 @@ const ConfirmModal = lazy(
 );
 const HistoryModal = lazy(
   () => import("@/components/modals/HistoryModal").then((m) => ({ default: m.HistoryModal })),
-);
-const PinSetupModal = lazy(
-  () => import("@/components/modals/PinSetupModal").then((m) => ({ default: m.PinSetupModal })),
 );
 const TagEditorModal = lazy(
   () => import("@/components/modals/TagEditorModal").then((m) => ({ default: m.TagEditorModal })),
@@ -70,7 +70,7 @@ import { useConfirmCallbacks } from "@/hooks/useConfirmDialog";
 import { useTagSyncEffects } from "@/hooks/useTagSync";
 import { useHistoryPanel } from "@/hooks/useHistoryPanel";
 import { useTransactionActions } from "@/hooks/useTransactionActions";
-import { getErrorMessage, isAuthError } from "@/utils/errorHandler";
+import { getErrorMessage, isAuthError, logError } from "@/utils/errorHandler";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { ConnectBanner } from "@/components/ui/ConnectBanner";
 import { ConnectingOverlay } from "@/components/ui/ConnectingOverlay";
@@ -106,7 +106,14 @@ function AppContent() {
     needsCurrencyPick,
     dismissCurrencyPick,
   } = usePreferences();
-  const { themeProgressBg, themeProgressContentOpacity, toggleThemeWithCrossfade } = useThemeCrossfade(
+  const {
+    themeBg,
+    themeDarkOverlay,
+    themeLightOverlay,
+    themeProgressContentOpacity,
+    toggleThemeWithCrossfade,
+    snapThemeProgress,
+  } = useThemeCrossfade(
     theme,
     accentColorScheme,
     toggleTheme,
@@ -551,19 +558,64 @@ function AppContent() {
   );
 
   // ─── Unlock transition ─────────────────────────────────────────
-  const unlockAnim = useRef(new Animated.Value(pinVerified ? 1 : 0)).current;
+  // Content is gated only while the PIN screen actually blocks it. usePin sets
+  // pinVerified to false whenever the app backgrounds — even with PIN
+  // disabled — so keying the unlock animation off pinVerified alone would leave
+  // the content invisible (black screen) on return.
+  const pinGated = pinEnabled && !pinVerified;
+  const unlockAnim = useRef(new Animated.Value(pinGated ? 0 : 1)).current;
   useEffect(() => {
-    if (pinVerified) {
+    if (pinGated) {
+      unlockAnim.setValue(0);
+    } else {
       Animated.timing(unlockAnim, {
         toValue: 1,
         duration: 380,
         easing: Easing.out(Easing.cubic),
         useNativeDriver: false,
       }).start();
-    } else {
-      unlockAnim.setValue(0);
     }
-  }, [pinVerified, unlockAnim]);
+  }, [pinGated, unlockAnim]);
+
+  // ─── Foreground resume ─────────────────────────────────────────
+  // The screen can come back blank when the app resumes: the native splash
+  // may still be up, or an interrupted unlock/toggle animation may have left
+  // content invisible. The token refresh is real but heavy (a full sheet
+  // read + applyFinancialState), so it is debounced well past the user's
+  // first interaction to avoid stealing the JS thread on resume.
+  const onForegroundRef = useRef<() => void>(() => {});
+  const foregroundReloadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    onForegroundRef.current = () => {
+      if (splashGone) hideAsync().catch(() => undefined);
+      unlockAnim.stopAnimation();
+      unlockAnim.setValue(pinGated ? 0 : 1);
+      snapThemeProgress();
+      if (accessToken && spreadsheetId) {
+        if (foregroundReloadTimerRef.current)
+          clearTimeout(foregroundReloadTimerRef.current);
+        foregroundReloadTimerRef.current = setTimeout(() => {
+          syncApi
+            .reloadFromGoogle(accessToken, spreadsheetId, false)
+            .catch((error) => logError(error, "foreground:reload"));
+        }, 1500);
+      }
+    };
+  });
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", (next) => {
+      if (next === "active") onForegroundRef.current();
+      if (next !== "active" && foregroundReloadTimerRef.current) {
+        clearTimeout(foregroundReloadTimerRef.current);
+        foregroundReloadTimerRef.current = null;
+      }
+    });
+    return () => {
+      sub.remove();
+      if (foregroundReloadTimerRef.current)
+        clearTimeout(foregroundReloadTimerRef.current);
+    };
+  }, []);
 
   // ─── Render ──────────────────────────────────────────────────────
   if (!splashGone) {
@@ -609,7 +661,15 @@ function AppContent() {
   }
 
   return (
-    <Animated.View style={[styles.safe, { backgroundColor: themeProgressBg }]}>
+    <View style={[styles.safe, { backgroundColor: themeBg }]}>
+      <Animated.View
+        pointerEvents="none"
+        style={[StyleSheet.absoluteFill, themeDarkOverlay]}
+      />
+      <Animated.View
+        pointerEvents="none"
+        style={[StyleSheet.absoluteFill, themeLightOverlay]}
+      />
       <Animated.View
         style={{
           flex: 1,
@@ -799,7 +859,7 @@ function AppContent() {
         onSubmit={applySearchFilters}
       />
       </Animated.View>
-    </Animated.View>
+    </View>
   );
 }
 

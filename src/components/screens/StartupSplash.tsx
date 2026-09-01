@@ -58,6 +58,14 @@ export function StartupSplash({ exiting = false, onExitComplete }: Props) {
     });
   }, [exiting, icon, text, onExitComplete]);
 
+  // Safety net: if the exit animation never reports completion (e.g. the
+  // JS thread stalls while backgrounded), release the splash anyway.
+  useEffect(() => {
+    if (!exiting) return;
+    const timer = setTimeout(() => onExitComplete?.(), 500);
+    return () => clearTimeout(timer);
+  }, [exiting, onExitComplete]);
+
   return (
     <View
       style={{

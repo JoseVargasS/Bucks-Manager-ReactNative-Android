@@ -1,12 +1,12 @@
-import { useRef, useState } from "react";
-import { Animated, Modal, Pressable, View } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import { Animated, BackHandler, Pressable, StyleSheet, View } from "react-native";
 import { BlurView } from "expo-blur";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { base } from "@/styles/baseStyles";
 import { recordModalStyles } from "@/components/modals/TransactionModal.styles";
 const styles = { ...base, ...recordModalStyles };
 import { type Palette } from "@/theme/colors";
-import { PIN_RESET_MS } from "@/theme/constants";
+import { PIN_RESET_MS, Z_INDEX_MODAL } from "@/theme/constants";
 import { type UiCopy } from "@/i18n";
 import { PinScreen } from "@/components/screens/PinScreen";
 import { useModalTransition } from "@/components/ui/useModalTransition";
@@ -54,39 +54,51 @@ export function PinSetupModal({ visible, colors, copy, onClose, onSave }: {
     }
   }
 
+  useEffect(() => {
+    if (!visible) return;
+    const subscription = BackHandler.addEventListener("hardwareBackPress", () => {
+      onClose();
+      return true;
+    });
+    return () => subscription.remove();
+  }, [visible, onClose]);
+
   const inFirstPhase = firstPin === "";
 
   if (!transition.modalVisible) return null;
   return (
-    <Modal visible transparent animationType="none" onRequestClose={onClose}>
+    <Animated.View
+      pointerEvents={transition.modalVisible ? "auto" : "none"}
+      accessibilityViewIsModal={visible}
+      importantForAccessibility={transition.modalVisible ? "yes" : "no-hide-descendants"}
+      style={[StyleSheet.absoluteFill, styles.modalOverlay, { backgroundColor: colors.overlay, zIndex: Z_INDEX_MODAL, elevation: Z_INDEX_MODAL }, transition.containerStyle]}
+    >
       <BlurView intensity={30} tint="dark" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
-      <Animated.View style={[styles.modalOverlay, { backgroundColor: colors.overlay }, transition.containerStyle]}>
-        <Pressable style={styles.optionBackdrop} onPress={onClose} />
-        <Animated.View style={[styles.recordModal, { backgroundColor: colors.card }, transition.panelStyle]}>
-          <View style={[styles.recordHeader, { borderColor: colors.border }]}>
-            <Text style={[styles.recordTitle, { color: colors.text }]}>
-              <MaterialCommunityIcons name="shield-lock" size={19} color={colors.primary} />{" "}
-              {copy.pinSetupTitle}
-            </Text>
-            <Pressable style={[styles.closeBtn, { backgroundColor: colors.input }]} onPress={onClose}>
-              <MaterialCommunityIcons name="close-thick" size={22} color={colors.text} />
-            </Pressable>
-          </View>
+      <Pressable style={styles.optionBackdrop} onPress={onClose} />
+      <Animated.View style={[styles.recordModal, { backgroundColor: colors.card }, transition.panelStyle]}>
+        <View style={[styles.recordHeader, { borderColor: colors.border }]}>
+          <Text style={[styles.recordTitle, { color: colors.text }]}>
+            <MaterialCommunityIcons name="shield-lock" size={19} color={colors.primary} />{" "}
+            {copy.pinSetupTitle}
+          </Text>
+          <Pressable style={[styles.closeBtn, { backgroundColor: colors.input }]} onPress={onClose}>
+            <MaterialCommunityIcons name="close-thick" size={22} color={colors.text} />
+          </Pressable>
+        </View>
 
-          <View style={{ height: 400 }}>
-            <PinScreen
-              key={inFirstPhase ? "enter" : "confirm"}
-              colors={colors}
-              copy={copy}
-              subtitle={inFirstPhase ? copy.pinEnterNew : copy.pinConfirm}
-              wrong={wrong}
-              bgColor={colors.card}
-              onFill={handleFill}
-            />
-          </View>
-        </Animated.View>
+        <View style={{ height: 400 }}>
+          <PinScreen
+            key={inFirstPhase ? "enter" : "confirm"}
+            colors={colors}
+            copy={copy}
+            subtitle={inFirstPhase ? copy.pinEnterNew : copy.pinConfirm}
+            wrong={wrong}
+            bgColor={colors.card}
+            onFill={handleFill}
+          />
+        </View>
       </Animated.View>
-    </Modal>
+    </Animated.View>
   );
 }
 

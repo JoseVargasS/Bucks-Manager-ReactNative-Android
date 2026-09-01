@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
+import { AppState } from "react-native";
 import { GoogleSignin } from "@react-native-google-signin/google-signin";
 import { hideAsync } from "expo-splash-screen";
+import { logError } from "@/utils/errorHandler";
 
 const BOOTSTRAP_TIMEOUT_MS = 8000;
 
@@ -47,6 +49,20 @@ export function useBootstrap(
   useEffect(() => {
     if (!bootstrapping) hideAsync().catch(() => undefined);
   }, [bootstrapping]);
+
+  // Some Android builds drop the GoogleSignin configuration when the app
+  // goes to the background; re-apply it on every foreground.
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", (next) => {
+      if (next !== "active") return;
+      try {
+        GoogleSignin.configure();
+      } catch (error) {
+        logError(error, "bootstrap:googleSigninReconfigure");
+      }
+    });
+    return () => sub.remove();
+  }, []);
 
   return bootstrapping;
 }

@@ -6,9 +6,11 @@ import type { ThemeMode } from "@/types";
 /**
  * Encapsulates the animated theme crossfade transition.
  *
- * Creates an Animated.Value that interpolates between the light and dark
- * background colors, and provides a toggle callback that runs the
- * animation, flips the theme, and persists the choice.
+ * React Native's core Animated cannot interpolate colors on the native
+ * driver, so the background crossfade is drawn as two opacity overlays over a
+ * solid base color that always matches the current theme. If a transition is
+ * interrupted (e.g. the app is backgrounded mid-animation) the screen keeps a
+ * valid solid background instead of a broken/black one.
  *
  * When the theme changes externally (e.g. from preference restore on
  * startup), a useEffect syncs `themeProgress` without animation so the
@@ -39,6 +41,9 @@ export function useThemeCrossfade(
     }
   }, [theme, themeProgress]);
 
+  // Stop any in-flight transition on unmount so the value cannot leak.
+  useEffect(() => () => themeAnimRef.current?.stop(), []);
+
   const themeBgDark = useMemo(
     () => getPalette("dark", accentColorScheme).bg,
     [accentColorScheme],
@@ -47,13 +52,28 @@ export function useThemeCrossfade(
     () => getPalette("light", accentColorScheme).bg,
     [accentColorScheme],
   );
-  const themeProgressBg = useMemo(
-    () =>
-      themeProgress.interpolate({
+
+  // Solid base color — always valid, independent of the animation state.
+  const themeBg = theme === "dark" ? themeBgDark : themeBgLight;
+
+  // Two overlays replace the color interpolation: dark fades in, light fades
+  // out, so the crossfade stays smooth in both directions.
+  const themeDarkOverlay = useMemo(
+    () => ({
+      backgroundColor: themeBgDark,
+      opacity: themeProgress,
+    }),
+    [themeBgDark, themeProgress],
+  );
+  const themeLightOverlay = useMemo(
+    () => ({
+      backgroundColor: themeBgLight,
+      opacity: themeProgress.interpolate({
         inputRange: [0, 1],
-        outputRange: [themeBgLight, themeBgDark],
+        outputRange: [1, 0],
       }),
-    [themeProgress, themeBgLight, themeBgDark],
+    }),
+    [themeBgLight, themeProgress],
   );
   const themeProgressContentOpacity = useMemo(
     () =>
@@ -63,6 +83,13 @@ export function useThemeCrossfade(
       }),
     [themeProgress],
   );
+
+  // Snaps the transition to the current theme. Used on foreground resume so
+  // a backgrounded mid-animation value cannot leave a stale blended overlay.
+  const snapThemeProgress = useCallback(() => {
+    themeAnimRef.current?.stop();
+    themeProgress.setValue(theme === "dark" ? 1 : 0);
+  }, [theme, themeProgress]);
 
   const toggleThemeWithCrossfade = useCallback(() => {
     const goingDark = theme !== "dark";
@@ -80,5 +107,12 @@ export function useThemeCrossfade(
     saveTheme(goingDark ? "dark" : "light");
   }, [theme, themeProgress, toggleTheme, saveTheme]);
 
-  return { themeProgressBg, themeProgressContentOpacity, toggleThemeWithCrossfade };
+  return {
+    themeBg,
+    themeDarkOverlay,
+    themeLightOverlay,
+    themeProgressContentOpacity,
+    toggleThemeWithCrossfade,
+    snapThemeProgress,
+  };
 }
