@@ -147,8 +147,9 @@ describe("bucksLogic", () => {
 
     expect(income.amount).toBe(100);
     expect(expense.amount).toBe(-100);
-    expect(() => buildTransactionFromDraft({ ...incomeDraft, amount: "-100" } as any, 4)).toThrow(/Invalid transaction draft/);
-    expect(() => buildTransactionFromDraft({ ...expenseDraft, amount: "100" } as any, 5)).toThrow(/Invalid transaction draft/);
+    // Con nuevo flujo sin signo obligatorio: "-100" para ingreso se normaliza a +100, "100" para gasto a -100
+    expect(buildTransactionFromDraft({ ...incomeDraft, amount: "-100" } as any, 4).amount).toBe(100);
+    expect(buildTransactionFromDraft({ ...expenseDraft, amount: "100" } as any, 5).amount).toBe(-100);
   });
 
   test("transaction draft validation rejects zero, bad dates, and empty details", () => {
@@ -160,8 +161,9 @@ describe("bucksLogic", () => {
     };
 
     expect(isValidTransactionDraft(valid as any)).toBe(true);
-    expect(isValidTransactionDraft({ ...valid, amount: "100" } as any)).toBe(false);
-    expect(isValidTransactionDraft({ ...valid, type: "INGRESO NO FRECUENTE" } as any)).toBe(false);
+    // Sin signo obligatorio: "100" para gasto se valida por magnitud, igual que "-100" para ingreso
+    expect(isValidTransactionDraft({ ...valid, amount: "100" } as any)).toBe(true);
+    expect(isValidTransactionDraft({ ...valid, type: "INGRESO NO FRECUENTE" } as any)).toBe(true);
     expect(isValidTransactionDraft({ ...valid, amount: "0" } as any)).toBe(false);
     expect(isValidTransactionDraft({ ...valid, amount: "10-10" } as any)).toBe(false);
     expect(isValidTransactionDraft({ ...valid, date: "fecha" } as any)).toBe(false);
@@ -546,7 +548,8 @@ describe("bucksLogic", () => {
       tags: [],
     };
     expect(isValidTransactionDraft(base as any)).toBe(true);
-    expect(isValidTransactionDraft({ ...base, type: "INGRESO NO FRECUENTE" } as any)).toBe(false);
+    // Con magnitudes sin signo, INGRESO con "-100" también es válido (se normaliza a +100)
+    expect(isValidTransactionDraft({ ...base, type: "INGRESO NO FRECUENTE" } as any)).toBe(true);
     expect(isValidTransactionDraft({ ...base, lineItems: [{ id: "li-1", amount: "", description: "A", tags: [] }] } as any)).toBe(false);
     expect(isValidTransactionDraft({ ...base, lineItems: [{ id: "li-1", amount: "0", description: "A", tags: [] }] } as any)).toBe(false);
   });
@@ -556,7 +559,8 @@ describe("bucksLogic", () => {
       date: "2026-01-15", amount: "", detail: "", type: "GASTO NO FRECUENTE",
       lineItems: [{ id: "li-1", amount: "=100", description: "A", tags: [] }],
     };
-    expect(isValidTransactionDraft(draft as any)).toBe(false);
+    // Ahora con flujo sin signo, "=100" para gasto es válido (magnitud 100 -> -100)
+    expect(isValidTransactionDraft(draft as any)).toBe(true);
   });
 
   // --- buildTransactionFromDraft (line items) ---

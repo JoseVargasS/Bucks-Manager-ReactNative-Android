@@ -110,11 +110,11 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
   });
 
   const totalState = useMemo(() => {
-    const { total, error } = computeLineItemsTotal(lineItems);
+    const { total, error } = computeLineItemsTotal(lineItems, formDraft.type);
     const sign = total > 0 ? "+ " : total < 0 ? "- " : "";
     const formatted = `${sign}${currencySymbol} ${Math.abs(total).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     return { total, error, formatted };
-  }, [currencySymbol, lineItems]);
+  }, [currencySymbol, lineItems, formDraft.type]);
 
   const isExpense = formDraft.type.startsWith("GASTO");
   const totalColor = totalState.error
@@ -312,7 +312,7 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
                     <AmountInput
                       ref={(r) => { amountInputRefs.current[item.id] = r; }}
                       value={item.amount}
-                      placeholder={isExpense ? "-0.00" : "0.00"}
+                      placeholder="0.00"
                       colors={colors}
                       cursor={cursors[item.id] ?? item.amount.length}
                       onValueChange={(v) => setLineItem(item.id, { amount: v })}

@@ -68,18 +68,23 @@ function formatCreatedAtForSheet(value?: string) {
 }
 
 function formatAmountForSheet(tx: Transaction) {
+  const isExpense = Boolean(tx.type && tx.type.startsWith("GASTO"));
   if (tx.lineItems && tx.lineItems.length > 0) {
     const parts: string[] = [];
     tx.lineItems.forEach((li) => {
       const expr = sanitizeAmountExpression(li.formula || "");
       if (expr) parts.push(expr);
-      else if (Number.isFinite(li.amount) && li.amount !== 0) parts.push(String(li.amount));
+      else if (Number.isFinite(li.amount) && li.amount !== 0) parts.push(String(Math.abs(li.amount)));
     });
     if (parts.length === 0) return tx.amount;
-    return `=${parts.join("+")}`;
+    const joined = parts.join("+");
+    return isExpense ? `=-(${joined})` : `=${joined}`;
   }
   const expression = sanitizeAmountExpression(tx.formula || "");
   if (!expression) return tx.amount;
+  if (isExpense) {
+    return expression.trim().startsWith("-") ? `=${expression}` : `=-(${expression})`;
+  }
   return `=${expression}`;
 }
 

@@ -292,12 +292,12 @@ describe("transactions", () => {
     };
     const draft: any = transactionToDraft(tx as any);
     expect(draft.date).toBe("2026-01-15");
-    expect(draft.amount).toBe("-25");
+    expect(draft.amount).toBe("25");
     expect(draft.detail).toBe("Comida del día");
     expect(draft.type).toBe("GASTO NO FRECUENTE");
     expect(draft.concepto).toBe("Comida del día");
     expect(draft.lineItems?.length).toBe(1);
-    expect(draft.lineItems[0].amount).toBe("-25");
+    expect(draft.lineItems[0].amount).toBe("25");
     expect(draft.lineItems[0].description).toBe("");
   });
 
@@ -316,7 +316,7 @@ describe("transactions", () => {
     expect(draft.lineItems.length).toBe(2);
     expect(draft.lineItems[0].amount).toBe("=10+20");
     expect(draft.lineItems[0].description).toBe("Frutas");
-    expect(draft.lineItems[1].amount).toBe("-20");
+    expect(draft.lineItems[1].amount).toBe("20");
   });
 
   test("transactionToDraft handles formula in amount", () => {

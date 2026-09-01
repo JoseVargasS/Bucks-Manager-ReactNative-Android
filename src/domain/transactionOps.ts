@@ -41,10 +41,11 @@ export function formatMoney(value: number, symbol = "S/", decimals = 2): string 
 
 export function normalizeDraftAmount(draft: TransactionDraft): number {
   if (draft.lineItems && draft.lineItems.length > 0) {
-    return draft.lineItems.reduce(
-      (sum, li) => sum + calculateExpression(normalizeAmountExpression(li.amount)),
+    const sumAbs = draft.lineItems.reduce(
+      (sum, li) => sum + Math.abs(calculateExpression(normalizeAmountExpression(li.amount))),
       0,
     );
+    return draft.type.startsWith("GASTO") ? -sumAbs : sumAbs;
   }
   const calculated = calculateExpression(normalizeAmountExpression(draft.amount));
   if (draft.type.startsWith("GASTO")) return -Math.abs(calculated);
@@ -56,25 +57,23 @@ export function isValidTransactionDraft(draft: TransactionDraft): boolean {
 
   if (draft.lineItems && draft.lineItems.length > 0) {
     let hasAmount = false;
-    let total = 0;
+    let sumAbs = 0;
     for (const li of draft.lineItems) {
       const raw = li.amount.trim();
       if (!raw) continue;
-      const val = calculateExpression(raw);
-      if (!Number.isFinite(val) || val === 0) return false;
+      const val = calculateExpression(normalizeAmountExpression(raw));
+      if (!Number.isFinite(val) || Math.abs(val) === 0) return false;
       hasAmount = true;
-      total += val;
+      sumAbs += Math.abs(val);
     }
     if (!hasAmount) return false;
-    if (draft.type.startsWith("GASTO")) return total < 0;
-    return total > 0;
+    return sumAbs > 0;
   }
 
   const amount = calculateExpression(normalizeAmountExpression(draft.amount));
   return Boolean(
     draft.detail.trim()
-      && Math.abs(amount) > 0
-      && (draft.type.startsWith("INGRESO") ? amount > 0 : amount < 0),
+      && Math.abs(amount) > 0,
   );
 }
 
@@ -84,18 +83,21 @@ export function buildTransactionFromDraft(draft: TransactionDraft, rowId: number
   const createdAt = draft.createdAt || new Date().toISOString();
 
   if (draft.lineItems && draft.lineItems.length > 0) {
+    const isExpense = draft.type.startsWith("GASTO");
     const lineItems: LineItem[] = [];
     for (const li of draft.lineItems) {
       if (li.amount.trim() === "") continue;
       const raw = normalizeAmountExpression(li.amount);
-      const amount = calculateExpression(raw);
-      if (!Number.isFinite(amount) || amount === 0) continue;
+      const parsed = calculateExpression(raw);
+      if (!Number.isFinite(parsed) || Math.abs(parsed) === 0) continue;
+      const amount = isExpense ? -Math.abs(parsed) : Math.abs(parsed);
+      const storedFormula = isMathFormula(li.amount) ? raw : undefined;
       lineItems.push({
         id: li.id,
         amount,
-        formula: isMathFormula(li.amount) ? raw : undefined,
+        formula: storedFormula,
         description: li.description.trim(),
-        tags: draft.type.startsWith("GASTO") ? li.tags : [],
+        tags: isExpense ? li.tags : [],
       });
     }
     if (lineItems.length === 0) throw new Error("Invalid transaction draft");
