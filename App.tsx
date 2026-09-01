@@ -6,6 +6,7 @@ import {
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Animated,
+  Easing,
   View,
   StatusBar as NativeStatusBar,
 } from "react-native";
@@ -105,7 +106,7 @@ function AppContent() {
     needsCurrencyPick,
     dismissCurrencyPick,
   } = usePreferences();
-  const { themeProgressBg, toggleThemeWithCrossfade } = useThemeCrossfade(
+  const { themeProgressBg, themeProgressContentOpacity, toggleThemeWithCrossfade } = useThemeCrossfade(
     theme,
     accentColorScheme,
     toggleTheme,
@@ -549,6 +550,21 @@ function AppContent() {
     ],
   );
 
+  // ─── Unlock transition ─────────────────────────────────────────
+  const unlockAnim = useRef(new Animated.Value(pinVerified ? 1 : 0)).current;
+  useEffect(() => {
+    if (pinVerified) {
+      Animated.timing(unlockAnim, {
+        toValue: 1,
+        duration: 380,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: false,
+      }).start();
+    } else {
+      unlockAnim.setValue(0);
+    }
+  }, [pinVerified, unlockAnim]);
+
   // ─── Render ──────────────────────────────────────────────────────
   if (!splashGone) {
     return <StartupSplash exiting={!splashWanted} onExitComplete={hideSplash} />;
@@ -594,6 +610,17 @@ function AppContent() {
 
   return (
     <Animated.View style={[styles.safe, { backgroundColor: themeProgressBg }]}>
+      <Animated.View
+        style={{
+          flex: 1,
+          opacity: Animated.multiply(unlockAnim, themeProgressContentOpacity) as unknown as number,
+          transform: [
+            {
+              scale: unlockAnim.interpolate({ inputRange: [0, 1], outputRange: [0.96, 1] }),
+            },
+          ],
+        }}
+      >
       <NativeStatusBar
         barStyle={theme === "dark" ? "light-content" : "dark-content"}
         translucent
@@ -771,6 +798,7 @@ function AppContent() {
         onClear={clearSearchFilters}
         onSubmit={applySearchFilters}
       />
+      </Animated.View>
     </Animated.View>
   );
 }

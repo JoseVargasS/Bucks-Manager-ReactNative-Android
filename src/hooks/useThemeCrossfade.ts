@@ -55,6 +55,14 @@ export function useThemeCrossfade(
       }),
     [themeProgress, themeBgLight, themeBgDark],
   );
+  const themeProgressContentOpacity = useMemo(
+    () =>
+      themeProgress.interpolate({
+        inputRange: [0, 0.5, 1],
+        outputRange: [1, 0.92, 1],
+      }),
+    [themeProgress],
+  );
 
   const toggleThemeWithCrossfade = useCallback(() => {
     const goingDark = theme !== "dark";
@@ -62,8 +70,8 @@ export function useThemeCrossfade(
     themeAnimRef.current?.stop();
     themeAnimRef.current = Animated.timing(themeProgress, {
       toValue: target,
-      duration: 20,
-      easing: Easing.inOut(Easing.cubic),
+      duration: 320,
+      easing: Easing.out(Easing.cubic),
       useNativeDriver: false,
     });
     themeAnimRef.current.start();
@@ -72,5 +80,5 @@ export function useThemeCrossfade(
     saveTheme(goingDark ? "dark" : "light");
   }, [theme, themeProgress, toggleTheme, saveTheme]);
 
-  return { themeProgressBg, toggleThemeWithCrossfade };
+  return { themeProgressBg, themeProgressContentOpacity, toggleThemeWithCrossfade };
 }
