@@ -51,7 +51,7 @@ adb -s $physicalSerial shell rm $remotePath | Out-Null
 
 if ($result -match "Success") {
   Write-Host "Installed. Starting app ..."
-  adb -s $physicalSerial shell monkey -p com.josev.bucksmanager -c android.intent.category.LAUNCHER 1 | Out-Null
+  adb -s $physicalSerial shell monkey -p com.kuskalabs.quipu -c android.intent.category.LAUNCHER 1 | Out-Null
 } else {
   Write-Error "Install failed: $result"
 }

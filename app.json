@@ -6,13 +6,13 @@
     "orientation": "portrait",
     "icon": "./assets/icon-bucks.png",
     "userInterfaceStyle": "dark",
-    "scheme": "com.josev.bucksmanager",
+    "scheme": "com.kuskalabs.quipu",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.josev.bucksmanager"
+      "bundleIdentifier": "com.kuskalabs.quipu"
     },
     "android": {
-      "package": "com.josev.bucksmanager",
+      "package": "com.kuskalabs.quipu",
       "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
         "backgroundColor": "#050E0B",
@@ -27,7 +27,7 @@
           "autoVerify": true,
           "data": [
             {
-              "scheme": "com.josev.bucksmanager",
+              "scheme": "com.kuskalabs.quipu",
               "pathPrefix": "/oauthredirect"
             }
           ],
@@ -277,6 +277,8 @@
       [
         "expo-splash-screen",
         {
+          "image": "./assets/splash-icon-bucks.png",
+          "resizeMode": "contain",
           "backgroundColor": "#001a16"
         }
       ]

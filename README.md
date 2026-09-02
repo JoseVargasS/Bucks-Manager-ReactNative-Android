@@ -173,7 +173,7 @@ The app requests these Drive/Sheets scopes incrementally after the user chooses 
 The Android OAuth client must use package:
 
 ```text
-com.josev.bucksmanager
+com.kuskalabs.quipu
 ```
 
 The debug/release SHA-1 in Google Cloud must match the keystore used to build the installed app.

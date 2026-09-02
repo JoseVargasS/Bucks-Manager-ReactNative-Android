@@ -174,7 +174,7 @@
   "googleOAuth": "Google OAuth",
   "missingEnvCredentials": "Missing credentials in .env.",
   "googleSignInError": "Could not sign in with Google.",
-  "oauthConfigRejected": "Google rejected the OAuth configuration. In Google Cloud, verify the Android client uses package com.josev.bucksmanager and the current debug SHA-1. Also confirm GOOGLE_WEB_CLIENT_ID is a Web application type.",
+  "oauthConfigRejected": "Google rejected the OAuth configuration. In Google Cloud, verify the Android client uses package com.kuskalabs.quipu and the current debug SHA-1. Also confirm GOOGLE_WEB_CLIENT_ID is a Web application type.",
   "moveRecord": "Move record",
   "moveRecordError": "Could not move the record.",
   "moveUpOnePosition": "Move up one position",
