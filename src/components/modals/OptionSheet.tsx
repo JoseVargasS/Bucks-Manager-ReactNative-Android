@@ -114,54 +114,34 @@ export const OptionSheet = forwardRef<OptionSheetHandle, { colors: Palette }>(fu
             </Pressable>
           </View>
 
-          {/* Preview inside modal — for font size selector */}
+          {/* Preview inside modal — for font size selector, simple */}
           {config.preview && (
             <View
               style={{
                 marginHorizontal: 16,
-                marginBottom: 8,
+                marginBottom: 12,
+                paddingVertical: 18,
                 paddingHorizontal: 12,
-                paddingVertical: 10,
                 borderRadius: RADIUS.md,
                 backgroundColor: colors.input,
                 borderWidth: 1,
                 borderColor: colors.border,
+                alignItems: "center",
               }}
             >
               <Text
                 style={{
-                  color: colors.muted,
-                  fontSize: Math.round(13 * (parseFloat(localSelected) || 1)),
-                  fontWeight: "600",
+                  color: colors.text,
+                  fontSize: Math.round(22 * (parseFloat(localSelected) || 1)),
+                  fontWeight: "700",
                 }}
                 numberOfLines={1}
               >
-                {config.preview.hint}
+                {config.preview.example}
               </Text>
-              <View style={{ flexDirection: "row", alignItems: "baseline", gap: 6, marginTop: 4 }}>
-                <Text
-                  style={{
-                    color: colors.text,
-                    fontSize: Math.round(15 * (parseFloat(localSelected) || 1)),
-                    fontWeight: "700",
-                  }}
-                  numberOfLines={1}
-                >
-                  {config.preview.example}
-                </Text>
-                <Text
-                  style={{
-                    color: colors.muted,
-                    fontSize: Math.round(13 * (parseFloat(localSelected) || 1)),
-                  }}
-                  numberOfLines={1}
-                >
-                  • 0 O 1 l I
-                </Text>
-              </View>
               {isSlider && (
-                <Text style={{ color: colors.muted, fontSize: 11, marginTop: 4 }}>
-                  {parseFloat(localSelected).toFixed(2)}x · {Math.round(15 * parseFloat(localSelected))}px
+                <Text style={{ color: colors.muted, fontSize: 12, marginTop: 8 }}>
+                  {parseFloat(localSelected).toFixed(2)}x
                 </Text>
               )}
             </View>
