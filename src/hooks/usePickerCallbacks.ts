@@ -13,6 +13,7 @@ import type {
   LanguageMode,
   FontPreference,
   ThemeMode,
+  MaterialIconName,
 } from "@/types";
 
 type PickerProps = {
@@ -31,9 +32,11 @@ type PickerProps = {
   theme: ThemeMode;
   colors: { expense: string };
   runGoogleSignIn: (silent: boolean) => void;
+  switchToAccount?: (email: string) => void;
   setConfirmConfig: React.Dispatch<
     React.SetStateAction<ConfirmConfig | null>
   >;
+  accountInfo?: { name?: string; email?: string } | null;
 };
 
 type PickerCallbacks = {
@@ -70,7 +73,9 @@ export function usePickerCallbacks({
   theme,
   colors,
   runGoogleSignIn,
+  switchToAccount,
   setConfirmConfig,
+  accountInfo,
 }: PickerProps): PickerCallbacks {
   const openLanguagePicker = useCallback(() => {
     optionSheetRef.current?.open({
@@ -149,29 +154,54 @@ export function usePickerCallbacks({
   }, [colorScheme, copy.colorPalette, language, saveColorScheme, theme, optionSheetRef]);
 
   const openAccountManager = useCallback(() => {
-    optionSheetRef.current?.open({
-      title: copy.googleAccounts,
-      selectedValue: "",
-      options: [
-        {
-          label: copy.switchAccount,
-          value: "switch",
-          icon: "account-switch",
+    void (async () => {
+      const { loadConnectedAccounts } = await import("@/data/connectedAccounts");
+      const accounts = await loadConnectedAccounts();
+      const currentEmail = accountInfo?.email?.toLowerCase() || "";
+      const hasCurrent = Boolean(currentEmail);
+      const options: Array<{ label: string; value: string; icon: MaterialIconName; tone?: string; trailingIcon?: MaterialIconName; trailingTone?: string; onTrailingPress?: () => void }> = [];
+
+      // Cuentas ya conectadas: tacho a la derecha por fila
+      for (const acc of accounts) {
+        const isCurrent = acc.email.toLowerCase() === currentEmail;
+        options.push({
+          label: acc.name ? `${acc.name} (${acc.email})` : acc.email,
+          value: `account:${acc.email}`,
+          icon: "account",
+          trailingIcon: "trash-can-outline",
+          trailingTone: colors.expense,
+          onTrailingPress: () =>
+            setConfirmConfig(
+              isCurrent
+                ? ({ kind: "removeAccount", email: acc.email, name: acc.name } as unknown as ConfirmConfig)
+                : ({ kind: "removeConnectedAccount", email: acc.email, name: acc.name } as unknown as ConfirmConfig),
+            ),
+        });
+      }
+
+      // Botón para conectar una cuenta nueva (no listada)
+      options.push({
+        label: (copy as unknown as { connectNewAccount?: string }).connectNewAccount || "Conectar nueva cuenta",
+        value: "new",
+        icon: "account-plus",
+      });
+
+      optionSheetRef.current?.open({
+        title: copy.googleAccounts,
+        selectedValue: hasCurrent ? `account:${accountInfo?.email}` : "",
+        options,
+        onSelect: (value: string) => {
+          if (value === "new") void runGoogleSignIn(true);
+          else if (value.startsWith("account:")) {
+            const email = value.slice(8);
+            if (email.toLowerCase() === currentEmail) return;
+            if (switchToAccount) void switchToAccount(email);
+            else void runGoogleSignIn(true);
+          }
         },
-        {
-          label: copy.removeCurrentAccount,
-          value: "remove",
-          icon: "account-remove",
-          tone: colors.expense,
-        },
-      ],
-      onSelect: (value: string) => {
-        if (value === "switch") void runGoogleSignIn(true);
-        if (value === "remove")
-          setConfirmConfig({ kind: "removeAccount" });
-      },
-    });
-  }, [colors.expense, copy, optionSheetRef, runGoogleSignIn, setConfirmConfig]);
+      });
+    })();
+  }, [accountInfo, colors.expense, copy, optionSheetRef, runGoogleSignIn, switchToAccount, setConfirmConfig]);
 
   return {
     openLanguagePicker,

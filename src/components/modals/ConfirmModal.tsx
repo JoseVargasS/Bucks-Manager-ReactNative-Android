@@ -15,12 +15,14 @@ import { type MaterialIconName } from "@/types";
 import { useModalTransition } from "@/components/ui/useModalTransition";
 import { Text } from "@/components/ui/AppText";
 
-type ConfirmKind = "delete" | "deleteSelected" | "disconnect" | "removeAccount";
+type ConfirmKind = "delete" | "deleteSelected" | "disconnect" | "removeAccount" | "removeConnectedAccount";
 
 export interface ConfirmConfig {
   kind: ConfirmKind;
   tx?: Transaction;
   count?: number;
+  email?: string;
+  name?: string;
 }
 
 export function ConfirmModal({
@@ -53,13 +55,13 @@ export function ConfirmModal({
   const current = config || displayConfig;
   if (!current || !transition.modalVisible) return null;
   const isAccountAction =
-    current.kind === "disconnect" || current.kind === "removeAccount";
+    current.kind === "disconnect" || current.kind === "removeAccount" || current.kind === "removeConnectedAccount";
   const title =
     current.kind === "delete"
       ? copy.confirmDeleteTitle
       : current.kind === "deleteSelected"
         ? copy.confirmDeleteSelectedTitle
-        : current.kind === "removeAccount"
+        : current.kind === "removeAccount" || current.kind === "removeConnectedAccount"
           ? copy.removeAccountTitle
           : copy.signOutTitle;
   const message =
@@ -67,14 +69,16 @@ export function ConfirmModal({
       ? copy.confirmDeleteMsg
       : current.kind === "deleteSelected"
         ? copy.confirmDeleteSelectedMsg
-        : current.kind === "removeAccount"
-          ? copy.removeAccountMessage
-          : copy.signOutMessage;
+        : current.kind === "removeConnectedAccount" && current.email
+          ? `¿Quitar ${current.name ? `${current.name} (${current.email})` : current.email} de Quipu? Su hoja Drive no se borra.`
+          : current.kind === "removeAccount"
+            ? copy.removeAccountMessage
+            : copy.signOutMessage;
   const accent = colors.expense;
   const accentSoft = colors.expenseSoft;
   const icon: MaterialIconName = isAccountAction ? "account-off" : "trash-can";
   const actionLabel =
-    current.kind === "removeAccount"
+    current.kind === "removeAccount" || current.kind === "removeConnectedAccount"
       ? copy.removeAccount
       : current.kind === "disconnect"
         ? copy.signOut

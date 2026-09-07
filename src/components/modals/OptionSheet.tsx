@@ -12,7 +12,7 @@ import { useModalTransition } from "@/components/ui/useModalTransition";
 import { Text } from "@/components/ui/AppText";
 import { RADIUS } from "@/theme/radii";
 
-type PickerOption = { label: string; value: string; icon?: MaterialIconName; tone?: string; fontFamily?: string; softBg?: string };
+type PickerOption = { label: string; value: string; icon?: MaterialIconName; tone?: string; fontFamily?: string; softBg?: string; trailingIcon?: MaterialIconName; trailingTone?: string; onTrailingPress?: () => void };
 type PickerConfig = {
   title: string;
   options: PickerOption[];
@@ -22,7 +22,7 @@ type PickerConfig = {
   keepOpenOnSelect?: boolean;
   sliderValues?: number[];
 };
-export type OptionSheetHandle = { open: (config: PickerConfig) => void };
+export type OptionSheetHandle = { open: (config: PickerConfig) => void; close: () => void; removeOption: (value: string) => void };
 
 export const OptionSheet = forwardRef<OptionSheetHandle, { colors: Palette }>(function OptionSheet({ colors }, ref) {
   const [config, setConfig] = useState<PickerConfig | null>(null);
@@ -42,6 +42,12 @@ export const OptionSheet = forwardRef<OptionSheetHandle, { colors: Palette }>(fu
       setConfig(next);
       setLocalSelected(next.selectedValue);
       setVisible(true);
+    },
+    close() {
+      setVisible(false);
+    },
+    removeOption(value: string) {
+      setConfig((prev) => (prev ? { ...prev, options: prev.options.filter((opt) => opt.value !== value) } : prev));
     },
   }), []);
 
@@ -306,6 +312,18 @@ export const OptionSheet = forwardRef<OptionSheetHandle, { colors: Palette }>(fu
                     >
                       {option.label}
                     </Text>
+                    {option.onTrailingPress && option.trailingIcon && (
+                      <Pressable
+                        onPress={(e) => {
+                          e.stopPropagation?.();
+                          option.onTrailingPress?.();
+                        }}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        style={{ width: 36, height: 36, alignItems: "center", justifyContent: "center", borderRadius: 18 }}
+                      >
+                        <MaterialCommunityIcons name={option.trailingIcon} size={20} color={option.trailingTone || colors.expense} />
+                      </Pressable>
+                    )}
                   </Pressable>
                 );
               })}

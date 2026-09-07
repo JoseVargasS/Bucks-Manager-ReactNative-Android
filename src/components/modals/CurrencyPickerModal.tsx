@@ -51,55 +51,57 @@ export function CurrencyPickerModal({
             </Pressable>
           </View>
 
-          <FlatList
-            data={options}
-            keyExtractor={(item) => item.value}
-            renderItem={({ item }) => {
-              const isSelected = item.value === selected;
-              return (
-                <Pressable
-                  onPress={() => setSelected(item.value)}
-                  style={{
-                    flexDirection: "row",
-                    alignItems: "center",
-                    paddingVertical: 14,
-                    paddingHorizontal: 16,
-                    gap: 12,
-                  }}
-                >
-                  <View
+          <View style={{ paddingHorizontal: 8, paddingTop: 4 }}>
+            <FlatList
+              data={options}
+              keyExtractor={(item) => item.value}
+              renderItem={({ item }) => {
+                const isSelected = item.value === selected;
+                return (
+                  <Pressable
+                    onPress={() => setSelected(item.value)}
                     style={{
-                      width: 22,
-                      height: 22,
-                      borderRadius: RADIUS.lg,
-                      borderWidth: 2,
-                      borderColor: isSelected ? colors.primary : colors.border,
+                      flexDirection: "row",
                       alignItems: "center",
-                      justifyContent: "center",
-                      backgroundColor: isSelected ? colors.primary : "transparent",
+                      paddingVertical: 14,
+                      paddingHorizontal: 16,
+                      gap: 12,
                     }}
                   >
-                    {isSelected && (
-                      <MaterialCommunityIcons name="check" size={14} color={colors.onPrimary} />
-                    )}
-                  </View>
-                  <Text
-                    style={{
-                      flex: 1,
-                      fontSize: 16,
-                      fontWeight: isSelected ? "700" : "500",
-                      color: isSelected ? colors.primary : colors.text,
-                    }}
-                  >
-                    {item.label}
-                  </Text>
-                </Pressable>
-              );
-            }}
-            style={{ maxHeight: 400, paddingHorizontal: 8 }}
-          />
+                    <View
+                      style={{
+                        width: 22,
+                        height: 22,
+                        borderRadius: RADIUS.lg,
+                        borderWidth: 2,
+                        borderColor: isSelected ? colors.primary : colors.border,
+                        alignItems: "center",
+                        justifyContent: "center",
+                        backgroundColor: isSelected ? colors.primary : "transparent",
+                      }}
+                    >
+                      {isSelected && (
+                        <MaterialCommunityIcons name="check" size={14} color={colors.onPrimary} />
+                      )}
+                    </View>
+                    <Text
+                      style={{
+                        flex: 1,
+                        fontSize: 16,
+                        fontWeight: isSelected ? "700" : "500",
+                        color: isSelected ? colors.primary : colors.text,
+                      }}
+                    >
+                      {item.label}
+                    </Text>
+                  </Pressable>
+                );
+              }}
+              style={{ maxHeight: 400 }}
+            />
+          </View>
 
-          <View style={[styles.recordActions, { paddingHorizontal: 8, paddingBottom: 8 }]}>
+          <View style={[styles.recordActions, { paddingHorizontal: 16, paddingBottom: 16, paddingTop: 12 }]}>
             <Pressable
               style={[styles.recordCancel, { backgroundColor: colors.input, borderColor: colors.border }]}
               onPress={onClose}

@@ -27,6 +27,7 @@
   "manageAccounts": "Administrar cuentas",
   "switchAccount": "Cambiar o agregar cuenta",
   "removeCurrentAccount": "Quitar esta cuenta de Quipu",
+  "connectNewAccount": "Conectar nueva cuenta",
   "removeAccountTitle": "Quitar cuenta",
   "removeAccountMessage": "Se cerrará la sesión y Quipu dejará de tener acceso a esta cuenta. Tu hoja de Google no se eliminará.",
   "removeAccount": "Quitar cuenta",

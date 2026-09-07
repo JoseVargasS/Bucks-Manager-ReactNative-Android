@@ -27,6 +27,7 @@
   "manageAccounts": "Manage accounts",
   "switchAccount": "Change or add account",
   "removeCurrentAccount": "Remove this account from Quipu",
+  "connectNewAccount": "Connect new account",
   "removeAccountTitle": "Remove account",
   "removeAccountMessage": "You will be signed out and Quipu will no longer have access to this account. Your Google Sheet will not be deleted.",
   "removeAccount": "Remove account",
