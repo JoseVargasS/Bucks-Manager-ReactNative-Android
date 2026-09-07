@@ -200,7 +200,13 @@ export function useFinancialState(tagsList: Tag[]): FinancialState {
         nextTransactions.length > 0 || summariesToUse.length > 0;
       setHasLocalData(nextHasLocalData);
       hasLocalDataRef.current = nextHasLocalData;
-      if (fromCache || nextTransactions.length) updateInitialPeriod(nextTransactions);
+      if (fromCache) {
+        updateInitialPeriod(nextTransactions);
+      } else if (nextTransactions.length) {
+        // Forzamos recálculo en reloads remotos — evita mes pegado al cambiar de cuenta (A→B)
+        didSetInitialPeriodRef.current = false;
+        updateInitialPeriod(nextTransactions);
+      }
     },
     [updateInitialPeriod],
   );
@@ -244,6 +250,13 @@ export function useFinancialState(tagsList: Tag[]): FinancialState {
     hasLocalDataRef.current = false;
     setLastSyncedAt(null);
     didSetInitialPeriodRef.current = false;
+    const now = new Date();
+    setMonth(now.getMonth());
+    setYear(now.getFullYear());
+    setLoadedMonthCount(1);
+    setSelectedRows([]);
+    setSearchActive(false);
+    setSearchFilters(emptySearchFilters);
   }, []);
 
   const selectPeriod = useCallback(

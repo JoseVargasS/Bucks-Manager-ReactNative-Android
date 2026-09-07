@@ -103,6 +103,7 @@ function AppContent() {
     saveTheme,
     restorePreferences,
     applyRemotePreferences,
+    resetToDefaults,
     needsCurrencyPick,
     dismissCurrencyPick,
   } = usePreferences();
@@ -168,9 +169,25 @@ function AppContent() {
     loadOlder,
     toggleSelection,
   } = fin;
-  const connectRef = useRef<((token: string, sheetId?: string, forceScan?: boolean) => Promise<void>) | undefined>(undefined);
-  const session = useSession(copy, errMsg, resetFinancial, (token, sheetId, forceScan) => {
-    return connectRef.current?.(token, sheetId, forceScan) ?? Promise.resolve();
+
+  // History panel defined early so handleResetFinancial can clear it on account switch (aislamiento por cuenta)
+  const {
+    historyEntries,
+    setHistoryEntries,
+    historyVisible,
+    openHistory,
+    closeHistory,
+  } = useHistoryPanel();
+
+  const handleResetFinancial = useCallback(() => {
+    resetFinancial();
+    setTagsList([]);
+    setHistoryEntries([]);
+  }, [resetFinancial, setHistoryEntries]);
+
+  const connectRef = useRef<((token: string, sheetId?: string, forceScan?: boolean, wasOffline?: boolean) => Promise<void>) | undefined>(undefined);
+  const session = useSession(copy, errMsg, handleResetFinancial, (token, sheetId, forceScan, wasOffline) => {
+    return connectRef.current?.(token, sheetId, forceScan, wasOffline) ?? Promise.resolve();
   });
   const {
     accessToken,
@@ -189,8 +206,28 @@ function AppContent() {
     isOffline,
     connectionStatus,
     runGoogleSignIn,
+    switchToAccount,
     disconnectGoogle, removeGoogleAccount,
   } = session;
+
+  // Envuelve disconnect/remove para regresar al diseño por defecto (no quedar con tema de cuenta quitada)
+  const wrappedDisconnect = useCallback(async () => {
+    await disconnectGoogle();
+    resetToDefaults();
+  }, [disconnectGoogle, resetToDefaults]);
+
+  const wrappedRemove = useCallback(async () => {
+    await removeGoogleAccount();
+    const { loadConnectedAccounts } = await import("@/data/connectedAccounts");
+    const remaining = await loadConnectedAccounts();
+    if (remaining.length) {
+      try {
+        await switchToAccount(remaining[0].email);
+        return;
+      } catch (_e) { void _e; }
+    }
+    resetToDefaults();
+  }, [removeGoogleAccount, resetToDefaults, switchToAccount]);
 
   // ─── Google sync & mutations ─────────────────────────────────────
   const reloadPromiseRef = useRef<Promise<void> | null>(null);
@@ -234,14 +271,6 @@ function AppContent() {
     if (splashWanted) setSplashGone(false);
   }, [splashWanted]);
 
-  // ─── History panel ───────────────────────────────────────────────
-  const {
-    historyEntries,
-    setHistoryEntries,
-    historyVisible,
-    openHistory,
-    closeHistory,
-  } = useHistoryPanel();
   // Wire remote history (sheet → local) once on mount.
   useEffect(() => {
     syncApi.wireRemoteHistory((sheetHistory) => {
@@ -335,10 +364,11 @@ function AppContent() {
   } = useConfirmCallbacks({
     deleteTx: mutations.deleteTx,
     deleteSelectedRows: mutations.deleteSelectedRows,
-    removeGoogleAccount,
-    disconnectGoogle,
+    removeGoogleAccount: wrappedRemove,
+    disconnectGoogle: wrappedDisconnect,
     selectedRowsLength: selectedRows.length,
     setConfirmConfig: modals.openers.openConfirm,
+    optionSheetRef: modals.refs.optionSheetRef,
   });
 
   // ─── Derived values ──────────────────────────────────────────────
@@ -382,7 +412,9 @@ function AppContent() {
     theme,
     colors,
     runGoogleSignIn,
+    switchToAccount,
     setConfirmConfig: modals.openers.openConfirm,
+    accountInfo,
   });
 
   // ─── Tab navigation ──────────────────────────────────────────────
@@ -584,18 +616,34 @@ function AppContent() {
   // first interaction to avoid stealing the JS thread on resume.
   const onForegroundRef = useRef<() => void>(() => {});
   const foregroundReloadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const accessTokenRef = useRef(accessToken);
+  accessTokenRef.current = accessToken;
+  const spreadsheetIdRefForFg = useRef(spreadsheetId);
+  spreadsheetIdRefForFg.current = spreadsheetId;
+  const splashGoneRef = useRef(splashGone);
+  splashGoneRef.current = splashGone;
+  const pinGatedRef = useRef(pinGated);
+  pinGatedRef.current = pinGated;
+  const reloadFromGoogleRef = useRef(syncApi.reloadFromGoogle);
+  reloadFromGoogleRef.current = syncApi.reloadFromGoogle;
   useEffect(() => {
     onForegroundRef.current = () => {
-      if (splashGone) hideAsync().catch(() => undefined);
+      if (splashGoneRef.current) hideAsync().catch(() => undefined);
       unlockAnim.stopAnimation();
-      unlockAnim.setValue(pinGated ? 0 : 1);
+      unlockAnim.setValue(pinGatedRef.current ? 0 : 1);
       snapThemeProgress();
-      if (accessToken && spreadsheetId) {
+      const token = accessTokenRef.current;
+      const sheetId = spreadsheetIdRefForFg.current;
+      if (token && sheetId) {
         if (foregroundReloadTimerRef.current)
           clearTimeout(foregroundReloadTimerRef.current);
         foregroundReloadTimerRef.current = setTimeout(() => {
-          syncApi
-            .reloadFromGoogle(accessToken, spreadsheetId, false)
+          // Usa refs actuales para no disparar reload con sheetId viejo tras A→B
+          const freshToken = accessTokenRef.current;
+          const freshSheetId = spreadsheetIdRefForFg.current;
+          if (!freshToken || !freshSheetId) return;
+          if (freshSheetId !== sheetId) return;
+          reloadFromGoogleRef.current(freshToken, freshSheetId, false)
             .catch((error) => logError(error, "foreground:reload"));
         }, 1500);
       }

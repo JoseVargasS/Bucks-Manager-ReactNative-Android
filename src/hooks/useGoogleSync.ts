@@ -3,6 +3,7 @@ import { useCallback, useRef } from "react";
 import { getItemAsync, setItemAsync, deleteItemAsync } from "expo-secure-store";
 import { GoogleSignin } from "@react-native-google-signin/google-signin";
 import { shouldRescanForSheetError } from "@/utils/errorHandler";
+import { syncAccountInfo as syncAccountInfoBase } from "@/api/googleAuth";
 import {
   isSheetTrashed,
   readTransactions,
@@ -16,6 +17,7 @@ import { readHistory, writeHistory as writeHistoryApi } from "@/api/historyOps";
 import { calculateSummaries } from "@/domain/bucksLogic";
 import { loadFinancialCache, deleteFinancialCache, loadOfflineCache } from "@/data/localCache";
 import { mergeTagsFromSheet, saveTags } from "@/utils/tags";
+import { saveConnectedAccount } from "@/data/connectedAccounts";
 import { TOKEN_KEY, SHEET_KEY } from "@/theme/constants";
 import type { LanguageMode, Tag, Transaction, SummaryRow, HistoryEntry } from "@/types";
 import type { UiPreferencesSnapshot } from "@/hooks/usePreferences";
@@ -38,7 +40,7 @@ export interface GoogleSyncApi {
   refreshStoredSession: (token: string, sheetId: string, hadCache: boolean) => Promise<void>;
   reloadFromGoogle: (token?: string, sheetId?: string, showLoader?: boolean, forceFresh?: boolean) => Promise<void>;
   syncGoogleInBackground: (task: (freshToken: string) => Promise<void>, title: string) => void;
-  connectGoogleWorkspace: (token: string, preferredSheetId?: string, forceScan?: boolean) => Promise<void>;
+  connectGoogleWorkspace: (token: string, preferredSheetId?: string, forceScan?: boolean, wasOffline?: boolean) => Promise<void>;
   selectSpreadsheet: (token: string, sheetId: string, showLoader?: boolean) => Promise<void>;
   writeUiPreferences: (snapshot: UiPreferencesSnapshot) => void;
   wireRemoteUiPreferences: (apply: (prefs: UiPreferencesSnapshot) => void) => void;
@@ -55,6 +57,7 @@ export function useGoogleSync(
     hasLocalDataRef: React.MutableRefObject<boolean>;
     freqIncomeRef: React.MutableRefObject<Record<string, number>>;
     transactions: Transaction[];
+    didSetInitialPeriodRef?: React.MutableRefObject<boolean>;
   },
   tags: {
     tagsList: Tag[];
@@ -89,6 +92,8 @@ export function useGoogleSync(
   const mergePromptRef = useRef<((cfg: { localCount: number; remoteCount: number; onMerge: () => void; onRemoteOnly: () => void }) => void) | null>(null);
   const lastRemoteTxCountRef = useRef(0);
   const lastRemoteTxsRef = useRef<Transaction[]>([]);
+  const spreadsheetIdRef = useRef(spreadsheetId);
+  spreadsheetIdRef.current = spreadsheetId;
 
   async function restoreSession() {
     const [token, sheetId] = await Promise.all([
@@ -204,6 +209,7 @@ export function useGoogleSync(
       if (!forceFresh) return reloadPromiseRef.current;
       await reloadPromiseRef.current.catch(() => undefined);
     }
+    const expectedSheetId = sheetId;
     const task = (async () => {
       if (showLoader) setLoading(true);
       setIsSyncing(true);
@@ -217,6 +223,14 @@ export function useGoogleSync(
         readUiPreferences(token, sheetId),
         readHistory(token, sheetId),
       ]);
+      // Descarta reload stale si mientras tanto se cambió de cuenta (sheetId ya es otro)
+      if (expectedSheetId !== spreadsheetIdRef.current) {
+        if (showLoader) setLoading(false);
+        setIsSyncing(false);
+        setIsFirstRemoteLoad(false);
+        reloadPromiseRef.current = null;
+        return;
+      }
       if (pendingSyncRef.current) {
         if (showLoader) setLoading(false);
         setIsSyncing(false);
@@ -386,10 +400,26 @@ export function useGoogleSync(
     token: string,
     preferredSheetId = "",
     forceScan = false,
+    wasOfflineOverride?: boolean,
   ) {
     setLoading(true);
     setIsSyncing(true);
-    const offlineTxs = txList.length > 0 ? [...txList] : [];
+    // Limpia estado de sync previo para que el reload del nuevo Drive no sea bloqueado
+    // y aisla por cuenta: nada de A pasa a B nunca.
+    reloadPromiseRef.current = null;
+    pendingSyncRef.current = false;
+    setPendingSync(false);
+    syncQueueRef.current = Promise.resolve();
+    lastRemoteTxCountRef.current = 0;
+    lastRemoteTxsRef.current = [];
+    // Reset autoritativo del periodo antes de cualquier await — evita mes pegado si runSwitchCleanup es lento
+    if (fin.didSetInitialPeriodRef) fin.didSetInitialPeriodRef.current = false;
+    // Aislamiento por cuenta: limpia tags en memoria (spreadsheetId aún "" → no dispara write al sheet viejo)
+    setTagsList([]);
+    tagsListRef.current = [];
+    const wasOffline = wasOfflineOverride ?? session.isOffline;
+    // A→B nunca trae offline: wasOfflineOverride===false fuerza [] aunque txList aún tenga restos de A
+    const offlineTxs = wasOfflineOverride === false ? [] : (wasOffline && txList.length > 0 ? [...txList] : []);
     try {
       if (preferredSheetId && !forceScan) {
         try {
@@ -397,6 +427,8 @@ export function useGoogleSync(
           await selectSpreadsheet(token, preferredSheetId, false);
           setConnectionStatus(null);
           session.setOffline(false);
+          const acc = syncAccountInfoBase();
+          if (acc?.email) void saveConnectedAccount({ email: acc.email, name: acc.name, lastUsedAt: new Date().toISOString(), spreadsheetId: preferredSheetId, scopesGranted: true, accessToken: token });
           return;
         } catch (error) {
           if (!shouldRescanForSheetError(error)) throw error;
@@ -406,8 +438,13 @@ export function useGoogleSync(
       const { sheetId, isNewSheet } = await findOrCreateSpreadsheet(token);
       setConnectionStatus("loading");
       await selectSpreadsheet(token, sheetId);
+      {
+        const acc = syncAccountInfoBase();
+        if (acc?.email) void saveConnectedAccount({ email: acc.email, name: acc.name, lastUsedAt: new Date().toISOString(), spreadsheetId: sheetId, scopesGranted: true, accessToken: token });
+      }
       void handleOfflineAfterConnect(
         offlineTxs,
+        wasOffline,
         isNewSheet,
         sheetId,
         fin,

@@ -55,7 +55,8 @@ describe("combineTransactions", () => {
       makeTx({ rowId: 3, rawDate: "2026-01-15T12:00:00.000Z", createdAtMs: 1 }),
     ];
     const result = combineTransactions(local, remote);
-    expect(result.map((r) => r.rowId)).toEqual([2, 3, 1]);
+    // Renumerados para garantizar claves únicas de SectionList
+    expect(result.map((r) => r.rowId)).toEqual([2, 3, 4]);
   });
 
   test("returns empty for empty inputs", () => {
@@ -65,7 +66,7 @@ describe("combineTransactions", () => {
   test("uses createdAt string fallback when createdAtMs missing", () => {
     const a = makeTx({ rowId: 1, rawDate: "2026-01-15T12:00:00.000Z", createdAt: "2", createdAtMs: undefined });
     const b = makeTx({ rowId: 2, rawDate: "2026-01-15T12:00:00.000Z", createdAt: "1", createdAtMs: undefined });
-    expect(combineTransactions([a], [b]).map((r) => r.rowId)).toEqual([2, 1]);
+    expect(combineTransactions([a], [b]).map((r) => r.rowId)).toEqual([2, 3]);
   });
 });
 
@@ -259,7 +260,7 @@ describe("handleOfflineAfterConnect", () => {
   test("returns early when no offline transactions", async () => {
     const sessionSetters = makeSessionSetters();
     await handleOfflineAfterConnect(
-      [], false, "sheet-1",
+      [], false, false, "sheet-1",
       makeFin(), makeTags(), makeHelpers(),
       deps,
       sessionSetters,
@@ -277,7 +278,7 @@ describe("handleOfflineAfterConnect", () => {
     const sessionSetters = makeSessionSetters();
 
     await handleOfflineAfterConnect(
-      [tx], true, "new-sheet",
+      [tx], true, true, "new-sheet",
       fin, tags, helpers,
       deps, sessionSetters,
       { current: null },
@@ -299,7 +300,7 @@ describe("handleOfflineAfterConnect", () => {
     let mergeCallback: (() => void) | null = null;
 
     await handleOfflineAfterConnect(
-      [tx], false, "sheet-1",
+      [tx], true, false, "sheet-1",
       fin, tags, helpers,
       deps, sessionSetters,
       {
@@ -320,7 +321,7 @@ describe("handleOfflineAfterConnect", () => {
     const sessionSetters = makeSessionSetters();
 
     await handleOfflineAfterConnect(
-      [tx], false, "sheet-1",
+      [tx], true, false, "sheet-1",
       makeFin(), makeTags(), makeHelpers(),
       deps, sessionSetters,
       {
@@ -339,13 +340,32 @@ describe("handleOfflineAfterConnect", () => {
     const sessionSetters = makeSessionSetters();
 
     await handleOfflineAfterConnect(
-      [tx], false, "sheet-1",
+      [tx], true, false, "sheet-1",
       makeFin(), makeTags(), makeHelpers(),
       deps, sessionSetters,
       { current: null },
       { current: { count: 2, txs: [] } },
     );
 
+    expect(sessionSetters.setOffline).toHaveBeenCalledWith(false);
+  });
+
+  test("does not prompt when switching accounts while online", async () => {
+    const tx = makeTx({ rowId: 12, tags: [] });
+    const fin = makeFin();
+    const sessionSetters = makeSessionSetters();
+    const prompt = jest.fn();
+
+    await handleOfflineAfterConnect(
+      [tx], false, false, "sheet-1",
+      fin, makeTags(), makeHelpers(),
+      deps, sessionSetters,
+      { current: prompt },
+      { current: { count: 5, txs: [] } },
+    );
+
+    expect(prompt).not.toHaveBeenCalled();
+    expect(fin.applyFinancialState).not.toHaveBeenCalled();
     expect(sessionSetters.setOffline).toHaveBeenCalledWith(false);
   });
 });

@@ -134,6 +134,7 @@ type PreferencesState = {
   saveTheme: (next: ThemeMode) => void;
   restorePreferences: () => Promise<void>;
   applyRemotePreferences: (prefs: UiPreferencesSnapshot) => void;
+  resetToDefaults: () => void;
 };
 
 function persistPreference(key: string, value: string) {
@@ -278,6 +279,27 @@ export function usePreferences(): PreferencesState {
     persistPreference(THEME_KEY, next);
   }, [setThemeMode]);
 
+  const resetToDefaults = useCallback(() => {
+    const defaultLang = sanitizeLanguage(detectDeviceLanguage());
+    const defaultScheme = DEFAULT_COLOR_SCHEME;
+    setLanguage(defaultLang);
+    setCurrencySymbol("$");
+    setAppFontPreference("inter");
+    setFontPreference("inter");
+    setAppFontSizeScale(DEFAULT_FONT_SIZE_SCALE);
+    setFontSizeScaleState(DEFAULT_FONT_SIZE_SCALE);
+    setColorScheme(defaultScheme);
+    setColorSchemeState(defaultScheme);
+    setThemeMode("dark");
+    setThemeState("dark");
+    persistPreference(LANGUAGE_KEY, defaultLang);
+    persistPreference(CURRENCY_SYMBOL_KEY, "$");
+    persistPreference(FONT_KEY, "inter");
+    persistPreference(FONT_SIZE_SCALE_KEY, String(DEFAULT_FONT_SIZE_SCALE));
+    persistPreference(COLOR_SCHEME_KEY, defaultScheme);
+    persistPreference(THEME_KEY, "dark");
+  }, [setColorScheme, setThemeMode]);
+
   return {
     language,
     currencySymbol,
@@ -296,5 +318,6 @@ export function usePreferences(): PreferencesState {
     saveTheme,
     restorePreferences,
     applyRemotePreferences,
+    resetToDefaults,
   };
 }

@@ -6,15 +6,25 @@ import { transactionToDraft } from "@/utils/transactions";
 import type { LanguageMode, Tag, Transaction, SummaryRow } from "@/types";
 
 export function combineTransactions(local: Transaction[], remote: Transaction[]): Transaction[] {
-  const merged = [...local, ...remote];
-  merged.sort((a, b) => {
+  // Deduplica por fingerprint estable (rowId+rawDate+createdAt) para evitar
+  // claves React duplicadas cuando local y remoto ya contienen el mismo registro
+  // tras el upload de fondo. Luego renumera para garantizar rowId únicos.
+  const seen = new Set<string>();
+  const unique: Transaction[] = [];
+  for (const tx of [...local, ...remote]) {
+    const k = `${tx.rowId}-${tx.rawDate}-${tx.createdAtMs ?? tx.createdAt ?? ""}`;
+    if (seen.has(k)) continue;
+    seen.add(k);
+    unique.push(tx);
+  }
+  unique.sort((a, b) => {
     const da = a.rawDate.localeCompare(b.rawDate);
     if (da !== 0) return da;
     const ca = a.createdAtMs ?? a.createdAt ?? "";
     const cb = b.createdAtMs ?? b.createdAt ?? "";
     return ca < cb ? -1 : ca > cb ? 1 : 0;
   });
-  return merged;
+  return unique.map((tx, idx) => ({ ...tx, rowId: idx + 2 }));
 }
 
 // ponytail: djb2-like hash para color determinístico de tags huérfanos.
@@ -115,6 +125,7 @@ export function scheduleBackgroundUpload(
 
 export async function handleOfflineAfterConnect(
   offlineTxs: Transaction[],
+  wasOffline: boolean,
   isNewSheet: boolean,
   sheetId: string,
   fin: {
@@ -138,7 +149,9 @@ export async function handleOfflineAfterConnect(
   mergePromptRef: { current: ((cfg: { localCount: number; remoteCount: number; onMerge: () => void; onRemoteOnly: () => void }) => void) | null },
   remoteStatsRef: { current: { count: number; txs: Transaction[] } },
 ): Promise<void> {
-  if (offlineTxs.length === 0) {
+  // Solo combina si viene de modo offline (datos locales sin cuenta). Al cambiar
+  // de cuenta estando ya logueado (wasOffline=false) debe cambiar directo.
+  if (!wasOffline || offlineTxs.length === 0) {
     sessionSetters.setConnectionStatus(null);
     sessionSetters.setOffline(false);
     return;
