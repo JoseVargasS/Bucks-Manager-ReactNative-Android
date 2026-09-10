@@ -27,8 +27,7 @@ export const Z_INDEX_DETAIL = 1001;
 export const Z_INDEX_SEARCH = 1002;
 
 // Splash uses raw constants because it renders before ThemeProvider mounts.
-// Dark shell #001a16 with lime #C8FF00 accent; light pastel is #F0EDE4.
-export const SPLASH_BG = "#001a16";
+export const SPLASH_BG = "#000000";
 export const SPLASH_SPINNER = "#C8FF00";
 export const SPLASH_TEXT = "#f0ede4";
 

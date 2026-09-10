@@ -274,12 +274,13 @@
           }
         }
       ],
+      "expo-video",
       [
         "expo-splash-screen",
         {
           "image": "./assets/splash-icon-bucks.png",
           "resizeMode": "contain",
-          "backgroundColor": "#001a16"
+          "backgroundColor": "#000000"
         }
       ]
     ],

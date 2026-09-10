@@ -1,9 +1,11 @@
-import { useEffect, useRef } from "react";
-import { Animated, Easing, View } from "react-native";
-import { SPLASH_BG, SPLASH_TEXT } from "@/theme/constants";
+import { useEffect, useRef, useState } from "react";
+import { Animated, Easing, StyleSheet, View } from "react-native";
+import { VideoView, useVideoPlayer } from "expo-video";
+import { SPLASH_BG } from "@/theme/constants";
 
-const ICON_SIZE = 160;
 const EXIT_DURATION = 220;
+// ponytail: video 3.1s, fallback timeout 3500ms. Use event + timeout, per-video logic if later swapped.
+const VIDEO_FALLBACK_MS = 3500;
 
 type Props = {
   exiting?: boolean;
@@ -11,98 +13,78 @@ type Props = {
 };
 
 export function StartupSplash({ exiting = false, onExitComplete }: Props) {
-  const icon = useRef(new Animated.Value(0)).current;
-  const text = useRef(new Animated.Value(0)).current;
+  const opacity = useRef(new Animated.Value(1)).current;
+  const [ended, setEnded] = useState(false);
+
+  const player = useVideoPlayer(require("../../../assets/splash.mp4"), (p) => {
+    p.loop = false;
+    p.muted = true;
+    p.play();
+  });
 
   useEffect(() => {
-    const iconIn = Animated.timing(icon, {
-      toValue: 1,
-      duration: 400,
-      easing: Easing.out(Easing.quad),
-      useNativeDriver: true,
-    });
-    const textIn = Animated.timing(text, {
-      toValue: 1,
-      duration: 350,
-      delay: 200,
-      easing: Easing.out(Easing.quad),
-      useNativeDriver: true,
-    });
-    iconIn.start();
-    textIn.start();
-    return () => {
-      iconIn.stop();
-      textIn.stop();
-    };
-  }, [icon, text]);
+    const sub = player.addListener("playToEnd", () => setEnded(true));
+    return () => sub.remove();
+  }, [player]);
 
   useEffect(() => {
-    if (!exiting) return;
-    icon.stopAnimation();
-    text.stopAnimation();
-    Animated.parallel([
-      Animated.timing(icon, {
-        toValue: 0,
-        duration: EXIT_DURATION,
-        easing: Easing.in(Easing.quad),
-        useNativeDriver: true,
-      }),
-      Animated.timing(text, {
-        toValue: 0,
-        duration: EXIT_DURATION,
-        easing: Easing.in(Easing.quad),
-        useNativeDriver: true,
-      }),
-    ]).start(({ finished }) => {
+    const t = setTimeout(() => setEnded(true), VIDEO_FALLBACK_MS);
+    return () => clearTimeout(t);
+  }, []);
+
+  const canExit = exiting && ended;
+
+  useEffect(() => {
+    if (!canExit) return;
+    Animated.timing(opacity, {
+      toValue: 0,
+      duration: EXIT_DURATION,
+      easing: Easing.in(Easing.quad),
+      useNativeDriver: true,
+    }).start(({ finished }) => {
       if (finished) onExitComplete?.();
     });
-  }, [exiting, icon, text, onExitComplete]);
+  }, [canExit, opacity, onExitComplete]);
 
-  // Safety net: if the exit animation never reports completion (e.g. the
-  // JS thread stalls while backgrounded), release the splash anyway.
   useEffect(() => {
-    if (!exiting) return;
-    const timer = setTimeout(() => onExitComplete?.(), 500);
-    return () => clearTimeout(timer);
-  }, [exiting, onExitComplete]);
+    if (!canExit) return;
+    const t = setTimeout(() => onExitComplete?.(), 600);
+    return () => clearTimeout(t);
+  }, [canExit, onExitComplete]);
 
   return (
-    <View
-      style={{
-        flex: 1,
-        backgroundColor: SPLASH_BG,
-        alignItems: "center",
-        justifyContent: "center",
-      }}
-    >
-      <Animated.Image
-        source={require("../../../assets/splash-icon-bucks.png")}
-        resizeMode="contain"
-        style={{
-          width: ICON_SIZE,
-          height: ICON_SIZE,
-          opacity: icon,
-          transform: [
-            { scale: icon.interpolate({ inputRange: [0, 1], outputRange: [0.85, 1] }) },
-          ],
-        }}
-      />
-      <Animated.Text
-        style={{
-          marginTop: 20,
-          color: SPLASH_TEXT,
-          fontFamily: "Inter",
-          fontWeight: "700",
-          fontSize: 24,
-          letterSpacing: -0.3,
-          opacity: text,
-          transform: [
-            { translateY: text.interpolate({ inputRange: [0, 1], outputRange: [12, 0] }) },
-          ],
-        }}
-      >
-        Quipu
-      </Animated.Text>
-    </View>
+    <Animated.View style={[styles.root, { opacity }]}>
+      <View style={styles.videoWrap}>
+        <VideoView
+          player={player}
+          style={styles.video}
+          contentFit="contain"
+          nativeControls={false}
+          allowsPictureInPicture={false}
+        />
+      </View>
+    </Animated.View>
   );
 }
+
+const VIDEO_W = 260;
+const VIDEO_H = (VIDEO_W * 904) / 720;
+
+const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: SPLASH_BG,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  videoWrap: {
+    width: VIDEO_W,
+    height: VIDEO_H,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  video: {
+    width: VIDEO_W,
+    height: VIDEO_H,
+  },
+});

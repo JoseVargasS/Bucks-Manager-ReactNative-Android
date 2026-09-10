@@ -28,6 +28,7 @@
     "expo-sharing": "~56.0.22",
     "expo-splash-screen": "~56.0.13",
     "expo-system-ui": "~56.0.5",
+    "expo-video": "~56.1.4",
     "react": "19.2.3",
     "react-native": "0.85.3",
     "react-native-svg": "15.15.5"
