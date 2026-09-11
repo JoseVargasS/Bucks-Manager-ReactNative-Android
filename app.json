@@ -15,10 +15,10 @@
       "package": "com.kuskalabs.quipu",
       "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
-        "backgroundColor": "#050E0B",
-        "foregroundImage": "./assets/android-icon-foreground-bucks.png",
-        "backgroundImage": "./assets/android-icon-background-bucks.png",
-        "monochromeImage": "./assets/android-icon-monochrome-bucks.png"
+        "backgroundColor": "#000000",
+        "foregroundImage": "./assets/icon-bucks.png",
+        "backgroundImage": "./assets/icon-bucks.png",
+        "monochromeImage": "./assets/icon-bucks.png"
       },
       "predictiveBackGestureEnabled": false,
       "intentFilters": [
@@ -39,7 +39,7 @@
       ]
     },
     "web": {
-      "favicon": "./assets/favicon-bucks.png"
+      "favicon": "./assets/icon-bucks.png"
     },
     "plugins": [
       "@react-native-google-signin/google-signin",

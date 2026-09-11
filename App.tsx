@@ -48,7 +48,6 @@ import {
 } from "@/types";
 
 import {
-  ANIM_SPLASH_DURATION,
   TAB_ORDER,
   COLOR_SCHEME_OPTIONS,
 } from "@/theme/constants";
@@ -83,7 +82,9 @@ import {
 } from "@/components/AppShell";
 
 preventAutoHideAsync().catch(() => undefined);
-setSplashOptions({ duration: ANIM_SPLASH_DURATION, fade: true });
+// ponytail: native fade disabled, JS StartupSplash (video) owns the 220ms exit;
+// windowBackground stays #000000 so early hideAsync still shows black, not plomo
+setSplashOptions({ duration: 0, fade: false });
 
 function AppContent() {
   const { colors, theme, colorScheme: accentColorScheme, toggleTheme } = useTheme();
@@ -261,7 +262,10 @@ function AppContent() {
 
   // Retain the splash mounted while it plays its exit fade.
   const [splashGone, setSplashGone] = useState(false);
-  const hideSplash = useCallback(() => setSplashGone(true), []);
+  const hideSplash = useCallback(() => {
+    hideAsync().catch(() => undefined);
+    setSplashGone(true);
+  }, []);
   const splashWanted =
     bootstrapping ||
     accountTransition ||
@@ -270,6 +274,21 @@ function AppContent() {
   useEffect(() => {
     if (splashWanted) setSplashGone(false);
   }, [splashWanted]);
+
+  // Black veil after video: first frame post-splash stays #000000 then fades
+  // 120ms hold + 280ms out, so there's no 1-frame plomo flash before dashboard
+  const postSplashBlack = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    if (!splashGone) return;
+    postSplashBlack.setValue(1);
+    Animated.timing(postSplashBlack, {
+      toValue: 0,
+      duration: 280,
+      delay: 120,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+  }, [splashGone, postSplashBlack]);
 
   // Wire remote history (sheet → local) once on mount.
   useEffect(() => {
@@ -906,6 +925,8 @@ function AppContent() {
         onSubmit={applySearchFilters}
       />
       </Animated.View>
+      {/* ponytail: black veil hides 1-frame plomo flash after video; fades 120+280ms */}
+      <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: "#000000", opacity: postSplashBlack }]} />
     </View>
   );
 }
