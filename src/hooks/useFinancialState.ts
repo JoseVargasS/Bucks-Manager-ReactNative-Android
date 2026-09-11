@@ -168,9 +168,11 @@ export function useFinancialState(tagsList: Tag[]): FinancialState {
     const today = new Date();
     let latest: Date | null = null;
     for (const tx of source) {
-      const date = new Date(tx.rawDate);
-      if (Number.isNaN(date.getTime()) || date > today) continue;
-      if (!latest || date.getTime() > latest.getTime()) latest = date;
+      const ms = tx.rawDateMs ?? Date.parse(tx.rawDate);
+      if (Number.isNaN(ms)) continue;
+      const date = new Date(ms);
+      if (date > today) continue;
+      if (!latest || ms > latest.getTime()) latest = date;
     }
     if (latest) {
       setMonth(latest.getMonth());

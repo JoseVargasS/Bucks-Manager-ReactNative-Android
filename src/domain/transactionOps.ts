@@ -173,20 +173,28 @@ export function applySearch(
   const start = filters.startDate ? Date.parse(`${filters.startDate}T00:00:00`) : null;
   const end = filters.endDate ? Date.parse(`${filters.endDate}T23:59:59`) : null;
 
+  // ponytail: cheap filters first; haystack/amount only built when needed.
+  // Sort stays here (newest-first before slice); visibleTransactions re-sorts ≤150 rows, negligible.
   return transactions
     .filter((tx) => {
-      const abs = Math.abs(Number(tx.amount) || 0);
-      const date = tx.rawDateMs ?? Date.parse(tx.rawDate);
-      const tagLabels = (tx.tags || [])
-        .map((id) => tagLabelsById[id] ?? id)
-        .join(" ");
-      const haystack = `${tx.detail} ${tx.type} ${tagLabels} ${(tx.lineItems || []).map((li) => li.description).join(" ")}`.toLowerCase();
-      if (text && !haystack.includes(text)) return false;
       if (tag && !(tx.tags || []).includes(tag)) return false;
-      if (min !== null && abs < min) return false;
-      if (max !== null && abs > max) return false;
-      if (start && date < start) return false;
-      if (end && date > end) return false;
+      if (min !== null || max !== null) {
+        const abs = Math.abs(Number(tx.amount) || 0);
+        if (min !== null && abs < min) return false;
+        if (max !== null && abs > max) return false;
+      }
+      if (start || end) {
+        const date = tx.rawDateMs ?? Date.parse(tx.rawDate);
+        if (start && date < start) return false;
+        if (end && date > end) return false;
+      }
+      if (text) {
+        const tagLabels = (tx.tags || [])
+          .map((id) => tagLabelsById[id] ?? id)
+          .join(" ");
+        const haystack = `${tx.detail} ${tx.type} ${tagLabels} ${(tx.lineItems || []).map((li) => li.description).join(" ")}`.toLowerCase();
+        if (!haystack.includes(text)) return false;
+      }
       return true;
     })
     .sort((a, b) => (b.rawDateMs ?? Date.parse(b.rawDate)) - (a.rawDateMs ?? Date.parse(a.rawDate)) || (b.createdAtMs ?? 0) - (a.createdAtMs ?? 0))
