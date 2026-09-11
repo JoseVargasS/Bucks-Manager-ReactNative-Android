@@ -684,12 +684,11 @@ function AppContent() {
   }, []);
 
   // ─── Render ──────────────────────────────────────────────────────
-  if (!splashGone) {
-    return <StartupSplash exiting={!splashWanted} onExitComplete={hideSplash} />;
-  }
-
+  // ponytail: keep shell mounted behind splash to avoid plomo flash; splash is overlay, veil bridges black→theme
+  const showSplash = !splashGone;
+  let mainContent: React.ReactNode;
   if (pinLoading) {
-    return (
+    mainContent = (
       <View style={[styles.safe, { backgroundColor: colors.bg }]}>
         <NativeStatusBar
           barStyle={theme === "dark" ? "light-content" : "dark-content"}
@@ -703,10 +702,8 @@ function AppContent() {
         />
       </View>
     );
-  }
-
-  if (pinEnabled && (!pinVerified || pinLockedRef.current)) {
-    return (
+  } else if (pinEnabled && (!pinVerified || pinLockedRef.current)) {
+    mainContent = (
       <View style={[styles.safe, { backgroundColor: colors.bg }]}>
         <NativeStatusBar
           barStyle={theme === "dark" ? "light-content" : "dark-content"}
@@ -724,10 +721,9 @@ function AppContent() {
         />
       </View>
     );
-  }
-
-  return (
-    <View style={[styles.safe, { backgroundColor: themeBg }]}>
+  } else {
+    mainContent = (
+      <View style={[styles.safe, { backgroundColor: themeBg }]}>
       <Animated.View
         pointerEvents="none"
         style={[StyleSheet.absoluteFill, themeDarkOverlay]}
@@ -925,8 +921,19 @@ function AppContent() {
         onSubmit={applySearchFilters}
       />
       </Animated.View>
-      {/* ponytail: black veil hides 1-frame plomo flash after video; fades 120+280ms */}
+    </View>
+    );
+  }
+
+  return (
+    <View style={[styles.safe, { backgroundColor: "#000000" }]}>
+      {mainContent}
       <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: "#000000", opacity: postSplashBlack }]} />
+      {showSplash && (
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: "#000000" }]} pointerEvents="auto">
+          <StartupSplash exiting={!splashWanted} onExitComplete={hideSplash} />
+        </View>
+      )}
     </View>
   );
 }
