@@ -3,7 +3,7 @@ import {
   preventAutoHideAsync,
   setOptions as setSplashOptions,
 } from "expo-splash-screen";
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import {
   Animated,
   View,
@@ -60,6 +60,7 @@ import { useThemeCrossfade } from "@/hooks/useThemeCrossfade";
 import { useDebouncedSheetWrites } from "@/hooks/useDebouncedSheetWrites";
 import { usePickerCallbacks } from "@/hooks/usePickerCallbacks";
 import { useTabNavigation } from "@/hooks/useTabNavigation";
+import { usePageProps } from "@/hooks/usePageProps";
 import { useBootstrap } from "@/hooks/useBootstrap";
 import { useAppShell } from "@/hooks/useAppShell";
 import { useConfirmCallbacks } from "@/hooks/useConfirmDialog";
@@ -416,137 +417,64 @@ function AppContent() {
     selectedRows,
   });
 
-  // ─── Memoised page props ─────────────────────────────────────────
-  const contentInset = headerTopInset + 62;
-
-  const dashboardProps = useMemo(() => ({
-    contentTopInset: contentInset,
+  // ─── Memoised page props (extracted hook) ────────────────────────
+  const { tabPageProps, headerProps } = usePageProps({
+    tab,
+    tabWidth,
+    headerTopInset,
+    headerFadeHeight,
+    historyCount: historyEntries.length,
     colors,
     theme,
     copy,
-    allTransactions: transactions,
+    transactions,
+    visibleTransactions: fin.visibleTransactions,
+    summaries,
+    freqIncome,
     tagsList,
     currencySymbol,
     month,
     year,
     availableYears: fin.availableYears,
     availableMonths: fin.availableMonths,
-    onSelectPeriod: selectPeriod,
-    goToday,
-    goPrevMonth,
-    goNextMonth,
-    onOpenDetail: handleTransactionPress,
-  }), [contentInset, colors, theme, copy, transactions, tagsList, currencySymbol, month, year, fin.availableYears, fin.availableMonths, selectPeriod, goToday, goPrevMonth, goNextMonth, handleTransactionPress]);
-
-  const expensesProps = useMemo(() => ({
-    contentTopInset: contentInset,
-    colors,
-    theme,
-    transactions: fin.visibleTransactions,
     searchActive,
     searchText: searchFilters.text,
     selectedRows,
-    currencySymbol,
-    copy,
-    month,
-    year,
-    availableYears: fin.availableYears,
-    availableMonths: fin.availableMonths,
-    onExitSearch: exitSearch,
-    onOpenDetail: handleTransactionPress,
-    onEdit: openEdit,
-    onDeleteSelected: requestDeleteSelected,
-    onMove: openMoveMenu,
-    onToggleSelection: fin.toggleSelection,
-    onLoadOlder: loadOlder,
-    onSelectPeriod: selectPeriod,
-    goToday,
-    goPrevMonth,
-    goNextMonth,
-    tagsList,
-  }), [contentInset, colors, theme, fin.visibleTransactions, searchActive, searchFilters.text, selectedRows, currencySymbol, copy, month, year, fin.availableYears, fin.availableMonths, exitSearch, handleTransactionPress, openEdit, requestDeleteSelected, openMoveMenu, fin.toggleSelection, loadOlder, selectPeriod, goToday, goPrevMonth, goNextMonth, tagsList]);
-
-  const summaryProps = useMemo(() => ({
-    contentTopInset: contentInset,
-    colors,
-    copy,
-    summaries,
-    transactions,
-    freqIncome,
-    availableYears: fin.availableYears,
-    currencySymbol,
-    tagsList,
-    theme,
-  }), [contentInset, colors, copy, summaries, transactions, freqIncome, fin.availableYears, currencySymbol, tagsList, theme]);
-
-  const settingsProps = useMemo(() => ({
-    contentTopInset: contentInset,
-    colors,
-    copy,
     language,
     accountInfo,
-    currencySymbol,
     fontPreference,
     fontSizeScale,
     colorSchemeLabel,
     pinEnabled,
-    tagsCount: tagsList.length,
-    onOpenLanguage: openLanguagePicker,
-    onOpenCurrency: openCurrencyPicker,
-    onOpenFont: openFontPicker,
-    onOpenFontSize: openFontSizePicker,
-    onOpenColorScheme: openColorSchemePicker,
-    onOpenPin: handlePinOpen,
-    onOpenTags: openTagEditor,
-    onSwitch: openAccountManager,
-    onDisconnect: requestDisconnectGoogle,
-    onOpenExport: openExport,
-  }), [contentInset, colors, copy, language, accountInfo, currencySymbol, fontPreference, fontSizeScale, colorSchemeLabel, pinEnabled, tagsList.length, openLanguagePicker, openCurrencyPicker, openFontPicker, openFontSizePicker, openColorSchemePicker, handlePinOpen, openTagEditor, openAccountManager, requestDisconnectGoogle, openExport]);
-
-  const loadingBarProps = useMemo(() => ({
-    visible: Boolean(loading || (syncStatusText && !pendingSync && !isSyncing)),
-    syncing: loading || isSyncing,
-    cardColor: colors.card,
-    primaryColor: colors.primary,
-    mutedColor: colors.muted,
-    text: syncStatusText || copy.syncing,
-  }), [loading, syncStatusText, pendingSync, isSyncing, colors.card, colors.primary, colors.muted, copy.syncing]);
-
-  const tabPageProps = useMemo(() => ({
-    tabWidth,
-    dashboard: dashboardProps,
-    expenses: expensesProps,
-    summary: summaryProps,
-    settings: settingsProps,
-    loadingBar: loadingBarProps,
-  }), [tabWidth, dashboardProps, expensesProps, summaryProps, settingsProps, loadingBarProps]);
-
-  const headerProps = useMemo(
-    () => ({
-      tab,
-      bg: colors.bg,
-      isDark: theme === "dark",
-      headerTopInset,
-      headerFadeHeight,
-      historyTint: historyEntries.length ? colors.primary : colors.muted,
-      onToggleTheme: toggleThemeWithCrossfade,
-      onOpenHistory: openHistory,
-      onOpenSearch: openSearch,
-      copy,
-    }),
-    [
-      tab,
-      colors,
-      theme,
-      headerTopInset,
-      headerFadeHeight,
-      historyEntries.length,
-      toggleThemeWithCrossfade,
-      openHistory,
-      openSearch,
-      copy,
-    ],
-  );
+    loading,
+    syncStatusText,
+    pendingSync,
+    isSyncing,
+    selectPeriod,
+    goToday,
+    goPrevMonth,
+    goNextMonth,
+    loadOlder,
+    handleTransactionPress,
+    toggleSelection: fin.toggleSelection,
+    exitSearch,
+    openEdit,
+    requestDeleteSelected,
+    openMoveMenu,
+    openSearch,
+    openHistory,
+    openExport,
+    openLanguagePicker,
+    openCurrencyPicker,
+    openFontPicker,
+    openFontSizePicker,
+    openColorSchemePicker,
+    handlePinOpen,
+    openTagEditor,
+    openAccountManager,
+    requestDisconnectGoogle,
+    toggleThemeWithCrossfade,
+  });
 
   // ─── Shell lifecycle: splash, sheet wiring, PIN gate, resume ──
   const { splashWanted, splashVisible, hideSplash, postSplashBlack, unlockAnim } = useAppShell({
