@@ -4,8 +4,8 @@ import { VideoView, useVideoPlayer } from "expo-video";
 import { SPLASH_BG } from "@/theme/constants";
 
 const EXIT_DURATION = 220;
-// ponytail: video 1.78s, fallback 2300ms + playToEnd listener
-const VIDEO_FALLBACK_MS = 2300;
+// ponytail: video ~1.0s, fallback 1600ms + playToEnd listener
+const VIDEO_FALLBACK_MS = 1600;
 
 type Props = {
   exiting?: boolean;
