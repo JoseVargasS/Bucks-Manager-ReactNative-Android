@@ -2,25 +2,25 @@
 
 ## Typography
 
-- **Default font**: DM Sans. Additional font options (Inter, Roboto, JetBrains Mono) configurable in Settings.
+- **Default font**: Inter. Additional font options configurable in Settings (14 families).
 - **Font weights**: 700 for titles/primary amounts, 600 for list labels, 500 for table headers, 400 for body text.
 - Avoid `fontWeight: "900"` as default.
 
 ## Color
 
-- **Default scheme (cyprus)**: dark `#004741` Cyprus green shell with `#9ed9c8` sand-mint primary. Light `#F0EDE4` Sand bg with Cyprus as primary. Botanical-museum, the calmest and most universal green in the catalogue.
-- **11 accent schemes**: cyprus, ocean, vulcanico, tiffany, charcoalline, truepink, silver, milky, sky, turmeric, bridal. Each has dark/light variants and redeclares every palette token (including `periodBg` and `text`) so scheme switches never leak the base value.
+- **Default scheme (cyprus)**: dark `#003530` Cyprus green shell with `#C8FF00` lime primary. Light `#F0EDE4` Sand bg with `#4A6500` olive primary. Botanical-museum, the calmest and most universal green in the catalogue.
+- **8 accent schemes** (kept maximally distinct so switching themes shows a real difference): cyprus, vulcanico, charcoalline, truepink, silver, sky, bridal, obsidian. Each has dark/light variants and redeclares every scheme token so scheme switches never leak the base value.
 - **Semantic colors**: Green for income, red for expense. Hue is tuned per scheme so the financial signal stays recognisable while harmonising with the accent.
 - **Palette resolution**: `getPalette` memoized per `(theme, scheme)` pair in a small LRU.
 - **WCAG AA**: every scheme's text-vs-bg and primary-vs-bg contrast is verified ≥ 4.5:1; semantic colors vs their card surface ≥ 4.5:1 (or ≥ 4.8:1 for non-text affordances on the warmer schemes).
 
 ## Component Tokens
 
-- **Card radius**: 14px (`borderRadius: 14`).
+- **Radii** (`src/theme/radii.ts`): sm 8 (chips/small buttons), md 10 (inputs/selects), lg 12 (cards/rows), xl 14 (stat cards/modals/settings groups), 2xl 20 (main transaction modal), pill 999 (circular).
 - **Card surfaces**: Soft, minimal outer borders.
 - **Borders**: Only on inputs, selects, destructive/secondary buttons, and internal row separators. Avoid border-heavy cards.
 - **Tabular numbers**: For finance values where React Native supports `fontVariant: ["tabular-nums"]`.
-- **OptionSheet (bottom sheet)**: 16px top radius, header with title and minimal close X (no background), rows without hairline dividers. Selected row uses a shaded background (softBg → tone+20alpha → primarySoft) instead of a checkmark. Options with an explicit `tone` (transaction types, color schemes) show coloured text for all items; unselected items with no tone use neutral `colors.text`.
+- **OptionSheet (bottom sheet)**: 20px top radius (`RADIUS["2xl"]`), header with title and minimal close X (no background), rows without hairline dividers. Selected row uses a shaded background (softBg → tone+20alpha → primarySoft) instead of a checkmark. Options with an explicit `tone` (transaction types, color schemes) show coloured text for all items; unselected items with no tone use neutral `colors.text`.
 
 ## Layout
 
@@ -40,7 +40,7 @@ Do not merge or bundle these contexts.
 
 ## Theme Crossfade
 
-- Shell background and `HeaderShell` animate `backgroundColor` over 180ms via `Animated.Value`.
+- Shell background snaps over ~20ms via two opacity overlays (dark/light) over a solid base, `useNativeDriver: false` on purpose — native driver races ahead of the palette commit (full app re-render) and shows old-theme content over the new background.
 - `HeaderActionButton` fires on `onPressIn` (not release) so the toggle lands while the finger is still down.
 - Feedback animation: 60ms in, 60ms out.
 

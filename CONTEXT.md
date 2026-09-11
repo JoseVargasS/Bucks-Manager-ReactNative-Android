@@ -81,7 +81,7 @@ The theme is split into three contexts to keep rerenders scoped to what actually
 - `PaletteContext` exposes the resolved `Palette`.
 - `useTheme()` remains available for callers that genuinely need everything; new code should prefer the split hooks.
 
-The toggle animates the shell and `HeaderShell` background through an `Animated.Value` interpolated over 180ms. The two SVG fades (`HeaderFade`, `HeaderTitleFade`) snap because they accept a string colour. `HeaderActionButton` fires `onPress` on `onPressIn` so the toggle lands while the finger is still down. `getPalette` memoizes the result for each `(theme, scheme)` pair in a small LRU.
+The toggle snaps the shell and `HeaderShell` background through two opacity overlays driven by an `Animated.Value` over ~20ms on the native driver (a long fade with an instant palette swap shows both themes at once). The two SVG fades (`HeaderFade`, `HeaderTitleFade`) snap because they accept a string colour. `HeaderActionButton` fires `onPress` on `onPressIn` so the toggle lands while the finger is still down. `getPalette` memoizes the result for each `(theme, scheme)` pair in a small LRU.
 
 ## Hot Paths
 

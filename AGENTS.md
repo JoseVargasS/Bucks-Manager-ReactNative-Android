@@ -116,7 +116,7 @@ Do not re-merge these contexts. Do not introduce a global "settings" context tha
 
 ### Theme crossfade
 
-- The shell background and the `HeaderShell` overlay animate `backgroundColor` from light to dark through an `Animated.Value` interpolated over 180ms when the toggle is pressed.
+- The shell background snaps through two opacity overlays (dark/light) over a solid base, driven by an `Animated.Value` over ~20ms on the JS driver when the toggle is pressed (native driver races ahead of the palette commit and shows both themes at once; a long fade does the same).
 - The shell root and `HeaderShell` are `Animated.View`. The two SVG fades (`HeaderFade`, `HeaderTitleFade`) keep their snap-into-place behavior because they receive a string color prop and cannot interpolate.
 - `HeaderActionButton` fires `onPress` on `onPressIn` (not on release) so the toggle lands while the finger is still down. Its feedback animation is 60ms in, 60ms out.
 - `getPalette` memoizes the result for each `(theme, scheme)` pair in a small LRU. Do not remove that cache.
