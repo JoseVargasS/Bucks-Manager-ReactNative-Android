@@ -32,7 +32,7 @@ import {
   findOrCreateSpreadsheet,
   scheduleBackgroundUpload,
   handleOfflineAfterConnect,
-} from "@/hooks/connectFlow";
+} from "@/domain/connectFlow";
 
 import type { Transaction, Tag } from "@/types";
 

@@ -26,7 +26,7 @@ import {
   handleOfflineAfterConnect,
   findOrCreateSpreadsheet,
   type OfflineConnectDeps,
-} from "./connectFlow";
+} from "@/domain/connectFlow";
 
 // ponytail: module-level promise chain serializes every Sheets mutation so a
 // fast edit cannot race with the reconcile read of an earlier edit.

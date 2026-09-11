@@ -20,7 +20,7 @@ import { Insight, Legend, CompositionContent } from "@/components/screens/Summar
 import { SummaryHeader, SummaryStickyHeader } from "@/components/screens/SummaryViewHeader";
 import { SummaryMonthlyTable } from "@/components/screens/SummaryMonthlyTable";
 import { SummaryKpiSection } from "@/components/screens/SummaryKpiSection";
-import { useSummaryState } from "@/components/screens/useSummaryState";
+import { useSummaryState } from "@/hooks/useSummaryState";
 import { RADIUS } from "@/theme/radii";
 
 export const SummaryView = memo(function SummaryView({ colors, copy, summaries, transactions, freqIncome, tagsList, availableYears, topInset, currencySymbol, theme }: {
