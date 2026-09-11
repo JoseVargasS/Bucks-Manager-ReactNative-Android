@@ -95,15 +95,19 @@ export function useThemeCrossfade(
     const goingDark = theme !== "dark";
     const target = goingDark ? 1 : 0;
     themeAnimRef.current?.stop();
+    lastAnimatedThemeRef.current = goingDark ? "dark" : "light";
     themeAnimRef.current = Animated.timing(themeProgress, {
       toValue: target,
-      duration: 320,
+      // ponytail: 20ms snap (was 320ms) — a long fade with an instant palette
+      // swap leaves both themes on screen at once (theme ghosting)
+      duration: 20,
       easing: Easing.out(Easing.cubic),
-      // ponytail: opacity-only overlays, safe on native driver (no color interpolation)
-      useNativeDriver: true,
+      // ponytail: JS driver on purpose — native driver races ahead of the
+      // palette commit (full app re-render) and shows old-theme content over
+      // the new background (theme ghosting). Was native in c56d1ac, reverted.
+      useNativeDriver: false,
     });
     themeAnimRef.current.start();
-    lastAnimatedThemeRef.current = goingDark ? "dark" : "light";
     toggleTheme();
     saveTheme(goingDark ? "dark" : "light");
   }, [theme, themeProgress, toggleTheme, saveTheme]);
