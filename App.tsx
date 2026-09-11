@@ -1,14 +1,11 @@
 import { BlurView } from "expo-blur";
 import {
-  hideAsync,
   preventAutoHideAsync,
   setOptions as setSplashOptions,
 } from "expo-splash-screen";
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Animated,
-  AppState,
-  Easing,
   View,
   StatusBar as NativeStatusBar,
 } from "react-native";
@@ -65,11 +62,14 @@ import { useDebouncedSheetWrites } from "@/hooks/useDebouncedSheetWrites";
 import { usePickerCallbacks } from "@/hooks/usePickerCallbacks";
 import { useTabNavigation } from "@/hooks/useTabNavigation";
 import { useBootstrap } from "@/hooks/useBootstrap";
+import { useSplashGate } from "@/hooks/useSplashGate";
+import { usePinGate } from "@/hooks/usePinGate";
+import { useForegroundSync } from "@/hooks/useForegroundSync";
 import { useConfirmCallbacks } from "@/hooks/useConfirmDialog";
 import { useTagSyncEffects } from "@/hooks/useTagSync";
 import { useHistoryPanel } from "@/hooks/useHistoryPanel";
 import { useTransactionActions } from "@/hooks/useTransactionActions";
-import { getErrorMessage, isAuthError, logError } from "@/utils/errorHandler";
+import { getErrorMessage, isAuthError } from "@/utils/errorHandler";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { ConnectBanner } from "@/components/ui/ConnectBanner";
 import { ConnectingOverlay } from "@/components/ui/ConnectingOverlay";
@@ -260,35 +260,13 @@ function AppContent() {
     restorePinState,
   );
 
-  // Retain the splash mounted while it plays its exit fade.
-  const [splashGone, setSplashGone] = useState(false);
-  const hideSplash = useCallback(() => {
-    hideAsync().catch(() => undefined);
-    setSplashGone(true);
-  }, []);
-  const splashWanted =
+  const splashWanted = Boolean(
     bootstrapping ||
     accountTransition ||
     rehydratingCache ||
-    (accessToken && isFirstRemoteLoad && !hasLocalData);
-  useEffect(() => {
-    if (splashWanted) setSplashGone(false);
-  }, [splashWanted]);
-
-  // Black veil after video: first frame post-splash stays #000000 then fades
-  // 120ms hold + 280ms out, so there's no 1-frame plomo flash before dashboard
-  const postSplashBlack = useRef(new Animated.Value(1)).current;
-  useEffect(() => {
-    if (!splashGone) return;
-    postSplashBlack.setValue(1);
-    Animated.timing(postSplashBlack, {
-      toValue: 0,
-      duration: 280,
-      delay: 120,
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: true,
-    }).start();
-  }, [splashGone, postSplashBlack]);
+    (accessToken && isFirstRemoteLoad && !hasLocalData),
+  );
+  const { splashGone, hideSplash, postSplashBlack } = useSplashGate(splashWanted);
 
   // Wire remote history (sheet → local) once on mount.
   useEffect(() => {
@@ -607,81 +585,17 @@ function AppContent() {
     ],
   );
 
-  // ─── Unlock transition ─────────────────────────────────────────
-  // Content is gated only while the PIN screen actually blocks it. usePin sets
-  // pinVerified to false whenever the app backgrounds — even with PIN
-  // disabled — so keying the unlock animation off pinVerified alone would leave
-  // the content invisible (black screen) on return.
-  const pinGated = pinEnabled && !pinVerified;
-  const unlockAnim = useRef(new Animated.Value(pinGated ? 0 : 1)).current;
-  useEffect(() => {
-    if (pinGated) {
-      unlockAnim.setValue(0);
-    } else {
-      Animated.timing(unlockAnim, {
-        toValue: 1,
-        duration: 380,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: false,
-      }).start();
-    }
-  }, [pinGated, unlockAnim]);
-
-  // ─── Foreground resume ─────────────────────────────────────────
-  // The screen can come back blank when the app resumes: the native splash
-  // may still be up, or an interrupted unlock/toggle animation may have left
-  // content invisible. The token refresh is real but heavy (a full sheet
-  // read + applyFinancialState), so it is debounced well past the user's
-  // first interaction to avoid stealing the JS thread on resume.
-  const onForegroundRef = useRef<() => void>(() => {});
-  const foregroundReloadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const accessTokenRef = useRef(accessToken);
-  accessTokenRef.current = accessToken;
-  const spreadsheetIdRefForFg = useRef(spreadsheetId);
-  spreadsheetIdRefForFg.current = spreadsheetId;
-  const splashGoneRef = useRef(splashGone);
-  splashGoneRef.current = splashGone;
-  const pinGatedRef = useRef(pinGated);
-  pinGatedRef.current = pinGated;
-  const reloadFromGoogleRef = useRef(syncApi.reloadFromGoogle);
-  reloadFromGoogleRef.current = syncApi.reloadFromGoogle;
-  useEffect(() => {
-    onForegroundRef.current = () => {
-      if (splashGoneRef.current) hideAsync().catch(() => undefined);
-      unlockAnim.stopAnimation();
-      unlockAnim.setValue(pinGatedRef.current ? 0 : 1);
-      snapThemeProgress();
-      const token = accessTokenRef.current;
-      const sheetId = spreadsheetIdRefForFg.current;
-      if (token && sheetId) {
-        if (foregroundReloadTimerRef.current)
-          clearTimeout(foregroundReloadTimerRef.current);
-        foregroundReloadTimerRef.current = setTimeout(() => {
-          // Usa refs actuales para no disparar reload con sheetId viejo tras A→B
-          const freshToken = accessTokenRef.current;
-          const freshSheetId = spreadsheetIdRefForFg.current;
-          if (!freshToken || !freshSheetId) return;
-          if (freshSheetId !== sheetId) return;
-          reloadFromGoogleRef.current(freshToken, freshSheetId, false)
-            .catch((error) => logError(error, "foreground:reload"));
-        }, 1500);
-      }
-    };
+  // ─── Unlock transition + foreground resume (extracted hooks) ──
+  const { pinGated, unlockAnim } = usePinGate(pinEnabled, pinVerified);
+  useForegroundSync({
+    accessToken,
+    spreadsheetId,
+    splashGone,
+    pinGated,
+    unlockAnim,
+    snapThemeProgress,
+    reloadFromGoogle: syncApi.reloadFromGoogle,
   });
-  useEffect(() => {
-    const sub = AppState.addEventListener("change", (next) => {
-      if (next === "active") onForegroundRef.current();
-      if (next !== "active" && foregroundReloadTimerRef.current) {
-        clearTimeout(foregroundReloadTimerRef.current);
-        foregroundReloadTimerRef.current = null;
-      }
-    });
-    return () => {
-      sub.remove();
-      if (foregroundReloadTimerRef.current)
-        clearTimeout(foregroundReloadTimerRef.current);
-    };
-  }, []);
 
   // ─── Render ──────────────────────────────────────────────────────
   // ponytail: keep shell mounted behind splash to avoid plomo flash; splash is overlay, veil bridges black→theme
