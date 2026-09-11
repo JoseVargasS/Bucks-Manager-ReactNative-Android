@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { View } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { type Palette } from "@/theme/colors";
@@ -5,7 +6,7 @@ import { type MaterialIconName } from "@/types";
 import { Text } from "@/components/ui/AppText";
 import { RADIUS } from "@/theme/radii";
 
-export function Insight({ label, value, icon, color, colors }: { label: string; value: string; icon: MaterialIconName; color: string; colors: Palette }) {
+export const Insight = memo(function Insight({ label, value, icon, color, colors }: { label: string; value: string; icon: MaterialIconName; color: string; colors: Palette }) {
   return (
     <View style={{ flex: 1, minWidth: 0, backgroundColor: colors.input, borderRadius: RADIUS.lg, padding: 12 }}>
       <MaterialCommunityIcons name={icon} size={18} color={color} />
@@ -13,18 +14,18 @@ export function Insight({ label, value, icon, color, colors }: { label: string; 
       <Text numberOfLines={1} style={{ color: colors.text, fontSize: 15, fontWeight: "700", marginTop: 3, fontVariant: ["tabular-nums"] }}>{value}</Text>
     </View>
   );
-}
+});
 
-export function Legend({ color, label, colors }: { color: string; label: string; colors: Palette }) {
+export const Legend = memo(function Legend({ color, label, colors }: { color: string; label: string; colors: Palette }) {
   return (
     <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
       <View style={{ width: 8, height: 8, borderRadius: 3, backgroundColor: color }} />
       <Text style={{ color: colors.muted, fontSize: 11, fontWeight: "600" }}>{label}</Text>
     </View>
   );
-}
+});
 
-export function CompositionContent({ items, total, colors, format }: {
+export const CompositionContent = memo(function CompositionContent({ items, total, colors, format }: {
   items: { label: string; value: number; color: string }[];
   total: number;
   colors: Palette;
@@ -50,4 +51,4 @@ export function CompositionContent({ items, total, colors, format }: {
       </View>
     </>
   );
-}
+});

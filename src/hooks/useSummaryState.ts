@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { Animated } from "react-native";
 import {
   aggregateExpensesByTag, calculateSummaries, detectNonFreqSpike,
-  formatMoney, groupSummariesByYear, MONTH_NAMES, type PieSlice,
+  formatMoney, getTransactionMonthIndex, getTransactionYear,
+  groupSummariesByYear, MONTH_NAMES, type PieSlice,
   type SavingsTrendMode,
 } from "@/domain/bucksLogic";
 import { UI_MONTH_NAMES, type UiCopy } from "@/i18n";
@@ -51,18 +52,14 @@ export function useSummaryState({
 
   const yearTransactions = useMemo(() => {
     if (isAllYears) return transactions;
-    return transactions.filter((tx) => {
-      const d = tx.rawDateMs != null ? new Date(tx.rawDateMs) : new Date(tx.rawDate);
-      return d.getFullYear() === filterYear;
-    });
+    return transactions.filter((tx) => getTransactionYear(tx) === filterYear);
   }, [transactions, isAllYears, filterYear]);
 
   const monthTransactionsMap = useMemo(() => {
     if (isAllYears) return new Map<string, Transaction[]>();
     const map = new Map<string, Transaction[]>();
     yearTransactions.forEach((tx) => {
-      const d = tx.rawDateMs != null ? new Date(tx.rawDateMs) : new Date(tx.rawDate);
-      const key = `${d.getMonth()}`;
+      const key = `${getTransactionMonthIndex(tx)}`;
       const list = map.get(key) || [];
       list.push(tx);
       map.set(key, list);
@@ -110,7 +107,10 @@ export function useSummaryState({
     { label: copy.freqExpenseFull, value: filtered.reduce((sum, row) => sum + Math.abs(row.freqExpense), 0), color: colors.expense },
     { label: copy.nonFreqExpenseFull, value: filtered.reduce((sum, row) => sum + Math.abs(row.nonFreqExpense), 0), color: colors.warn },
   ], [filtered, copy.freqExpenseFull, copy.nonFreqExpenseFull, colors.expense, colors.warn]);
-  const fm = (value: number) => formatMoney(value, currencySymbol, 0).replace("+ ", "");
+  const fm = useCallback(
+    (value: number) => formatMoney(value, currencySymbol, 0).replace("+ ", ""),
+    [currencySymbol],
+  );
 
   const handleMonthPress = useCallback((row: SummaryRow) => {
     if (isAllYears) return;

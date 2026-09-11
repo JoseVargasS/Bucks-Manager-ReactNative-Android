@@ -27,7 +27,7 @@ export default tseslint.config(
       "react-hooks/exhaustive-deps": "warn",
       "react-refresh/only-export-components": [
         "warn",
-        { allowConstantExport: true, allowExportNames: ["useColors", "useTheme", "useAppFontFamily", "getAppFontFamily", "setAppFontPreference", "emptySearchFilters", "SearchModalHandle"] },
+        { allowConstantExport: true, allowExportNames: ["useColors", "useTheme", "useAppFontFamily", "getAppFontFamily", "setAppFontPreference", "SearchModalHandle"] },
       ],
       "@typescript-eslint/no-unused-vars": [
         "error",

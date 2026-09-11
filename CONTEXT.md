@@ -18,6 +18,7 @@ Quipu is an Expo/React Native client with no custom backend. Google Sign-In supp
 - **`useSplashGate`** — owns `splashGone` (logic) vs `splashVisible` (mount: overlay unmounts only after the veil fade ends) plus the black `postSplashBlack` veil (120ms hold + 280ms fade). Native modals (currency, merge) gate on `!splashVisible` because RN `Modal` paints above the splash overlay.
 - **`usePinGate`** — owns `pinGated` and the 380ms unlock animation.
 - **`useForegroundSync`** — owns the `AppState` resume listener and the debounced 1500ms sheet reload.
+- **`useAppShell`** — owns the shell lifecycle in one place: `splashWanted` + `useSplashGate`, the three sheet→local wires (history, UI preferences, merge prompt) with honest deps, `usePinGate`, and `useForegroundSync`. `App.tsx` only consumes its return.
 - **`useSummaryState`** — lives in `src/hooks/` (used by `SummaryView`); `connectFlow.ts` lives in `src/domain/` (pure offline-first functions, not a hook).
 - **`useAppModals`** — owns the modal refs (transaction, detail, search, option sheet) and the App-level modal state (confirm dialog and merge prompt), plus pass-through of secondary modal visibility. Returns stable `{ refs, openers, closers, state }`.
 - **`useDerivedSyncStatus`** — derives the sync-status text from `authError`/`syncError`/`hasLocalData`/`pendingSync`/`isSyncing`.

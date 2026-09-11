@@ -35,9 +35,22 @@ export function calculateMonthSummary(
   return row;
 }
 
+function resolveTxDate(tx: Transaction): Date {
+  return tx.rawDateMs != null ? new Date(tx.rawDateMs) : parseLocalDate(tx.rawDate);
+}
+
 export function getTransactionMonthKey(tx: Transaction): string {
-  const date = tx.rawDateMs != null ? new Date(tx.rawDateMs) : parseLocalDate(tx.rawDate);
-  return getMonthYear(date);
+  return getMonthYear(resolveTxDate(tx));
+}
+
+/** Single source for per-transaction calendar parts (use instead of inline `new Date`). */
+export function getTransactionYear(tx: Transaction): number {
+  return resolveTxDate(tx).getFullYear();
+}
+
+/** Single source for per-transaction calendar parts (use instead of inline `new Date`). */
+export function getTransactionMonthIndex(tx: Transaction): number {
+  return resolveTxDate(tx).getMonth();
 }
 
 export function recalculateSummariesForMonths(

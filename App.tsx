@@ -40,7 +40,6 @@ const TagEditorModal = lazy(
   () => import("@/components/modals/TagEditorModal").then((m) => ({ default: m.TagEditorModal })),
 );
 import {
-  type HistoryEntry,
   type Tag,
 } from "@/types";
 
@@ -62,9 +61,7 @@ import { useDebouncedSheetWrites } from "@/hooks/useDebouncedSheetWrites";
 import { usePickerCallbacks } from "@/hooks/usePickerCallbacks";
 import { useTabNavigation } from "@/hooks/useTabNavigation";
 import { useBootstrap } from "@/hooks/useBootstrap";
-import { useSplashGate } from "@/hooks/useSplashGate";
-import { usePinGate } from "@/hooks/usePinGate";
-import { useForegroundSync } from "@/hooks/useForegroundSync";
+import { useAppShell } from "@/hooks/useAppShell";
 import { useConfirmCallbacks } from "@/hooks/useConfirmDialog";
 import { useTagSyncEffects } from "@/hooks/useTagSync";
 import { useHistoryPanel } from "@/hooks/useHistoryPanel";
@@ -260,34 +257,6 @@ function AppContent() {
     restorePinState,
   );
 
-  const splashWanted = Boolean(
-    bootstrapping ||
-    accountTransition ||
-    rehydratingCache ||
-    (accessToken && isFirstRemoteLoad && !hasLocalData),
-  );
-  const { splashVisible, hideSplash, postSplashBlack } = useSplashGate(splashWanted);
-
-  // Wire remote history (sheet → local) once on mount.
-  useEffect(() => {
-    syncApi.wireRemoteHistory((sheetHistory) => {
-      setHistoryEntries((prev) => {
-        const byId = new Map<string, HistoryEntry>();
-        for (const e of prev) byId.set(e.id, e);
-        for (const e of sheetHistory) byId.set(e.id, e);
-        return Array.from(byId.values());
-      });
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Wire the remote-applier (sheet → local) once on mount.
-  useEffect(() => {
-    syncApi.wireRemoteUiPreferences(applyRemotePreferences);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [applyRemotePreferences]);
-
-  // ─── Merge prompt ─────────────────────────────────────────────────
   // ─── Export ──────────────────────────────────────────────────────
   const {
     exportVisible,
@@ -313,12 +282,6 @@ function AppContent() {
     openTagEditor,
     closeTagEditor,
   });
-
-  // Wire the merge prompt (sheet → local) once on mount.
-  useEffect(() => {
-    syncApi.wireMergePrompt(modals.openers.openMergePrompt);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   // ─── Debounced sheet writes ──────────────────────────────────────
   useDebouncedSheetWrites(
@@ -585,16 +548,25 @@ function AppContent() {
     ],
   );
 
-  // ─── Unlock transition + foreground resume (extracted hooks) ──
-  const { pinGated, unlockAnim } = usePinGate(pinEnabled, pinVerified);
-  useForegroundSync({
+  // ─── Shell lifecycle: splash, sheet wiring, PIN gate, resume ──
+  const { splashWanted, splashVisible, hideSplash, postSplashBlack, unlockAnim } = useAppShell({
+    bootstrapping,
+    accountTransition,
+    rehydratingCache,
     accessToken,
     spreadsheetId,
-    splashGone: !splashVisible,
-    pinGated,
-    unlockAnim,
+    isFirstRemoteLoad,
+    hasLocalData,
+    pinEnabled,
+    pinVerified,
     snapThemeProgress,
     reloadFromGoogle: syncApi.reloadFromGoogle,
+    wireRemoteHistory: syncApi.wireRemoteHistory,
+    wireRemoteUiPreferences: syncApi.wireRemoteUiPreferences,
+    wireMergePrompt: syncApi.wireMergePrompt,
+    applyRemotePreferences,
+    setHistoryEntries,
+    openMergePrompt: modals.openers.openMergePrompt,
   });
 
   // ─── Render ──────────────────────────────────────────────────────

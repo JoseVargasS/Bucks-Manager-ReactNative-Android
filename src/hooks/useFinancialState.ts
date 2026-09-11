@@ -12,10 +12,7 @@ import {
 } from "@/utils/transactions";
 import { saveFinancialCache, saveOfflineCache } from "@/data/localCache";
 import { getPeriodRange, getAvailableMonthsForYear } from "@/utils/helpers";
-import {
-  emptySearchFilters,
-} from "@/components/modals/SearchModal";
-import type { SearchFilters, SummaryRow, Tag, Transaction } from "@/types";
+import { emptySearchFilters, type SearchFilters, type SummaryRow, type Tag, type Transaction } from "@/types";
 
 function renumberTransactions(items: Transaction[]) {
   return items.map((item, idx) => ({ ...item, rowId: idx + 2 }));

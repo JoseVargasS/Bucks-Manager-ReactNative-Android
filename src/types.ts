@@ -76,6 +76,15 @@ export type SearchFilters = {
   endDate: string;
 };
 
+export const emptySearchFilters: SearchFilters = {
+  text: "",
+  tag: "",
+  minAmount: "",
+  maxAmount: "",
+  startDate: "",
+  endDate: "",
+};
+
 export type SheetCandidate = {
   id: string;
   name: string;

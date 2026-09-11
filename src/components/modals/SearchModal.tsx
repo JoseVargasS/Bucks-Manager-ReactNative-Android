@@ -8,22 +8,13 @@ import { searchModalStyles } from "@/components/modals/SearchModal.styles";
 const styles = { ...base, ...searchModalStyles };
 import { type Palette } from "@/theme/colors";
 import { Z_INDEX_SEARCH } from "@/theme/constants";
-import { type SearchFilters, type Tag } from "@/types";
+import { emptySearchFilters, type SearchFilters, type Tag } from "@/types";
 import { SearchPage } from "@/components/screens/SearchPage";
 import { type UiCopy } from "@/i18n";
 import { useModalTransition } from "@/components/ui/useModalTransition";
 import { Text } from "@/components/ui/AppText";
 
 export type SearchModalHandle = { open: (filters: SearchFilters) => void };
-
-export const emptySearchFilters: SearchFilters = {
-  text: "",
-  tag: "",
-  minAmount: "",
-  maxAmount: "",
-  startDate: "",
-  endDate: "",
-};
 
 export const SearchModal = forwardRef<SearchModalHandle, {
   colors: Palette; copy: UiCopy; currencySymbol: string; tags: Tag[];
