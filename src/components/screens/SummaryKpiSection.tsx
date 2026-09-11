@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { View } from "react-native";
 import { type UiCopy } from "@/i18n";
 import { type Palette } from "@/theme/colors";
@@ -6,7 +7,7 @@ import { Kpi } from "@/components/ui/Kpi";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { RADIUS } from "@/theme/radii";
 
-export function SummaryKpiSection({
+export const SummaryKpiSection = memo(function SummaryKpiSection({
   colors, copy, kpiSegment, setKpiSegment, kpiSegmentOptions,
   fm, totals, savings, filtered, isAllYears, bestIncomeMonth, monthLabel,
   avgIncome, averageExpense, positiveMonths,
@@ -66,4 +67,4 @@ export function SummaryKpiSection({
       </View>
     </View>
   );
-}
+});

@@ -73,35 +73,33 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
     startCreateTagFlow, closeTagOverlay,
   } = useTagOverlay({ tags, onAddTag, setFormDraft, modalRef, tagAddRefs });
 
-  useEffect(() => {
-    if (kbHeight === 0) { focusHandledRef.current = false; return; }
-    if (focusHandledRef.current) return;
-    const key = focusedKey.current;
-    if (!key) return;
-    const target = inputRefs.current[key];
-    const host = scrollHostRef.current;
-    if (!target || !host) return;
-    focusHandledRef.current = true;
+  const scrollInputIntoView = useCallback((key: string) => {
     requestAnimationFrame(() => {
+      const target = inputRefs.current[key];
+      const host = scrollHostRef.current;
+      if (!target || !host) return;
       try {
         target.measureLayout(
           host,
           (_x: number, y: number) => {
             scrollRef.current?.scrollTo({ y: Math.max(0, y - 24), animated: true });
           },
-          () => {
-            target.measure((_x: number, y: number) => {
-              scrollRef.current?.scrollTo({ y: Math.max(0, y - 24), animated: true });
-            });
-          },
+          () => undefined,
         );
       } catch {
-        target.measure((_x: number, y: number) => {
-          scrollRef.current?.scrollTo({ y: Math.max(0, y - 24), animated: true });
-        });
+        // ignore
       }
     });
-  }, [kbHeight]);
+  }, []);
+
+  useEffect(() => {
+    if (kbHeight === 0) { focusHandledRef.current = false; return; }
+    if (focusHandledRef.current) return;
+    const key = focusedKey.current;
+    if (!key) return;
+    focusHandledRef.current = true;
+    scrollInputIntoView(key);
+  }, [kbHeight, scrollInputIntoView]);
 
   const transition = useModalTransition(visible, 14, 0.99, () => {
     const pending = pendingSubmit.current;
@@ -364,22 +362,7 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
                     focusedKey.current = `desc-${item.id}`;
                     setActiveAmountId(null);
                     focusHandledRef.current = false;
-                    requestAnimationFrame(() => {
-                      const target = inputRefs.current[`desc-${item.id}`];
-                      const host = scrollHostRef.current;
-                      if (!target || !host) return;
-                      try {
-                        target.measureLayout(
-                          host,
-                          (_x: number, y: number) => {
-                            scrollRef.current?.scrollTo({ y: Math.max(0, y - 24), animated: true });
-                          },
-                          () => undefined,
-                        );
-                      } catch {
-                        // ignore
-                      }
-                    });
+                    scrollInputIntoView(`desc-${item.id}`);
                   }}
                           placeholder="Descripción"
                           placeholderTextColor={colors.muted}

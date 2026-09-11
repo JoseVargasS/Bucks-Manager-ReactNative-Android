@@ -100,25 +100,21 @@ export function useFinancialState(tagsList: Tag[]): FinancialState {
     return map;
   }, [tagsList]);
 
-  const visibleTransactions = useMemo(() => {
-    const source = searchActive
-      ? applySearch(transactions, searchFilters, tagLabelsById)
-      : filterTransactionsByRollingPeriod(
-          transactions,
-          month,
-          year,
-          loadedMonthCount,
-        );
-    return sortTransactionsDesc(source);
-  }, [
-    transactions,
-    month,
-    year,
-    loadedMonthCount,
-    searchActive,
-    searchFilters,
-    tagLabelsById,
-  ]);
+  // ponytail: split memos so a tag-label/language change only refilters
+  // the search path and never invalidates the rolling list (and vice versa)
+  const searchResults = useMemo(() => {
+    if (!searchActive) return null;
+    return sortTransactionsDesc(applySearch(transactions, searchFilters, tagLabelsById));
+  }, [transactions, searchActive, searchFilters, tagLabelsById]);
+
+  const rollingTransactions = useMemo(() => {
+    if (searchActive) return null;
+    return sortTransactionsDesc(
+      filterTransactionsByRollingPeriod(transactions, month, year, loadedMonthCount),
+    );
+  }, [transactions, searchActive, month, year, loadedMonthCount]);
+
+  const visibleTransactions = searchResults ?? rollingTransactions ?? [];
 
   const currentSummary = useMemo(() => {
     const key = `${MONTH_NAMES[month]} ${year}`;
