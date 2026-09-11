@@ -51,6 +51,9 @@ expo*.log
 # test coverage
 coverage/
 
+# lint cache (pre-commit uses eslint --cache)
+.eslintcache
+
 # generated native folders
 /ios
 /android

@@ -1,4 +1,22 @@
 {
   "js/tsdk.path": "node_modules/typescript/lib",
-  "js/tsdk.promptToUseWorkspaceVersion": true
+  "js/tsdk.promptToUseWorkspaceVersion": true,
+  "files.watcherExclude": {
+    "**/node_modules/**": true,
+    "**/android/**": true,
+    "**/.expo/**": true,
+    "**/.codegraph/**": true,
+    "**/.codebase-memory/**": true,
+    "**/coverage/**": true,
+    "**/dist/**": true
+  },
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/android": true,
+    "**/.expo": true,
+    "**/.codegraph": true,
+    "**/coverage": true,
+    "**/dist": true
+  },
+  "git.autoFetch": false
 }

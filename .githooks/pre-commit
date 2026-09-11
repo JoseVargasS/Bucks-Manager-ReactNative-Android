@@ -1,10 +1,21 @@
 #!/usr/bin/env node
 
+// Fast gate: format + types + lint (cached). The full suite (jest)
+// runs on pre-push, so commits stay under ~10s.
 const { spawnSync } = require("node:child_process");
 
-const command = process.platform === "win32" ? "npm.cmd" : "npm";
-const result = spawnSync(command, ["run", "ci"], {
-  shell: process.platform === "win32",
-  stdio: "inherit",
-});
-process.exit(result.status ?? 1);
+const pnpm = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
+const steps = [
+  ["format:check"],
+  ["exec", "tsc", "--noEmit", "--noUnusedLocals", "--noUnusedParameters"],
+  ["exec", "eslint", "src/**/*.{ts,tsx}", "App.tsx", "index.ts", "--cache", "--max-warnings", "0"],
+];
+
+for (const args of steps) {
+  // ponytail: shell:true is required on win32 to run pnpm.cmd, same as before
+  const result = spawnSync(pnpm, args, {
+    shell: process.platform === "win32",
+    stdio: "inherit",
+  });
+  if ((result.status ?? 1) !== 0) process.exit(result.status ?? 1);
+}
