@@ -99,7 +99,8 @@ export function useThemeCrossfade(
       toValue: target,
       duration: 320,
       easing: Easing.out(Easing.cubic),
-      useNativeDriver: false,
+      // ponytail: opacity-only overlays, safe on native driver (no color interpolation)
+      useNativeDriver: true,
     });
     themeAnimRef.current.start();
     lastAnimatedThemeRef.current = goingDark ? "dark" : "light";
