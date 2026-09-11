@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Keyboard } from "react-native";
+import { Keyboard, Platform } from "react-native";
 
 export function useKeyboardOffset(visible: boolean, transform: (height: number) => number = (h) => h) {
   const [offset, setOffset] = useState(0);
@@ -10,9 +10,14 @@ export function useKeyboardOffset(visible: boolean, transform: (height: number) 
       setOffset(0);
       return;
     }
-    const showSub = Keyboard.addListener("keyboardDidShow", (e) => {
-      setOffset(transformRef.current(e.endCoordinates.height));
-    });
+    // ponytail: willShow on iOS arrives before the frame covers inputs;
+    // Android only reliably sends didShow
+    const showSub = Keyboard.addListener(
+      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow",
+      (e) => {
+        setOffset(transformRef.current(e.endCoordinates.height));
+      },
+    );
     const hideSub = Keyboard.addListener("keyboardDidHide", () => setOffset(0));
     return () => {
       showSub.remove();

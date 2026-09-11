@@ -1,4 +1,4 @@
-import { type Dispatch, type SetStateAction, useMemo } from "react";
+import { type Dispatch, type SetStateAction, useMemo, useRef, useState } from "react";
 import { ScrollView, Pressable, View } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { base } from "@/styles/baseStyles";
@@ -7,6 +7,7 @@ import { searchPageStyles } from "@/components/screens/SearchPage.styles";
 const styles = { ...base, ...searchPageStyles };
 import { Field } from "@/components/ui/Field";
 import { Select } from "@/components/ui/Select";
+import { CalendarPicker } from "@/components/ui/CalendarPicker";
 import { type Palette } from "@/theme/colors";
 import { type SearchFilters, type Tag } from "@/types";
 import { type UiCopy } from "@/i18n";
@@ -20,6 +21,14 @@ export function SearchPage({ colors, copy, currencySymbol, tags, filters, setFil
     { label: copy.allTags, value: "" },
     ...tags.map((tag) => ({ label: tag.label, value: tag.id, color: tag.color })),
   ], [copy.allTags, tags]);
+  // ponytail: reuse CalendarPicker (no new calendar); readonly fields so no keyboard flicker
+  const [calFor, setCalFor] = useState<"start" | "end" | null>(null);
+  // ponytail: ref mirror — onSelect fires after close (stale render would read calFor=null)
+  const calForRef = useRef<"start" | "end" | null>(null);
+  const openCal = (which: "start" | "end") => {
+    calForRef.current = which;
+    setCalFor(which);
+  };
 
   return (
     <View style={styles.searchBody}>
@@ -87,23 +96,39 @@ export function SearchPage({ colors, copy, currencySymbol, tags, filters, setFil
             <Text style={[styles.searchSectionTitle, { color: colors.text }]}>{copy.dates}</Text>
           </View>
           <View style={styles.searchFieldGrid}>
-            <Field
-              label={copy.from}
-              value={filters.startDate}
-              onChangeText={(startDate: string) => setFilters((current) => ({ ...current, startDate }))}
-              colors={colors}
-              placeholder={copy.datePlaceholder}
-              rightIcon="calendar-start"
-            />
-            <Field
-              label={copy.to}
-              value={filters.endDate}
-              onChangeText={(endDate: string) => setFilters((current) => ({ ...current, endDate }))}
-              colors={colors}
-              placeholder={copy.datePlaceholder}
-              rightIcon="calendar-end"
-            />
+            <Pressable style={{ flex: 1 }} onPress={() => openCal("start")}>
+              <View pointerEvents="none">
+                <Field
+                  label={copy.from}
+                  value={filters.startDate}
+                  onChangeText={() => undefined}
+                  colors={colors}
+                  placeholder={copy.datePlaceholder}
+                  rightIcon="calendar-start"
+                />
+              </View>
+            </Pressable>
+            <Pressable style={{ flex: 1 }} onPress={() => openCal("end")}>
+              <View pointerEvents="none">
+                <Field
+                  label={copy.to}
+                  value={filters.endDate}
+                  onChangeText={() => undefined}
+                  colors={colors}
+                  placeholder={copy.datePlaceholder}
+                  rightIcon="calendar-end"
+                />
+              </View>
+            </Pressable>
           </View>
+          <CalendarPicker
+            visible={calFor !== null}
+            value={calFor === "end" ? filters.endDate : filters.startDate}
+            onSelect={(date: string) => setFilters((current) => (calForRef.current === "end" ? { ...current, endDate: date } : { ...current, startDate: date }))}
+            onClose={() => setCalFor(null)}
+            colors={colors}
+            copy={copy}
+          />
         </View>
       </ScrollView>
 

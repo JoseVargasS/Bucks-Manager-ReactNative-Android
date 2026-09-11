@@ -12,6 +12,7 @@ import { emptySearchFilters, type SearchFilters, type Tag } from "@/types";
 import { SearchPage } from "@/components/screens/SearchPage";
 import { type UiCopy } from "@/i18n";
 import { useModalTransition } from "@/components/ui/useModalTransition";
+import { useKeyboardOffset } from "@/components/ui/useKeyboardOffset";
 import { Text } from "@/components/ui/AppText";
 
 export type SearchModalHandle = { open: (filters: SearchFilters) => void };
@@ -22,6 +23,7 @@ export const SearchModal = forwardRef<SearchModalHandle, {
 }>(function SearchModal({ colors, copy, currencySymbol, tags, onClear, onSubmit }, ref) {
   const [visible, setVisible] = useState(false);
   const [localFilters, setLocalFilters] = useState<SearchFilters>(emptySearchFilters);
+  const kbHeight = useKeyboardOffset(visible);
   const pendingAction = useRef<(() => void) | null>(null);
   const transition = useModalTransition(visible, 24, 1, () => {
     const action = pendingAction.current;
@@ -59,7 +61,7 @@ export const SearchModal = forwardRef<SearchModalHandle, {
       >
         <BlurView intensity={30} tint="dark" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
         <Pressable style={styles.optionBackdrop} onPress={close} />
-        <Animated.View style={[styles.searchSheet, { backgroundColor: colors.card }, transition.panelStyle]}>
+        <Animated.View style={[styles.searchSheet, { backgroundColor: colors.card, paddingBottom: kbHeight }, transition.panelStyle]}>
           <View style={[styles.searchGrabber, { backgroundColor: colors.border }]} />
           <View style={styles.searchHeader}>
             <View style={[styles.searchHeaderIcon, { backgroundColor: colors.primarySoft }]}>

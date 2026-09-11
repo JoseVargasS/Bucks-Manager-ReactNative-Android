@@ -6,11 +6,15 @@ jest.mock("react-native", () => ({
   Keyboard: {
     addListener: jest.fn(() => ({ remove: jest.fn() })),
   },
+  Platform: { OS: "android" },
 }));
+
+import { Platform } from "react-native";
 
 describe("useKeyboardOffset", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    (Platform as { OS: string }).OS = "android";
   });
 
   it("returns 0 when not visible", async () => {
@@ -59,6 +63,13 @@ describe("useKeyboardOffset", () => {
     const { result } = await renderHook(() => useKeyboardOffset(true, transform));
     await act(async () => { showCallback({ endCoordinates: { height: 400 } }); });
     expect(result.current).toBe(200);
+  });
+
+  it("subscribes to keyboardWillShow on ios", async () => {
+    (Platform as { OS: string }).OS = "ios";
+    await renderHook(() => useKeyboardOffset(true));
+    expect(Keyboard.addListener).toHaveBeenCalledWith("keyboardWillShow", expect.any(Function));
+    expect(Keyboard.addListener).toHaveBeenCalledWith("keyboardDidHide", expect.any(Function));
   });
 
   it("cleans up listeners on unmount", async () => {
