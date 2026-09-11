@@ -48,7 +48,7 @@ export const SummaryView = memo(function SummaryView({ colors, copy, summaries, 
 
       <View style={{ backgroundColor: colors.card, borderRadius: RADIUS["2xl"], padding: 18, overflow: "hidden" }}>
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-          <Text style={{ color: colors.muted, fontSize: 13, fontWeight: "600", textTransform: "uppercase" }}>{isAllYears ? copy.totalBalance : copy.annualBalance}</Text>
+          <Text style={[{ color: colors.muted, textTransform: "uppercase" }, T.label]}>{isAllYears ? copy.totalBalance : copy.annualBalance}</Text>
         </View>
         <Text numberOfLines={1} style={[{ color: totals.net >= 0 ? colors.primary : colors.expense, marginTop: 10 }, T.amountDisplay]}>
           {formatMoney(totals.net, currencySymbol, 0)}

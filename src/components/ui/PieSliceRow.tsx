@@ -50,7 +50,7 @@ export const PieSliceRow = memo(function PieSliceRow({
         style={{
           width: 10,
           height: 10,
-          borderRadius: 3,
+          borderRadius: RADIUS.pill,
           backgroundColor: color,
           flexShrink: 0,
         }}

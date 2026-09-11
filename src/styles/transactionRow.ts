@@ -14,7 +14,7 @@ export const txStyles = StyleSheet.create({
   txIcon: {
     width: 40,
     height: 40,
-    borderRadius: RADIUS["2xl"],
+    borderRadius: RADIUS.pill,
     borderWidth: 0,
     alignItems: "center",
     justifyContent: "center",
@@ -28,9 +28,9 @@ export const txStyles = StyleSheet.create({
     textAlign: "right",
   },
   sectionCardRow: { marginHorizontal: 14 },
-  sectionCardFirstRow: { borderTopLeftRadius: 14, borderTopRightRadius: 14 },
+  sectionCardFirstRow: { borderTopLeftRadius: RADIUS.xl, borderTopRightRadius: RADIUS.xl },
   sectionCardLastRow: {
-    borderBottomLeftRadius: 14,
-    borderBottomRightRadius: 14,
+    borderBottomLeftRadius: RADIUS.xl,
+    borderBottomRightRadius: RADIUS.xl,
   },
 });

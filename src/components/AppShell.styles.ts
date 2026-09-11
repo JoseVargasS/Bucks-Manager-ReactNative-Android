@@ -49,7 +49,7 @@ export const appShellStyles = StyleSheet.create({
     justifyContent: "center",
   },
   pageTitle: { ...T.pageTitle },
-  pageTitleMobile: { fontSize: 21, fontWeight: "700" as const },
+  pageTitleMobile: { ...T.title },
   pageSub: { ...T.pageSub },
   pageSubMobile: { ...T.body, fontWeight: "500" as const },
   headerReadableTextDark: {

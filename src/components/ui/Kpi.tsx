@@ -5,6 +5,7 @@ import { statCardStyles as styles } from "@/components/ui/StatCard.styles";
 import { type Palette } from "@/theme/colors";
 import { type MaterialIconName } from "@/types";
 import { Text } from "./AppText";
+import { T } from "@/theme/typography";
 import { RADIUS } from "@/theme/radii";
 
 const BUBBLE_W = 170;
@@ -50,7 +51,7 @@ export const Kpi = memo(function Kpi({ title, value, icon, color, colors, toolti
               shadowColor: colors.shadow, shadowOpacity: 0.2, shadowRadius: 10, elevation: 8,
             }}
           >
-            <Text style={{ fontSize: 12, color: colors.text, fontWeight: "400" }}>
+            <Text style={[{ color: colors.text }, T.metadata]}>
               {tooltip}
             </Text>
           </View>

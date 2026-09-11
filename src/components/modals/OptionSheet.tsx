@@ -320,8 +320,8 @@ const optionSheetStylesMini = StyleSheet.create({
     width: "100%",
     maxHeight: "70%",
     borderTopWidth: 0,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
+    borderTopLeftRadius: RADIUS["2xl"],
+    borderTopRightRadius: RADIUS["2xl"],
     overflow: "hidden",
   },
 });

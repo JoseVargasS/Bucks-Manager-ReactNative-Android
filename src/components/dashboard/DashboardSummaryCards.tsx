@@ -6,6 +6,7 @@ import type { SummaryRow } from "@/types";
 import type { UiCopy } from "@/i18n";
 import { StatCard } from "@/components/ui/StatCard";
 import { Text } from "@/components/ui/AppText";
+import { T } from "@/theme/typography";
 
 export type BubbleKind = "income" | "expense" | "balance";
 
@@ -87,14 +88,14 @@ export const DashboardSummaryCards = memo(function DashboardSummaryCards({
           >
             <View style={{ borderTopWidth: 1, borderTopColor: colors.border, marginTop: 8, paddingTop: 8, gap: 6 }}>
               <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                <Text style={{ fontSize: 12, color: colors.muted }}>{copy.savingsRate}</Text>
-                <Text style={{ fontSize: 12, fontWeight: "600", color: colors.text, fontVariant: ["tabular-nums"] }}>
+                <Text style={[{ color: colors.muted }, T.metadata]}>{copy.savingsRate}</Text>
+                <Text style={[{ color: colors.text, fontVariant: ["tabular-nums"] }, T.metadata]}>
                   {savingsRate}
                 </Text>
               </View>
               <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                <Text style={{ fontSize: 12, color: colors.muted }}>{copy.vsPrevMonth}</Text>
-                <Text style={{ fontSize: 12, fontWeight: "600", color: vsPrevPositive ? colors.income : colors.expense, fontVariant: ["tabular-nums"] }}>
+                <Text style={[{ color: colors.muted }, T.metadata]}>{copy.vsPrevMonth}</Text>
+                <Text style={[{ color: vsPrevPositive ? colors.income : colors.expense, fontVariant: ["tabular-nums"] }, T.metadata]}>
                   {vsPrev}
                 </Text>
               </View>

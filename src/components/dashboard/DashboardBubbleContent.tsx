@@ -6,6 +6,8 @@ import type { Palette } from "@/theme/colors";
 import type { SummaryRow } from "@/types";
 import type { UiCopy } from "@/i18n";
 import { Text } from "@/components/ui/AppText";
+import { RADIUS } from "@/theme/radii";
+import { T } from "@/theme/typography";
 
 export const DashboardBubbleContent = memo(function DashboardBubbleContent({
   kind,
@@ -30,10 +32,10 @@ export const DashboardBubbleContent = memo(function DashboardBubbleContent({
           <MaterialCommunityIcons name="cash" size={18} color={colors.income} />
           <Text style={{ fontSize: 14, fontWeight: "600", color: colors.text }}>{copy.income}</Text>
         </View>
-        <Text style={{ fontSize: 20, fontWeight: "700", color: colors.income, fontVariant: ["tabular-nums"], marginBottom: 12 }}>
+        <Text style={[{ color: colors.income, marginBottom: 12 }, T.amountHero]}>
           {formatMoney(total, currencySymbol)}
         </Text>
-        <View style={{ height: 6, borderRadius: 3, backgroundColor: colors.input, overflow: "hidden", flexDirection: "row", marginBottom: 12 }}>
+        <View style={{ height: 6, borderRadius: RADIUS.pill, backgroundColor: colors.input, overflow: "hidden", flexDirection: "row", marginBottom: 12 }}>
           {freqPct > 0 && <View style={{ flex: freqPct, backgroundColor: colors.income }} />}
           {nonFreqPct > 0 && <View style={{ flex: nonFreqPct, backgroundColor: colors.incomeSoft }} />}
         </View>
@@ -41,9 +43,9 @@ export const DashboardBubbleContent = memo(function DashboardBubbleContent({
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 6, flex: 1 }}>
               <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: colors.income }} />
-              <Text style={{ fontSize: 13, color: colors.muted, flex: 1 }} numberOfLines={1}>{copy.freqIncomeFull}</Text>
+              <Text style={[{ color: colors.muted, flex: 1 }, T.labelMuted]} numberOfLines={1}>{copy.freqIncomeFull}</Text>
             </View>
-            <Text style={{ fontSize: 13, fontWeight: "600", color: colors.text, fontVariant: ["tabular-nums"] }}>{freqPct}%</Text>
+            <Text style={[{ color: colors.text, fontVariant: ["tabular-nums"] }, T.label]}>{freqPct}%</Text>
           </View>
           <Text style={{ fontSize: 14, fontWeight: "600", color: colors.text, fontVariant: ["tabular-nums"], marginBottom: 8, marginLeft: 14 }}>
             {formatMoney(summary.freqIncome, currencySymbol)}
@@ -53,7 +55,7 @@ export const DashboardBubbleContent = memo(function DashboardBubbleContent({
               <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: colors.incomeSoft }} />
               <Text style={{ fontSize: 13, color: colors.muted, flex: 1 }} numberOfLines={1}>{copy.nonFreqIncomeFull}</Text>
             </View>
-            <Text style={{ fontSize: 13, fontWeight: "600", color: colors.text, fontVariant: ["tabular-nums"] }}>{nonFreqPct}%</Text>
+            <Text style={[{ color: colors.text, fontVariant: ["tabular-nums"] }, T.label]}>{nonFreqPct}%</Text>
           </View>
           <Text style={{ fontSize: 14, fontWeight: "600", color: colors.text, fontVariant: ["tabular-nums"], marginLeft: 14 }}>
             {formatMoney(summary.nonFreqIncome, currencySymbol)}
@@ -78,7 +80,7 @@ export const DashboardBubbleContent = memo(function DashboardBubbleContent({
         <Text style={{ fontSize: 20, fontWeight: "700", color: colors.expense, fontVariant: ["tabular-nums"], marginBottom: 12 }}>
           {formatMoney(summary.totalExpense, currencySymbol)}
         </Text>
-        <View style={{ height: 6, borderRadius: 3, backgroundColor: colors.input, overflow: "hidden", flexDirection: "row", marginBottom: 12 }}>
+        <View style={{ height: 6, borderRadius: RADIUS.pill, backgroundColor: colors.input, overflow: "hidden", flexDirection: "row", marginBottom: 12 }}>
           {freqPct > 0 && <View style={{ flex: freqPct, backgroundColor: colors.expense }} />}
           {nonFreqPct > 0 && <View style={{ flex: nonFreqPct, backgroundColor: colors.warnSoft }} />}
         </View>
@@ -88,7 +90,7 @@ export const DashboardBubbleContent = memo(function DashboardBubbleContent({
               <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: colors.expense }} />
               <Text style={{ fontSize: 13, color: colors.muted, flex: 1 }} numberOfLines={1}>{copy.freqExpenseFull}</Text>
             </View>
-            <Text style={{ fontSize: 13, fontWeight: "600", color: colors.text, fontVariant: ["tabular-nums"] }}>{freqPct}%</Text>
+            <Text style={[{ color: colors.text, fontVariant: ["tabular-nums"] }, T.label]}>{freqPct}%</Text>
           </View>
           <Text style={{ fontSize: 14, fontWeight: "600", color: colors.text, fontVariant: ["tabular-nums"], marginBottom: 8, marginLeft: 14 }}>
             {formatMoney(summary.freqExpense, currencySymbol)}
@@ -98,7 +100,7 @@ export const DashboardBubbleContent = memo(function DashboardBubbleContent({
               <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: colors.warnSoft }} />
               <Text style={{ fontSize: 13, color: colors.muted, flex: 1 }} numberOfLines={1}>{copy.nonFreqExpenseFull}</Text>
             </View>
-            <Text style={{ fontSize: 13, fontWeight: "600", color: colors.text, fontVariant: ["tabular-nums"] }}>{nonFreqPct}%</Text>
+            <Text style={[{ color: colors.text, fontVariant: ["tabular-nums"] }, T.label]}>{nonFreqPct}%</Text>
           </View>
           <Text style={{ fontSize: 14, fontWeight: "600", color: colors.text, fontVariant: ["tabular-nums"], marginLeft: 14 }}>
             {formatMoney(summary.nonFreqExpense, currencySymbol)}
@@ -115,19 +117,19 @@ export const DashboardBubbleContent = memo(function DashboardBubbleContent({
         <MaterialCommunityIcons name="wallet" size={18} color={colors.info} />
         <Text style={{ fontSize: 14, fontWeight: "600", color: colors.text }}>{copy.balance}</Text>
       </View>
-      <Text style={{ fontSize: 20, fontWeight: "700", color: current >= 0 ? colors.income : colors.expense, fontVariant: ["tabular-nums"], marginBottom: 12 }}>
+      <Text style={[{ color: current >= 0 ? colors.income : colors.expense, marginBottom: 12 }, T.amountHero]}>
         {formatMoney(current, currencySymbol)}
       </Text>
       <View style={{ gap: 8 }}>
         <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-          <Text style={{ fontSize: 13, color: colors.muted }}>{copy.income}</Text>
-          <Text style={{ fontSize: 13, fontWeight: "600", color: colors.income, fontVariant: ["tabular-nums"] }}>
+          <Text style={[{ color: colors.muted }, T.labelMuted]}>{copy.income}</Text>
+          <Text style={[{ color: colors.income, fontVariant: ["tabular-nums"] }, T.label]}>
             {formatMoney(summary.totalIncome, currencySymbol)}
           </Text>
         </View>
         <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-          <Text style={{ fontSize: 13, color: colors.muted }}>{copy.expensesLabel}</Text>
-          <Text style={{ fontSize: 13, fontWeight: "600", color: colors.expense, fontVariant: ["tabular-nums"] }}>
+          <Text style={[{ color: colors.muted }, T.labelMuted]}>{copy.expensesLabel}</Text>
+          <Text style={[{ color: colors.expense, fontVariant: ["tabular-nums"] }, T.label]}>
             {formatMoney(summary.totalExpense, currencySymbol)}
           </Text>
         </View>

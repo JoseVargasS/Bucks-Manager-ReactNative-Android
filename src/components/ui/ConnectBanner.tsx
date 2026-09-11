@@ -38,7 +38,7 @@ export const ConnectBanner = memo(function ConnectBanner({
   onPress: () => void;
   copy: { connectBanner: string };
 }) {
-  const { card } = useColors();
+  const { card, shadow } = useColors();
   const [dismissed, setDismissed] = useState(false);
   const pulse = useRef<Animated.Value | null>(null);
   if (!pulse.current) pulse.current = new Animated.Value(0);
@@ -115,11 +115,11 @@ export const ConnectBanner = memo(function ConnectBanner({
         style={{
           width: 62,
           height: 62,
-          borderRadius: 31,
+          borderRadius: RADIUS.pill,
           alignItems: "center",
           justifyContent: "center",
           elevation: 6,
-          shadowColor: "#000",
+          shadowColor: shadow,
           shadowOffset: { width: 0, height: 3 },
           shadowOpacity: 0.3,
           shadowRadius: 6,
@@ -132,7 +132,7 @@ export const ConnectBanner = memo(function ConnectBanner({
             left: 0,
             right: 0,
             bottom: 0,
-            borderRadius: 31,
+            borderRadius: RADIUS.pill,
             borderWidth: 1,
             borderColor: pillColor,
           }}
@@ -143,7 +143,7 @@ export const ConnectBanner = memo(function ConnectBanner({
           style={{
             width: 54,
             height: 54,
-            borderRadius: 27,
+            borderRadius: RADIUS.pill,
             backgroundColor: card,
             alignItems: "center",
             justifyContent: "center",

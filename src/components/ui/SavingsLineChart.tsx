@@ -4,6 +4,7 @@ import Svg, { Circle, G, Line, Path, Rect, Text as SvgText } from "react-native-
 import { computeSavingsLinePoints, MONTH_NAMES, formatMoney, type SavingsTrendMode } from "@/domain/bucksLogic";
 import { UI_MONTH_NAMES } from "@/i18n";
 import { type Palette } from "@/theme/colors";
+import { T } from "@/theme/typography";
 import { compactNumber } from "@/utils/formats";
 import { type SummaryRow } from "@/types";
 import { useAppFontFamily } from "./AppText";
@@ -74,13 +75,13 @@ export const SavingsLineChart = memo(function SavingsLineChart({
   return (
     <Svg width="100%" height={190} viewBox={`0 0 ${CHART_W} 190`} style={{ marginTop: 12 }}>
       <Line x1={PLOT_LEFT} y1={BASE_Y} x2={CHART_W - 8} y2={BASE_Y} stroke={colors.border} strokeWidth={0.75} strokeDasharray="3 5" />
-      <SvgText x={2} y={BASE_Y + 3} fontSize={10} fill={colors.muted} fontFamily={fontFamily} fontWeight="500">
+      <SvgText x={2} y={BASE_Y + 3} fontSize={T.chartLabel.fontSize} fill={colors.muted} fontFamily={fontFamily} fontWeight="500">
         0
       </SvgText>
       {labels.map((lbl, idx) => (
         <G key={idx}>
           <Line x1={PLOT_LEFT} y1={lbl.y} x2={CHART_W - 8} y2={lbl.y} stroke={colors.border} strokeWidth={0.5} strokeDasharray="3 5" />
-          <SvgText x={2} y={lbl.y + 3} fontSize={10} fill={colors.muted} fontFamily={fontFamily} fontWeight="500">
+          <SvgText x={2} y={lbl.y + 3} fontSize={T.chartLabel.fontSize} fill={colors.muted} fontFamily={fontFamily} fontWeight="500">
             {lbl.text}
           </SvgText>
         </G>
@@ -126,7 +127,7 @@ export const SavingsLineChart = memo(function SavingsLineChart({
               <SvgText
                 x={tooltipX}
                 y={tooltipY}
-                fontSize={isSelected ? 10 : 9}
+                fontSize={isSelected ? T.chartLabel.fontSize : T.chartValue.fontSize}
                 fill={lineColor}
                 fontFamily={fontFamily}
                 textAnchor={textAnchor}
@@ -138,7 +139,7 @@ export const SavingsLineChart = memo(function SavingsLineChart({
             <SvgText
               x={x}
               y={BASE_Y + 17}
-              fontSize={10.5}
+              fontSize={T.chartLabel.fontSize}
               fill={isSelected ? lineColor : colors.muted}
               fontFamily={fontFamily}
               textAnchor="middle"

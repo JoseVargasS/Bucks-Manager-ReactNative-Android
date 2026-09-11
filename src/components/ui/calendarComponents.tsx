@@ -1,4 +1,4 @@
-import { type ReactNode } from "react";
+import { memo, type ReactNode } from "react";
 import { Pressable, View, StyleSheet, type ViewStyle } from "react-native";
 import { type Palette } from "@/theme/colors";
 import { Text } from "./AppText";
@@ -7,7 +7,7 @@ import { RADIUS } from "@/theme/radii";
 const s = StyleSheet.create({
   sheetOverlay: { alignItems: "center", justifyContent: "center" },
   sheetCard: {
-    borderRadius: 16,
+    borderRadius: RADIUS.xl,
     elevation: 12,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
@@ -25,7 +25,7 @@ const s = StyleSheet.create({
   chipInner: { paddingVertical: 8, paddingHorizontal: 10, borderRadius: RADIUS.lg },
 });
 
-export function PickerSheet({
+export const PickerSheet = memo(function PickerSheet({
   children,
   onClose,
   colors,
@@ -61,9 +61,9 @@ export function PickerSheet({
       </View>
     </View>
   );
-}
+});
 
-export function PickerRow({
+export const PickerRow = memo(function PickerRow({
   label,
   selected,
   colors,
@@ -95,9 +95,9 @@ export function PickerRow({
       </Text>
     </Pressable>
   );
-}
+});
 
-export function PickerChip({
+export const PickerChip = memo(function PickerChip({
   label,
   selected,
   disabled,
@@ -142,4 +142,4 @@ export function PickerChip({
       </View>
     </Pressable>
   );
-}
+});

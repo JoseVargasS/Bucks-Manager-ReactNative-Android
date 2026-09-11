@@ -38,14 +38,14 @@ export const SummaryMonthlyTable = memo(function SummaryMonthlyTable({
           <View style={{ flex: 1, minWidth: 0 }}>
             <Text numberOfLines={1} style={{ color: colors.text, fontSize: 16, fontWeight: "600" }}>{monthLabel(row, copy.languageCode)}</Text>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 4 }}>
-              <Text numberOfLines={1} style={{ color: colors.income, fontSize: 13, fontWeight: "600", fontVariant: ["tabular-nums"], flexShrink: 1 }}>{fm(row.totalIncome)}</Text>
+              <Text numberOfLines={1} style={[{ color: colors.income, fontVariant: ["tabular-nums"], flexShrink: 1 }, T.label]}>{fm(row.totalIncome)}</Text>
               <Text style={{ color: colors.muted, fontSize: 11 }}>•</Text>
-              <Text numberOfLines={1} style={{ color: colors.expense, fontSize: 13, fontWeight: "600", fontVariant: ["tabular-nums"], flexShrink: 1 }}>{fm(Math.abs(row.totalExpense))}</Text>
+              <Text numberOfLines={1} style={[{ color: colors.expense, fontVariant: ["tabular-nums"], flexShrink: 1 }, T.label]}>{fm(Math.abs(row.totalExpense))}</Text>
             </View>
           </View>
           <View style={{ alignItems: "flex-end" }}>
             <Text numberOfLines={1} style={[{ color: row.netMonthly >= 0 ? colors.income : colors.expense }, T.amountList]}>{formatMoney(row.netMonthly, currencySymbol, 0)}</Text>
-            <Text style={{ color: colors.muted, fontSize: 13, fontWeight: "500", marginTop: 3 }}>{row.totalIncome > 0 ? Math.round((row.netMonthly / row.totalIncome) * 100) : 0}%</Text>
+            <Text style={[{ color: colors.muted, marginTop: 3 }, T.pageSub]}>{row.totalIncome > 0 ? Math.round((row.netMonthly / row.totalIncome) * 100) : 0}%</Text>
           </View>
         </Pressable>
       )) : (

@@ -9,6 +9,8 @@ import { type Palette } from "@/theme/colors";
 import { type FontPreference, type MaterialIconName } from "@/types";
 import { type UiCopy } from "@/i18n";
 import { Text } from "@/components/ui/AppText";
+import { RADIUS } from "@/theme/radii";
+import { T } from "@/theme/typography";
 // font size selector handled via SettingsView props; levels defined in fontConstants
 
 export const SettingsView = memo(function SettingsView({
@@ -80,7 +82,7 @@ export const SettingsView = memo(function SettingsView({
             <MaterialCommunityIcons name="shield-lock" size={22} color={colors.primary} />
             <View style={{ flex: 1, minWidth: 0 }}>
               <Text style={{ fontSize: 14, fontWeight: "600", color: colors.text }}>{copy.pinApp}</Text>
-              <Text style={{ fontSize: 11, fontWeight: "500", color: colors.muted, marginTop: 1 }}>{copy.pinAppSub}</Text>
+              <Text style={[{ color: colors.muted, marginTop: 1 }, T.caption]}>{copy.pinAppSub}</Text>
             </View>
             <SmoothSwitch value={pinEnabled} onValueChange={onOpenPin} colors={colors} />
           </View>
@@ -153,7 +155,7 @@ function SmoothSwitch({ value, onValueChange, colors }: { value: boolean; onValu
         style={{
           width: 44,
           height: 26,
-          borderRadius: 13,
+          borderRadius: RADIUS.pill,
           backgroundColor: trackBg as unknown as string,
           borderWidth: 1,
           borderColor: trackBorder as unknown as string,
@@ -166,10 +168,10 @@ function SmoothSwitch({ value, onValueChange, colors }: { value: boolean; onValu
           style={{
             width: 22,
             height: 22,
-            borderRadius: 11,
+            borderRadius: RADIUS.pill,
             backgroundColor: thumbBg as unknown as string,
             transform: [{ translateX }, { scale: thumbScale }],
-            shadowColor: "#000",
+            shadowColor: colors.shadow,
             shadowOffset: { width: 0, height: 1 },
             shadowOpacity: 0.22,
             shadowRadius: 1.5,
