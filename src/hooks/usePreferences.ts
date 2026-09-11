@@ -21,8 +21,8 @@ const COLOR_SCHEME_KEY = "bucks_color_scheme";
 const THEME_KEY = "bucks_theme";
 const FONT_PREFERENCES = Object.keys(FONT_FAMILIES) as FontPreference[];
 const COLOR_SCHEME_PREFERENCES: ColorSchemePreference[] = [
-  "cyprus", "ocean", "vulcanico", "tiffany", "charcoalline",
-  "truepink", "silver", "milky", "sky", "turmeric", "bridal", "obsidian",
+  "cyprus", "vulcanico", "charcoalline",
+  "truepink", "silver", "sky", "bridal", "obsidian",
 ];
 const DEFAULT_COLOR_SCHEME: ColorSchemePreference = "sky";
 const CURRENCY_OPTIONS_SET = new Set([

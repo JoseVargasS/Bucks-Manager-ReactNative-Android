@@ -2,15 +2,11 @@ import accentsData from "./accents.json";
 
 export type ColorSchemePreference =
   | "cyprus"
-  | "ocean"
   | "vulcanico"
-  | "tiffany"
   | "charcoalline"
   | "truepink"
   | "silver"
-  | "milky"
   | "sky"
-  | "turmeric"
   | "bridal"
   | "obsidian";
 

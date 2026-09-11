@@ -26,18 +26,6 @@ describe("themeColors", () => {
     expect(palette.text).toBe("#1a2622");
   });
 
-  test("getPalette applies ocean scheme overrides on dark", () => {
-    const palette = getPalette("dark", "ocean");
-    expect(palette.bg).toBe("#061418");
-    expect(palette.primary).toBe("#4ed8d0");
-  });
-
-  test("getPalette applies ocean scheme overrides on light", () => {
-    const palette = getPalette("light", "ocean");
-    expect(palette.bg).toBe("#e8f4f2");
-    expect(palette.primary).toBe("#066b64");
-  });
-
   test("getPalette applies vulcanico scheme", () => {
     const d = getPalette("dark", "vulcanico");
     expect(d.bg).toBe("#001621");
@@ -45,13 +33,6 @@ describe("themeColors", () => {
     const l = getPalette("light", "vulcanico");
     expect(l.bg).toBe("#f4ede6");
     expect(l.primary).toBe("#b82c00");
-  });
-
-  test("getPalette applies tiffany scheme", () => {
-    const d = getPalette("dark", "tiffany");
-    expect(d.primary).toBe("#21F1A8");
-    const l = getPalette("light", "tiffany");
-    expect(l.primary).toBe("#066b50");
   });
 
   test("getPalette applies charcoalline scheme", () => {
@@ -75,25 +56,11 @@ describe("themeColors", () => {
     expect(l.primary).toBe("#137016");
   });
 
-  test("getPalette applies milky scheme", () => {
-    const d = getPalette("dark", "milky");
-    expect(d.primary).toBe("#48B868");
-    const l = getPalette("light", "milky");
-    expect(l.primary).toBe("#2a7a20");
-  });
-
   test("getPalette applies sky scheme", () => {
     const d = getPalette("dark", "sky");
     expect(d.primary).toBe("#58b8ff");
     const l = getPalette("light", "sky");
     expect(l.primary).toBe("#1868b8");
-  });
-
-  test("getPalette applies turmeric scheme", () => {
-    const d = getPalette("dark", "turmeric");
-    expect(d.primary).toBe("#FFBE0B");
-    const l = getPalette("light", "turmeric");
-    expect(l.primary).toBe("#7a5c04");
   });
 
   test("getPalette applies bridal scheme", () => {
@@ -118,15 +85,15 @@ describe("themeColors", () => {
 
   test("getPalette evicts oldest entry when cache is full", () => {
     const schemes = [
-      "cyprus", "ocean", "vulcanico", "tiffany", "charcoalline", "truepink",
-      "silver", "milky", "sky", "turmeric", "bridal", "obsidian",
+      "cyprus", "vulcanico", "charcoalline", "truepink",
+      "silver", "sky", "bridal", "obsidian",
     ];
     const refs: any[] = [];
     for (const s of schemes) {
       refs.push(getPalette("dark", s as ColorSchemePreference));
       refs.push(getPalette("light", s as ColorSchemePreference));
     }
-    expect(refs.length).toBe(24);
+    expect(refs.length).toBe(16);
     const extra = getPalette("dark", "silver");
     expect(extra).toBeTruthy();
     const re = getPalette("dark", "cyprus");
@@ -149,26 +116,26 @@ describe("themeColors", () => {
 
   test("getPalette evicts oldest when cache overflows", () => {
     const schemes: ColorSchemePreference[] = [
-      "cyprus", "ocean", "vulcanico", "tiffany", "charcoalline", "truepink",
-      "silver", "milky", "sky", "turmeric", "bridal", "obsidian",
+      "cyprus", "vulcanico", "charcoalline", "truepink",
+      "silver", "sky", "bridal", "obsidian",
     ];
     for (const s of schemes) {
       getPalette("dark", s);
       getPalette("light", s);
     }
     const before = getPaletteCacheStats();
-    expect(before.size).toBe(24);
+    expect(before.size).toBe(16);
 
     const overflowed = getPalette("fallback" as "dark", "cyprus");
     expect(overflowed.bg).toBeDefined();
     const after = getPaletteCacheStats();
-    expect(after.size).toBe(24);
+    expect(after.size).toBe(16);
   });
 
   test("getPalette re-orders cache on access (LRU promotion)", () => {
     getPalette("dark", "sky");
     getPalette("dark", "cyprus");
-    getPalette("dark", "ocean");
+    getPalette("dark", "vulcanico");
     getPalette("dark", "sky");
     const d = getPalette("dark", "obsidian");
     expect(d.primary).toBe("#C8FF00");

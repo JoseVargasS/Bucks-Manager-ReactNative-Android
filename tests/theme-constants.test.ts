@@ -41,10 +41,10 @@ describe("theme constants", () => {
   });
 
   test("COLOR_SCHEME_OPTIONS has all schemes", () => {
-    expect(COLOR_SCHEME_OPTIONS.length).toBe(12);
+    expect(COLOR_SCHEME_OPTIONS.length).toBe(8);
     const values = COLOR_SCHEME_OPTIONS.map((o) => o.value);
     expect(values).toContain("cyprus");
-    expect(values).toContain("ocean");
+    expect(values).toContain("vulcanico");
     expect(values).toContain("sky");
     expect(values).toContain("obsidian");
   });

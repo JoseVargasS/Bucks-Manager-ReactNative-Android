@@ -6,8 +6,6 @@ export const ANIM_TAB_PAGER = 210;
 export const ANIM_HEADER_BTN_IN = 60;
 export const ANIM_HEADER_BTN_OUT = 60;
 
-export const RADII = { sm: 8, md: 10, lg: 12, xl: 14, "2xl": 20, pill: 999 } as const;
-
 export const NAV_BTN_SIZE = 40;
 export const NAV_BTN_HEIGHT = 42;
 export const NAV_BTN_RADIUS = 21;
@@ -53,18 +51,11 @@ export const COLOR_SCHEME_OPTIONS: Array<{
     labelEn: "Cyprus",
     icon: "leaf",
   },
-  { value: "ocean", labelEs: "Océano", labelEn: "Ocean", icon: "waves" },
   {
     value: "vulcanico",
     labelEs: "Volcánico",
     labelEn: "Vulcanico",
     icon: "fire",
-  },
-  {
-    value: "tiffany",
-    labelEs: "Tiffany",
-    labelEn: "Tiffany",
-    icon: "diamond-stone",
   },
   {
     value: "charcoalline",
@@ -84,19 +75,7 @@ export const COLOR_SCHEME_OPTIONS: Array<{
     labelEn: "Silver",
     icon: "circle-half-full",
   },
-  {
-    value: "milky",
-    labelEs: "Lácteo",
-    labelEn: "Milky",
-    icon: "sprout",
-  },
   { value: "sky", labelEs: "Cielo", labelEn: "Sky", icon: "weather-night" },
-  {
-    value: "turmeric",
-    labelEs: "Cúrcuma",
-    labelEn: "Turmeric",
-    icon: "white-balance-sunny",
-  },
   {
     value: "bridal",
     labelEs: "Nupcial",

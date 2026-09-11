@@ -1,7 +1,7 @@
 /**
  * Sistema de tokens de radio — 5 niveles + pill.
  * Mantiene identidad visual y evita magic numbers.
- * Todos los componentes deben importar desde aquí o desde constants.RADII.
+ * Todos los componentes deben importar desde aquí.
  */
 export const RADIUS = {
   sm: 8, // botones pequeños, chips, cancel/save

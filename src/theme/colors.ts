@@ -265,7 +265,8 @@ export interface Palette extends Omit<PaletteBase, "tagColors"> {
 }
 
 const paletteCache = new Map<string, Palette>();
-const PALETTE_CACHE_LIMIT = 24;
+// ponytail: limit must stay >= schemes*themes (8*2); bump when adding a scheme
+const PALETTE_CACHE_LIMIT = 16;
 
 function cacheGet(key: string): Palette | undefined {
   const value = paletteCache.get(key);

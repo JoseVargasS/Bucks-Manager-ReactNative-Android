@@ -190,7 +190,7 @@ describe("preferencesOps", () => {
         language: "en",
         currencySymbol: "€",
         fontPreference: "sora",
-        colorScheme: "milky",
+        colorScheme: "sky",
         theme: "light",
       });
       await writeUiPreferences("token", "sheet", prefs);
