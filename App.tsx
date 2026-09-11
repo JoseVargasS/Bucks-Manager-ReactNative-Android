@@ -266,7 +266,7 @@ function AppContent() {
     rehydratingCache ||
     (accessToken && isFirstRemoteLoad && !hasLocalData),
   );
-  const { splashGone, hideSplash, postSplashBlack } = useSplashGate(splashWanted);
+  const { splashVisible, hideSplash, postSplashBlack } = useSplashGate(splashWanted);
 
   // Wire remote history (sheet → local) once on mount.
   useEffect(() => {
@@ -590,7 +590,7 @@ function AppContent() {
   useForegroundSync({
     accessToken,
     spreadsheetId,
-    splashGone,
+    splashGone: !splashVisible,
     pinGated,
     unlockAnim,
     snapThemeProgress,
@@ -599,7 +599,7 @@ function AppContent() {
 
   // ─── Render ──────────────────────────────────────────────────────
   // ponytail: keep shell mounted behind splash to avoid plomo flash; splash is overlay, veil bridges black→theme
-  const showSplash = !splashGone;
+  // splashVisible (mount) lags splashGone (logic) until the veil fade ends
   let mainContent: React.ReactNode;
   if (pinLoading) {
     mainContent = (
@@ -799,7 +799,7 @@ function AppContent() {
         />
       </Suspense>
       <MergePromptModal
-        config={modals.state.mergePrompt}
+        config={splashVisible ? null : modals.state.mergePrompt}
         colors={colors}
         copy={{
           mergeTitle: "Datos en Drive",
@@ -812,7 +812,7 @@ function AppContent() {
         onRemoteOnly={modals.closers.remoteOnlyMerge}
       />
       <CurrencyPickerModal
-        visible={needsCurrencyPick}
+        visible={needsCurrencyPick && !splashVisible}
         colors={colors}
         copy={{ chooseCurrency: "Elige tu moneda", continue: "Continuar" }}
         options={CURRENCY_OPTIONS.map((o) => ({
@@ -843,7 +843,7 @@ function AppContent() {
     <View style={[styles.safe, { backgroundColor: "#000000" }]}>
       {mainContent}
       <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: "#000000", opacity: postSplashBlack }]} />
-      {showSplash && (
+      {splashVisible && (
         <View style={[StyleSheet.absoluteFill, { backgroundColor: "#000000" }]} pointerEvents="auto">
           <StartupSplash exiting={!splashWanted} onExitComplete={hideSplash} />
         </View>

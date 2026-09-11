@@ -15,7 +15,7 @@ Quipu is an Expo/React Native client with no custom backend. Google Sign-In supp
 - **`useTagSyncEffects`** — tag-load and tag-cleanup effects: loads tags, migrates legacy label refs, prunes orphaned tag ids from transactions, and syncs removals to the sheet.
 - **`useConfirmCallbacks`** — typed confirm-dialog dispatcher (`delete`, `deleteSelected`, `removeAccount`, `disconnect`) and open/close helpers.
 - **`useTransactionActions`** — bridges modal refs into action callbacks: `openAdd`, `openEdit`, `applySearchFilters`, `handleTransactionPress`, `openMoveMenu`, `exitSearch`, `openSearch`.
-- **`useSplashGate`** — owns `splashGone`/`hideSplash`/`splashWanted` re-arm plus the black `postSplashBlack` veil (120ms hold + 280ms fade).
+- **`useSplashGate`** — owns `splashGone` (logic) vs `splashVisible` (mount: overlay unmounts only after the veil fade ends) plus the black `postSplashBlack` veil (120ms hold + 280ms fade). Native modals (currency, merge) gate on `!splashVisible` because RN `Modal` paints above the splash overlay.
 - **`usePinGate`** — owns `pinGated` and the 380ms unlock animation.
 - **`useForegroundSync`** — owns the `AppState` resume listener and the debounced 1500ms sheet reload.
 - **`useSummaryState`** — lives in `src/hooks/` (used by `SummaryView`); `connectFlow.ts` lives in `src/domain/` (pure offline-first functions, not a hook).

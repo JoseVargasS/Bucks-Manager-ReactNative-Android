@@ -7,7 +7,10 @@ const { spawnSync } = require("node:child_process");
 const pnpm = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
 const steps = [
   ["format:check"],
-  ["exec", "tsc", "--noEmit", "--noUnusedLocals", "--noUnusedParameters"],
+  // ponytail: incremental tsc (buildinfo in node_modules cache, gitignored);
+  // first run is full ~18s, then ~2-4s
+  ["exec", "tsc", "--noEmit", "--noUnusedLocals", "--noUnusedParameters",
+    "--incremental", "--tsBuildInfoFile", "node_modules/.cache/tsc-precommit.tsbuildinfo"],
   ["exec", "eslint", "src/**/*.{ts,tsx}", "App.tsx", "index.ts", "--cache", "--max-warnings", "0"],
 ];
 
