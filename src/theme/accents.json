@@ -2,10 +2,10 @@
   "cyprus": {
     "dark": {
       "bg": "#003530",
-      "card": "#10867e",
+      "card": "#0c5b54",
       "input": "#0c4a46",
-      "border": "#1e7a72",
-      "borderStrong": "#2e9a8e",
+      "border": "#186b62",
+      "borderStrong": "#25897d",
       "text": "#fafcf8",
       "textSubtle": "#b8e0d8",
       "muted": "#9ecac2",
