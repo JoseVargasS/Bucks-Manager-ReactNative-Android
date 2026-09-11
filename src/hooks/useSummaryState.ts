@@ -7,6 +7,7 @@ import {
 } from "@/domain/bucksLogic";
 import { UI_MONTH_NAMES, type UiCopy } from "@/i18n";
 import { type Palette } from "@/theme/colors";
+import { useTagMaps } from "@/hooks/useTagMaps";
 import { type SummaryRow, type Tag, type Transaction } from "@/types";
 import { monthIndex, monthLabel, emptySummary } from "@/components/screens/summaryHelpers";
 import type { MonthTagBreakdownHandle } from "@/components/modals/MonthTagBreakdownModal";
@@ -69,11 +70,7 @@ export function useSummaryState({
     return map;
   }, [yearTransactions, isAllYears]);
 
-  const tagColorMap = useMemo(() => {
-    const map: Record<string, string> = {};
-    tagsList.forEach((t) => { map[t.id] = t.color; });
-    return map;
-  }, [tagsList]);
+  const { tagColorMap } = useTagMaps(tagsList);
 
   const topCategoriesPieData = useMemo<PieSlice[]>(
     () => aggregateExpensesByTag(yearTransactions, tagColorMap, tagsList, colors.muted, copy.otherLabel),
@@ -105,14 +102,14 @@ export function useSummaryState({
   const avgIncomeThreshold = avgIncome * 0.7;
   const stableMonths = filtered.filter((row) => row.totalIncome >= avgIncomeThreshold).length;
 
-  const incomeBreakdown = [
+  const incomeBreakdown = useMemo(() => [
     { label: copy.freqIncomeFull, value: filtered.reduce((sum, row) => sum + row.freqIncome, 0), color: colors.income },
     { label: copy.nonFreqIncomeFull, value: filtered.reduce((sum, row) => sum + row.nonFreqIncome, 0), color: colors.info },
-  ];
-  const expenseBreakdown = [
+  ], [filtered, copy.freqIncomeFull, copy.nonFreqIncomeFull, colors.income, colors.info]);
+  const expenseBreakdown = useMemo(() => [
     { label: copy.freqExpenseFull, value: filtered.reduce((sum, row) => sum + Math.abs(row.freqExpense), 0), color: colors.expense },
     { label: copy.nonFreqExpenseFull, value: filtered.reduce((sum, row) => sum + Math.abs(row.nonFreqExpense), 0), color: colors.warn },
-  ];
+  ], [filtered, copy.freqExpenseFull, copy.nonFreqExpenseFull, colors.expense, colors.warn]);
   const fm = (value: number) => formatMoney(value, currencySymbol, 0).replace("+ ", "");
 
   const handleMonthPress = useCallback((row: SummaryRow) => {

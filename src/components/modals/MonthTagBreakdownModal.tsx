@@ -12,6 +12,7 @@ import { type Tag, type Transaction } from "@/types";
 import { aggregateExpensesByTag, aggregateIncomesByTag, type PieSlice } from "@/domain/bucksLogic";
 import { type UiCopy } from "@/i18n";
 import { useModalTransition } from "@/components/ui/useModalTransition";
+import { useTagMaps } from "@/hooks/useTagMaps";
 import { PieChart, type MergedSlice } from "@/components/ui/PieChart";
 import { PieSliceRow as SliceRow } from "@/components/ui/PieSliceRow";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
@@ -42,11 +43,7 @@ export const MonthTagBreakdownModal = forwardRef<
     { key: "income", label: copy.incomeBreakdown },
   ], [copy.expenseBreakdown, copy.incomeBreakdown]);
 
-  const tagColorMap = useMemo(() => {
-    const map: Record<string, string> = {};
-    tagsList.forEach((t) => { map[t.id] = t.color; });
-    return map;
-  }, [tagsList]);
+  const { tagColorMap } = useTagMaps(tagsList);
 
   const expenseData = useMemo<PieSlice[]>(
     () => aggregateExpensesByTag(monthTransactions, tagColorMap, tagsList, colors.muted, copy.otherLabel),
