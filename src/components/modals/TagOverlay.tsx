@@ -65,7 +65,7 @@ export function TagOverlay({
                 style={[tagOptionStyles.selectOptionRow, { width: "48%", backgroundColor: colors.input }]}
                 onPress={() => onToggleTag(tag.id)}
               >
-                <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: tag.color }} />
+                <View style={{ width: 10, height: 10, borderRadius: RADIUS.pill, backgroundColor: tag.color }} />
                 <Text numberOfLines={1} style={[tagOptionStyles.selectOptionLabel, { color: colors.text }]}>
                   {tag.label}
                 </Text>

@@ -6,6 +6,7 @@ import { Select } from "@/components/ui/Select";
 import { type Palette } from "@/theme/colors";
 import { type UiCopy, UI_MONTH_NAMES } from "@/i18n";
 import { NAV_BTN_SIZE, NAV_BTN_HEIGHT, NAV_BTN_RADIUS, NAV_GROUP_GAP, NAV_GROUP_PADDING, NAV_GROUP_RADIUS, SELECT_HEIGHT, BLUR_INTENSITY } from "@/theme/constants";
+import { RADIUS } from "@/theme/radii";
 
 export const PeriodControls = memo(function PeriodControls({
   colors,
@@ -58,7 +59,7 @@ export const PeriodControls = memo(function PeriodControls({
             buttonStyle={{
               backgroundColor: "transparent",
               borderColor: "transparent",
-              borderRadius: 50,
+              borderRadius: RADIUS.pill,
             }}
           />
           <Select
@@ -75,7 +76,7 @@ export const PeriodControls = memo(function PeriodControls({
             buttonStyle={{
               backgroundColor: "transparent",
               borderColor: "transparent",
-              borderRadius: 50,
+              borderRadius: RADIUS.pill,
             }}
           />
         </View>

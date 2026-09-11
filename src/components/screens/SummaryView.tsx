@@ -22,6 +22,7 @@ import { SummaryMonthlyTable } from "@/components/screens/SummaryMonthlyTable";
 import { SummaryKpiSection } from "@/components/screens/SummaryKpiSection";
 import { useSummaryState } from "@/hooks/useSummaryState";
 import { RADIUS } from "@/theme/radii";
+import { T } from "@/theme/typography";
 
 export const SummaryView = memo(function SummaryView({ colors, copy, summaries, transactions, freqIncome, tagsList, availableYears, topInset, currencySymbol, theme }: {
   colors: Palette; copy: UiCopy; summaries: SummaryRow[]; transactions: Transaction[]; freqIncome: Record<string, number>;
@@ -49,7 +50,7 @@ export const SummaryView = memo(function SummaryView({ colors, copy, summaries, 
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
           <Text style={{ color: colors.muted, fontSize: 13, fontWeight: "600", textTransform: "uppercase" }}>{isAllYears ? copy.totalBalance : copy.annualBalance}</Text>
         </View>
-        <Text numberOfLines={1} style={{ color: totals.net >= 0 ? colors.primary : colors.expense, fontSize: 34, fontWeight: "700", marginTop: 10, fontVariant: ["tabular-nums"] }}>
+        <Text numberOfLines={1} style={[{ color: totals.net >= 0 ? colors.primary : colors.expense, marginTop: 10 }, T.amountDisplay]}>
           {formatMoney(totals.net, currencySymbol, 0)}
         </Text>
         <View style={{ flexDirection: "row", gap: 10, marginTop: 18 }}>

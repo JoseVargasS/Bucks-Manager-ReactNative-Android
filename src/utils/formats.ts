@@ -4,6 +4,13 @@ import type { Palette } from "@/theme/colors";
 
 export const DEFAULT_LOCALE = "en-US";
 
+const compactFormatter = new Intl.NumberFormat(undefined, { notation: "compact", maximumFractionDigits: 1 });
+
+/** Compact axis value for charts (1.2K, 3M). Shared by BarChart/SavingsLineChart. */
+export function compactNumber(value: number): string {
+  return compactFormatter.format(value);
+}
+
 export function formatCreatedTime(createdAt?: string): string {
   if (!createdAt) return "-";
   const date = new Date(createdAt);

@@ -1,5 +1,6 @@
 import { StyleSheet } from "react-native";
 import { RADIUS } from "@/theme/radii";
+import { T } from "@/theme/typography";
 
 export const settingsStyles = StyleSheet.create({
   settingsSection: { marginBottom: 22 },
@@ -36,7 +37,7 @@ export const settingsStyles = StyleSheet.create({
     textAlign: "right",
   },
   accountInitial: { fontSize: 24, fontWeight: "700" },
-  accountHeroName: { fontSize: 18, fontWeight: "700" },
+  accountHeroName: { ...T.section },
   accountHeroEmail: { fontSize: 14, fontWeight: "500", marginTop: 4 },
   signOutBtn: {
     alignSelf: "center",

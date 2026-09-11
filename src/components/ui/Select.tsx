@@ -60,7 +60,7 @@ export const Select = memo(function Select({ value, options, onSelect, colors, p
             onPressOut={() => animatePress(0, 110)}
             accessibilityLabel={title || placeholder || label}
           >
-            {selected?.color && <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: selected.color }} />}
+            {selected?.color && <View style={{ width: 10, height: 10, borderRadius: RADIUS.pill, backgroundColor: selected.color }} />}
             <Text numberOfLines={1} style={[selectStyles.buttonText, { color: selected?.color || (selected ? colors.text : colors.muted) }]}>{label}</Text>
             {!hideArrow && <MaterialCommunityIcons name="chevron-down" size={18} color={colors.muted} />}
           </Pressable>

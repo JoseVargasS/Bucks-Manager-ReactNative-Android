@@ -277,7 +277,7 @@ const BottomAddButton = memo(function BottomAddButton({ onPress }: { onPress: ()
           height: "100%",
           alignItems: "center",
           justifyContent: "center",
-          borderRadius: 17,
+          borderRadius: RADIUS.xl,
         }}
       >
         <MaterialCommunityIcons name="plus" size={31} color={onPrimary} />

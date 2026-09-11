@@ -4,6 +4,7 @@ import Svg, { Circle, G, Line, Path, Rect, Text as SvgText } from "react-native-
 import { computeSavingsLinePoints, MONTH_NAMES, formatMoney, type SavingsTrendMode } from "@/domain/bucksLogic";
 import { UI_MONTH_NAMES } from "@/i18n";
 import { type Palette } from "@/theme/colors";
+import { compactNumber } from "@/utils/formats";
 import { type SummaryRow } from "@/types";
 import { useAppFontFamily } from "./AppText";
 
@@ -152,8 +153,6 @@ export const SavingsLineChart = memo(function SavingsLineChart({
   );
 });
 
-const compactFormatter = new Intl.NumberFormat(undefined, { notation: "compact", maximumFractionDigits: 1 });
-
 function compact(value: number) {
-  return compactFormatter.format(value);
+  return compactNumber(value);
 }

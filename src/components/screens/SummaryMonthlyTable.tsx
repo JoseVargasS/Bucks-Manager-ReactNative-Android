@@ -6,6 +6,7 @@ import { type SummaryRow } from "@/types";
 import { type UiCopy } from "@/i18n";
 import { Text } from "@/components/ui/AppText";
 import { RADIUS } from "@/theme/radii";
+import { T } from "@/theme/typography";
 
 export const SummaryMonthlyTable = memo(function SummaryMonthlyTable({
   colors, copy, filtered, currencySymbol, monthLabel, fm, handleMonthPress,
@@ -18,7 +19,7 @@ export const SummaryMonthlyTable = memo(function SummaryMonthlyTable({
   return (
     <View style={{ backgroundColor: colors.card, borderRadius: RADIUS.xl, overflow: "hidden" }}>
       <View style={{ paddingHorizontal: 16, paddingTop: 16, paddingBottom: 10 }}>
-        <Text style={{ color: colors.text, fontSize: 18, fontWeight: "700" }}>{copy.monthlyDetail}</Text>
+        <Text style={[{ color: colors.text }, T.section]}>{copy.monthlyDetail}</Text>
       </View>
       {filtered.length ? [...filtered].reverse().map((row, index) => (
         <Pressable
@@ -43,7 +44,7 @@ export const SummaryMonthlyTable = memo(function SummaryMonthlyTable({
             </View>
           </View>
           <View style={{ alignItems: "flex-end" }}>
-            <Text numberOfLines={1} style={{ color: row.netMonthly >= 0 ? colors.income : colors.expense, fontSize: 16, fontWeight: "700", fontVariant: ["tabular-nums"] }}>{formatMoney(row.netMonthly, currencySymbol, 0)}</Text>
+            <Text numberOfLines={1} style={[{ color: row.netMonthly >= 0 ? colors.income : colors.expense }, T.amountList]}>{formatMoney(row.netMonthly, currencySymbol, 0)}</Text>
             <Text style={{ color: colors.muted, fontSize: 13, fontWeight: "500", marginTop: 3 }}>{row.totalIncome > 0 ? Math.round((row.netMonthly / row.totalIncome) * 100) : 0}%</Text>
           </View>
         </Pressable>

@@ -5,6 +5,7 @@ import { type Palette } from "@/theme/colors";
 import { type UiCopy } from "@/i18n";
 import { Select } from "@/components/ui/Select";
 import { Text } from "@/components/ui/AppText";
+import { T } from "@/theme/typography";
 import { HEADER_ACTIONS_WIDTH, SELECT_HEIGHT, BLUR_INTENSITY, NAV_GROUP_RADIUS } from "@/theme/constants";
 
 export const SummaryHeader = memo(function SummaryHeader({
@@ -18,8 +19,8 @@ export const SummaryHeader = memo(function SummaryHeader({
     <Animated.View style={{ opacity: scrollY.interpolate({ inputRange: [0, 5], outputRange: [1, 0], extrapolate: "clamp" }) }}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
         <View style={{ flex: 1, minWidth: 0 }}>
-          <Text style={{ color: colors.text, fontSize: 18, fontWeight: "700" }}>{copy.annualOverview}</Text>
-          <Text style={{ color: colors.muted, fontSize: 13, fontWeight: "500", marginTop: 2 }}>{subLabel}</Text>
+          <Text style={[{ color: colors.text }, T.section]}>{copy.annualOverview}</Text>
+          <Text style={[{ color: colors.muted, marginTop: 2 }, T.pageSub]}>{subLabel}</Text>
         </View>
         <BlurView intensity={BLUR_INTENSITY} tint={theme} style={{ borderRadius: NAV_GROUP_RADIUS, overflow: "hidden" }}>
           <Select
@@ -52,8 +53,8 @@ export const SummaryStickyHeader = memo(function SummaryStickyHeader({
       }}
     >
       <View style={{ flex: 1, minWidth: 0 }}>
-        <Text style={{ color: colors.text, fontSize: 18, fontWeight: "700" }}>{copy.annualOverview}</Text>
-        <Text style={{ color: colors.muted, fontSize: 13, fontWeight: "500", marginTop: 2 }}>{subLabel}</Text>
+        <Text style={[{ color: colors.text }, T.section]}>{copy.annualOverview}</Text>
+        <Text style={[{ color: colors.muted, marginTop: 2 }, T.pageSub]}>{subLabel}</Text>
       </View>
       <BlurView intensity={BLUR_INTENSITY} tint={theme} style={{ borderRadius: NAV_GROUP_RADIUS, overflow: "hidden" }}>
         <Select

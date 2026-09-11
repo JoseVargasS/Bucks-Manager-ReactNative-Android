@@ -10,6 +10,7 @@ import type { Palette } from "@/theme/colors";
 import type { Tag, Transaction } from "@/types";
 import type { UiCopy } from "@/i18n";
 import { Text } from "@/components/ui/AppText";
+import { T } from "@/theme/typography";
 import { useTagMaps } from "@/hooks/useTagMaps";
 import type { TagButtonRef } from "@/components/screens/TransactionRow";
 import { PeriodControls } from "@/components/layout/PeriodControls";
@@ -116,12 +117,7 @@ export const DashboardView = memo(function DashboardView({
         />
         <View>
           <Text
-            style={{
-              color: colors.text,
-              fontSize: 18,
-              fontWeight: "700",
-              marginBottom: 10,
-            }}
+            style={[{ color: colors.text, marginBottom: 10 }, T.section]}
           >
             {`${copy.dashboardSubtitle} · ${data.monthKey}`}
           </Text>

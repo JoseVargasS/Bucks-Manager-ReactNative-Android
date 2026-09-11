@@ -7,6 +7,7 @@ import { UI_MONTH_NAMES } from "@/i18n";
 import { type Palette } from "@/theme/colors";
 import { type SummaryRow } from "@/types";
 import { T } from "@/theme/typography";
+import { compactNumber } from "@/utils/formats";
 import { useAppFontFamily } from "./AppText";
 import { useChartFade } from "./chartFade";
 
@@ -133,8 +134,6 @@ export const BarChart = memo(function BarChart({
   );
 });
 
-const compactFormatter = new Intl.NumberFormat(undefined, { notation: "compact", maximumFractionDigits: 1 });
-
 function compact(value: number) {
-  return compactFormatter.format(value);
+  return compactNumber(value);
 }

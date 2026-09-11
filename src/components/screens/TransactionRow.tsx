@@ -7,6 +7,7 @@ import { abbreviateTag, tagTextColor } from "@/utils/tags";
 import { txStyles } from "@/styles/transactionRow";
 import { HighlightedText } from "@/components/ui/HighlightedText";
 import { type Palette } from "@/theme/colors";
+import { RADIUS } from "@/theme/radii";
 import { type Transaction, type MaterialIconName } from "@/types";
 import { type UiCopy } from "@/i18n";
 import { Text } from "@/components/ui/AppText";
@@ -151,7 +152,7 @@ export const TransactionRow = memo(function TransactionRow({
               style={{
                 paddingHorizontal: 7,
                 paddingVertical: 2,
-                borderRadius: 5,
+                borderRadius: RADIUS.pill,
                 backgroundColor: typeFill(tx.type, colors),
               }}
             >
@@ -178,7 +179,7 @@ export const TransactionRow = memo(function TransactionRow({
                 style={{
                   paddingHorizontal: 6,
                   paddingVertical: 2,
-                  borderRadius: 5,
+                  borderRadius: RADIUS.pill,
                   backgroundColor: tagColor,
                 }}
               >
@@ -201,7 +202,7 @@ export const TransactionRow = memo(function TransactionRow({
               style={{
                 paddingHorizontal: 6,
                 paddingVertical: 2,
-                borderRadius: 5,
+                borderRadius: RADIUS.pill,
                 backgroundColor: colors.primary,
               }}
             >

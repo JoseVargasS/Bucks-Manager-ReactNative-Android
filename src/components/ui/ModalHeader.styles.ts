@@ -1,4 +1,5 @@
 import { StyleSheet } from "react-native";
+import { T } from "@/theme/typography";
 
 export const modalHeaderStyles = StyleSheet.create({
   modalHeader: {
@@ -7,5 +8,5 @@ export const modalHeaderStyles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 14,
   },
-  modalTitle: { fontSize: 18, fontWeight: "700" },
+  modalTitle: { ...T.section },
 });
