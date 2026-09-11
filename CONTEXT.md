@@ -15,6 +15,10 @@ Quipu is an Expo/React Native client with no custom backend. Google Sign-In supp
 - **`useTagSyncEffects`** — tag-load and tag-cleanup effects: loads tags, migrates legacy label refs, prunes orphaned tag ids from transactions, and syncs removals to the sheet.
 - **`useConfirmCallbacks`** — typed confirm-dialog dispatcher (`delete`, `deleteSelected`, `removeAccount`, `disconnect`) and open/close helpers.
 - **`useTransactionActions`** — bridges modal refs into action callbacks: `openAdd`, `openEdit`, `applySearchFilters`, `handleTransactionPress`, `openMoveMenu`, `exitSearch`, `openSearch`.
+- **`useSplashGate`** — owns `splashGone`/`hideSplash`/`splashWanted` re-arm plus the black `postSplashBlack` veil (120ms hold + 280ms fade).
+- **`usePinGate`** — owns `pinGated` and the 380ms unlock animation.
+- **`useForegroundSync`** — owns the `AppState` resume listener and the debounced 1500ms sheet reload.
+- **`useSummaryState`** — lives in `src/hooks/` (used by `SummaryView`); `connectFlow.ts` lives in `src/domain/` (pure offline-first functions, not a hook).
 - **`useAppModals`** — owns the modal refs (transaction, detail, search, option sheet) and the App-level modal state (confirm dialog and merge prompt), plus pass-through of secondary modal visibility. Returns stable `{ refs, openers, closers, state }`.
 - **`useDerivedSyncStatus`** — derives the sync-status text from `authError`/`syncError`/`hasLocalData`/`pendingSync`/`isSyncing`.
 
@@ -31,11 +35,19 @@ Deployment-specific Expo values, including `EAS_PROJECT_ID`, come from `.env` or
 5. Create `INCOME AND EXPENSES` only when no compatible named sheet is available.
 6. If the stored spreadsheet was trashed in Drive, clear the local cache and start fresh.
 
+## Splash (Video) and First Frame
+
+- `StartupSplash` (`src/components/screens/StartupSplash.tsx`) plays `assets/splash.mp4` (720x904, ~1.78s) centered at 260px wide (`contain`) on `SPLASH_BG #000000`. `expo-video` (`useVideoPlayer` + `VideoView`, muted, no loop) owns playback; exit requires `exiting && ended` where `ended` comes from `playToEnd` or a 2300ms fallback, then a 220ms fade plus a 600ms safety-net timer.
+- `expo-splash-screen` is configured with `duration: 0, fade: false` (`App.tsx`); the JS video owns the exit. The native poster is `assets/splash-icon-bucks.png` (frame extracted from the mp4) on `#000000` so the handoff is black-on-black.
+- `App.tsx` keeps the shell mounted behind the splash: `mainContent` (PIN / gated / themed shell) renders first, the black veil (`postSplashBlack`, 120ms hold + 280ms fade, native driver) sits above it, and `StartupSplash` is an `absoluteFill` overlay on top. `hideSplash` calls `hideAsync()` then `setSplashGone(true)`, so there is no one-frame `themeBg` flash between video and dashboard.
+- `splashWanted = bootstrapping || accountTransition || rehydratingCache || (accessToken && isFirstRemoteLoad && !hasLocalData)`. The splash reopens on login/account switch by design (current behavior); `ConnectingOverlay` covers the in-shell `scanning/loading/creating/merging/syncing` states underneath.
+- Branding assets are deduplicated: `app.json` points `icon`, `adaptiveIcon.foreground/background/monochrome`, and `web.favicon` all at `./assets/icon-bucks.png` (`backgroundColor #000000`). `assets/` holds only `icon-bucks.png`, `splash-icon-bucks.png`, `splash.mp4`, plus `fonts/`. Icon/video changes require a native rebuild (`npx expo prebuild --clean` + `npm run android`); an `r` reload only refreshes JS.
+
 `reloadFromGoogle()` shares one in-flight promise. `pendingSyncRef` prevents an ordinary refresh from replacing optimistic state. Mutations update React state and the local cache first, then write to Sheets and force one reconciliation read. Each mutation sets `pendingSyncRef.current = true` before the sync call so the reconciliation does not overwrite the optimistic update.
 
 A module-level `syncQueue` serializes Sheets mutations so a fast edit cannot race the reconcile read of an earlier edit. The queue lives in `useGoogleSync.ts` and is exported for use by `connectFlow.ts` during offline-first connect.
 
-`src/hooks/connectFlow.ts` contains the offline connect logic extracted from `useGoogleSync`: `combineTransactions`, `ensureTagsInCatalogue`, `scheduleBackgroundUpload`, and `handleOfflineAfterConnect`. These are pure or async functions that take all dependencies as explicit parameters, with no React closure coupling.
+`src/domain/connectFlow.ts` contains the offline connect logic extracted from `useGoogleSync`: `combineTransactions`, `ensureTagsInCatalogue`, `scheduleBackgroundUpload`, and `handleOfflineAfterConnect`. These are pure or async functions that take all dependencies as explicit parameters, with no React closure coupling.
 
 ## Data Contract
 
@@ -81,7 +93,8 @@ The toggle animates the shell and `HeaderShell` background through an `Animated.
 - `src/components/ui/Select.tsx`: opens an `OptionSheet` (bottom sheet via Modal) instead of an inline dropdown or portal. This avoids Android z-index issues with nested ScrollViews.
 - UI files import the direct `MaterialCommunityIcons` entry so Android exports include only that icon font.
 - `src/theme/ThemeContext.tsx`: three contexts as described above. Do not re-merge them.
-- `App.tsx`: mutation pipeline with `pendingSyncRef.current = true` guards, `rehydratingCache` state for splash visibility during cache restore, `isSheetTrashed` check on cached sessions.
+- `App.tsx`: mutation pipeline with `pendingSyncRef.current = true` guards, `rehydratingCache` state for splash visibility during cache restore, `isSheetTrashed` check on cached sessions. Render keeps `mainContent` mounted under the splash overlay plus `postSplashBlack` veil; outer root is `#000000` so the splash→dashboard transition never flashes `themeBg`.
+- `assets/`: single `icon-bucks.png` for all icon slots, `splash.mp4` + `splash-icon-bucks.png` poster for the video splash. Deleted: `splash-bucks.png`, `android-icon-*-bucks.png` duplicates, `favicon-bucks.png` duplicate.
 
 ## Memoization Contract
 

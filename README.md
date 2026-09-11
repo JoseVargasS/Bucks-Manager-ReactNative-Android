@@ -14,7 +14,7 @@ The app has no custom backend. Each user signs in with Google and uses a private
 6. Scan Google Drive only when there is no usable saved spreadsheet, validating candidates in bounded parallel batches.
 7. Prefer an existing spreadsheet named `INCOME AND EXPENSES`; if none exists, create it with that exact name.
 
-No demo finance data is shown during startup. The native splash remains visible until a cached session or the first Google Sheets load is ready, so the app opens directly with real data instead of showing a skeleton.
+No demo finance data is shown during startup. A short video splash (`assets/splash.mp4`, ~1.78s, black background) plays while bootstrap restores preferences/session/PIN and the cache hydrates, then a black veil fades (120ms hold + 280ms out) into the dashboard. The shell stays mounted behind the splash overlay so there is no light flash between video and content. The splash also reopens on Google login/account switch by design.
 
 Add, edit, delete, reorder, and frequent-income changes update the local UI first. Google Sheets reconciliation runs in the background and a failed sync keeps the local data visible with a pending/error status.
 
@@ -181,7 +181,10 @@ The debug/release SHA-1 in Google Cloud must match the keystore used to build th
 ## Project Structure
 
 ```text
-App.tsx                         Main app composition and runtime state
+App.tsx                         Main app composition and runtime state (splash overlay + black veil)
+assets/icon-bucks.png           Single app icon (icon, adaptiveIcon x3, web favicon)
+assets/splash.mp4               Video splash (expo-video, muted, no loop)
+assets/splash-icon-bucks.png    Native splash poster (frame of splash.mp4, black bg)
 src/api/googleAuth.ts           Google Sign-In and token management
 src/api/googleWorkspace.ts      Google Drive and Sheets integration
 src/api/sheetFormats.ts         Sheet date/number/header parsing
@@ -195,6 +198,10 @@ src/hooks/usePickerCallbacks.ts     OptionSheet openers for settings
 src/hooks/useThemeCrossfade.ts      Theme toggle animation state
 src/hooks/useTabNavigation.ts       Tab state, pager animation, layout constants
 src/hooks/useBootstrap.ts           Startup orchestration (GoogleSignin, restore, splash)
+src/hooks/useSplashGate.ts          Splash visibility + black veil after video
+src/hooks/usePinGate.ts             PIN gate + unlock animation
+src/hooks/useForegroundSync.ts      AppState resume + debounced sheet reload
+src/domain/connectFlow.ts           Offline-first connect (pure functions, not a hook)
 src/hooks/useHistoryPanel.ts        History entries state + SecureStore load
 src/hooks/useTagSync.ts             Tag lifecycle effects (load, migrate, cleanup)
 src/hooks/useConfirmDialog.ts       Typed confirm-dialog callbacks
@@ -204,7 +211,7 @@ src/utils/tags.ts               Tag catalogue, migration, and resolution
 src/utils/history.ts            Transaction history tracking
 src/utils/pin.ts                PIN storage and verification
 src/utils/errorHandler.ts       Logging and error normalization
-src/components/screens/         Dashboard, Expenses, Settings, Login, PIN, Search, Summary
+src/components/screens/         Dashboard, Expenses, Settings, Login, PIN, Search, Summary, StartupSplash (video)
 src/components/modals/          Detail, Export, History, Search, TagEditor, Transaction, OptionSheet
 src/components/layout/          BottomNav, Header, PeriodControls
 src/components/ui/              StatCard, Kpi, BarChart, PieChart, Select, CalendarPicker
@@ -262,6 +269,12 @@ Both servers are configured as MCP entries in Claude Code, Codex CLI, Gemini CLI
 - Transaction tags store stable ids, not labels. Custom tags keep the label the user typed; default tags are translated through the catalogue and keep their colour. `migrateTagReferences` rewrites legacy label refs to ids once when the tag catalogue finishes loading.
 - Tag catalogue (including colours) is persisted in sheet cell `MONTHLY SUMMARY!K2` so custom tag colours survive app data clear and device changes.
 - Every reusable UI primitive is `React.memo`-wrapped. New UI primitives must be memoized at creation time.
+
+## Branding Assets
+
+- `assets/` holds only `icon-bucks.png`, `splash.mp4`, `splash-icon-bucks.png`, plus `fonts/`. All `app.json` icon slots (`icon`, `adaptiveIcon.foreground/background/monochrome` with `backgroundColor #000000`, `web.favicon`) point at `icon-bucks.png`. Removed duplicates: `android-icon-*-bucks.png`, `favicon-bucks.png`, `splash-bucks.png`.
+- `expo-video` renders the splash (`contentFit: contain`, 260px wide, centered on `#000000`). The native `expo-splash-screen` poster uses the extracted mp4 frame on `#000000` with `resizeMode: contain`.
+- Icon, splash poster, video, or `app.json` plugin changes need a native rebuild (`npx expo prebuild --clean` + `npm run android`); `r` in Metro only refreshes JS.
 
 ## Repository Hygiene
 

@@ -27,14 +27,17 @@ if ($physicalLines.Count -gt 1) {
 # adb install that hangs on streamed install for some devices.
 $androidDir = Join-Path $PSScriptRoot "..\android"
 if ($variant -eq "release") {
-  Write-Host "Building release APK ..."
+  # Release: full 4 ABIs from gradle.properties (Play Store / reparto general).
+  Write-Host "Building release APK (all ABIs) ..."
   Push-Location $androidDir
-  try { & .\gradlew.bat assembleRelease --quiet } finally { Pop-Location }
+  try { & .\gradlew.bat assembleRelease --build-cache --quiet } finally { Pop-Location }
   $apk = Join-Path $PSScriptRoot "..\android\app\build\outputs\apk\release\app-release.apk"
 } else {
-  Write-Host "Building debug APK ..."
+  # Debug: solo arm64-v8a (tu celular fisico). Compilar 1 ABI en vez de 4
+  # baja el APK de ~180 MB a ~50 MB y el tiempo a menos de la mitad.
+  Write-Host "Building debug APK (arm64-v8a only) ..."
   Push-Location $androidDir
-  try { & .\gradlew.bat assembleDebug --quiet } finally { Pop-Location }
+  try { & .\gradlew.bat assembleDebug -PreactNativeArchitectures=arm64-v8a --build-cache --quiet } finally { Pop-Location }
   $apk = Join-Path $PSScriptRoot "..\android\app\build\outputs\apk\debug\app-debug.apk"
 }
 

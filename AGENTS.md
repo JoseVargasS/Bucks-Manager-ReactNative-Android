@@ -68,8 +68,11 @@ These rules reflect the current shape of the app and the scale it must support. 
 
 ### Runtime state
 
-- `App.tsx` owns cross-cutting runtime state: session restore, preferences, cache hydration, Google synchronization, optimistic writes, pager state, and modal refs. Cross-cutting logic has been extracted into 12 dedicated hooks (see `CONTEXT.md` for the full list).
+- `App.tsx` owns cross-cutting runtime state: session restore, preferences, cache hydration, Google synchronization, optimistic writes, pager state, and modal refs. Cross-cutting logic has been extracted into dedicated hooks including splash/pin/foreground gates (see `CONTEXT.md` for the full list).
 - The three main pages stay mounted inside one animated pager. Primary interaction modals open through refs so opening them does not require a root visibility-state round trip.
+- The shell stays mounted behind the video splash: `App.tsx` renders `mainContent` first, then a black `postSplashBlack` veil (120ms hold + 280ms fade, native driver), then `StartupSplash` as an `absoluteFill` overlay on a `#000000` root. `hideSplash` calls `hideAsync()` before `setSplashGone(true)`. Do not return early from the splash branch or the first frame flashes `themeBg`.
+- Branding is deduplicated: `app.json` points `icon`, all three `adaptiveIcon` images, and `web.favicon` at `./assets/icon-bucks.png` (`backgroundColor #000000`). `assets/` holds only `icon-bucks.png`, `splash.mp4`, `splash-icon-bucks.png` (native poster), plus `fonts/`.
+- `StartupSplash` plays `assets/splash.mp4` via `expo-video` (muted, no loop, `contain`, 260px centered on `SPLASH_BG #000000`); exit needs `exiting && ended` (`playToEnd` or 2300ms fallback) then a 220ms fade. Native `expo-splash-screen` uses `duration: 0, fade: false` so the JS video owns the exit. Icon/video/`app.json` changes need `npx expo prebuild --clean` + `npm run android`; `r` only refreshes JS.
 - Mutations update React state and the local cache first, then write to Sheets and force one reconciliation read.
 - `reloadFromGoogle()` shares one in-flight promise. `pendingSyncRef` prevents an ordinary refresh from replacing optimistic state. Each mutation sets `pendingSyncRef.current = true` before the sync call so the reconciliation does not overwrite the optimistic update.
 
