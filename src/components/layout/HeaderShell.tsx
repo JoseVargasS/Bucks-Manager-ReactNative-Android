@@ -1,7 +1,6 @@
 import { memo } from "react";
-import { Animated, View } from "react-native";
+import { Animated, Image, View } from "react-native";
 import { BlurView } from "expo-blur";
-import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { appShellStyles } from "@/components/AppShell.styles";
 import { type Palette } from "@/theme/colors";
 import { type Tab } from "@/types";
@@ -78,16 +77,11 @@ function HeaderShellImpl(
         >
           <HeaderTitleFade color={bg} />
           <View style={appShellStyles.headerLeft}>
-            <View
-              style={[
-                appShellStyles.headerLogo,
-                { backgroundColor: colors.primary },
-              ]}
-            >
-              <MaterialCommunityIcons
-                name="sack"
-                size={19}
-                color={colors.onPrimary}
+            <View style={appShellStyles.headerLogo}>
+              <Image
+                source={require("../../../assets/icon-bucks.png")}
+                style={{ width: 40, height: 40, borderRadius: 10 }}
+                resizeMode="cover"
               />
             </View>
             <View style={appShellStyles.titleBlock}>

@@ -54,9 +54,11 @@ export const SegmentedControl = memo(function SegmentedControl({
       {segmentW > 0 && (
           <Animated.View
           style={{
+            // ponytail: left matches container padding (absolute starts at border box)
             position: "absolute",
             top: 3,
             bottom: 3,
+            left: 3,
             width: segmentW,
             backgroundColor: colors.card,
             borderRadius: RADIUS.sm,
