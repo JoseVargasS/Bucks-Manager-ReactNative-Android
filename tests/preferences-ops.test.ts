@@ -189,7 +189,7 @@ describe("preferencesOps", () => {
       const prefs = buildUiPreferences({
         language: "en",
         currencySymbol: "€",
-        fontPreference: "playfair",
+        fontPreference: "sora",
         colorScheme: "milky",
         theme: "light",
       });

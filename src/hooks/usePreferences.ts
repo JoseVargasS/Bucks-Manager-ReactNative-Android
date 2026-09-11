@@ -56,25 +56,18 @@ function sanitizeLanguage(next: string): LanguageMode {
 const FONT_COPY_KEYS: Record<FontPreference, keyof UiCopy> = {
   dmsans: "system",
   serif: "serif",
-  mono: "mono",
   condensed: "condensed",
   light: "lightFont",
   casual: "casual",
   smallcaps: "smallCaps",
   inter: "inter",
   intervariable: "interVariable",
-  jetbrainsmono: "jetbrainsMono",
-  spacemono: "spaceMono",
-  orbitron: "orbitron",
-  playfair: "playfair",
-  bebasneue: "bebasNeue",
   fredoka: "fredoka",
   comicneue: "comicNeue",
   sora: "sora",
   patrickhand: "patrickHand",
   plusjakartasans: "plusJakartaSans",
   comicsansms: "comicSansMS",
-  proggysquare: "proggySquare",
 };
 
 export function getFontPickerOptions(copy: UiCopy) {

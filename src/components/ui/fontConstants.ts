@@ -19,26 +19,18 @@ import type { FontPreference, MaterialIconName } from "@/types";
 export const FONT_FAMILIES: Record<FontPreference, string> = {
   dmsans: "DMSans",
   serif: "serif",
-  mono: "monospace",
   condensed: "sans-serif-condensed",
   light: "sans-serif-light",
   casual: "casual",
   smallcaps: "sans-serif-smallcaps",
   inter: "Inter",
   fredoka: "Fredoka",
-  jetbrainsmono: "JetBrainsMono",
-  spacemono: "SpaceMono",
-  orbitron: "Orbitron",
-  playfair: "PlayfairDisplay",
-  bebasneue: "BebasNeue",
   comicneue: "ComicNeue",
   sora: "Sora",
   patrickhand: "PatrickHand",
   plusjakartasans: "PlusJakartaSans",
   intervariable: "InterVariable",
   comicsansms: "ComicSansMS",
-  proggysquare: "ProggySquare",
-
 };
 
 // Escala global de tamaño de texto (5 niveles). Se multiplica sobre el
@@ -57,31 +49,22 @@ export const FONT_SIZE_SCALE_VALUES = Object.values(FONT_SIZE_SCALE_LEVELS) as F
 export const DEFAULT_FONT_SIZE_SCALE: FontSizeScaleValue = 1.0;
 
 export const FONT_SIZE_SCALE: Partial<Record<FontPreference, number>> = {
-  proggysquare: 1.4,
   comicsansms: 1.2,
 };
 
 export const FONT_ICONS: Record<FontPreference, MaterialIconName> = {
   dmsans: "format-font",
   serif: "format-letter-case",
-  mono: "code-tags",
   condensed: "format-letter-spacing",
   light: "feather",
   casual: "draw",
   smallcaps: "format-letter-case-upper",
   inter: "format-font",
   intervariable: "format-font",
-  jetbrainsmono: "code-tags",
-  spacemono: "code-tags",
-  orbitron: "rocket-launch",
-  playfair: "format-letter-case",
-  bebasneue: "format-letter-spacing",
   fredoka: "balloon",
   comicneue: "emoticon-happy",
   patrickhand: "draw",
   sora: "format-font",
   plusjakartasans: "format-font",
   comicsansms: "emoticon-happy",
-  proggysquare: "code-tags",
-
 };

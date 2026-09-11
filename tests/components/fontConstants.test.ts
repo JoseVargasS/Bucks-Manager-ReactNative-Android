@@ -2,13 +2,12 @@ import { FONT_FAMILIES, FONT_SIZE_SCALE, FONT_ICONS } from "@/components/ui/font
 
 describe("fontConstants", () => {
   it("has all font families", () => {
-    expect(Object.keys(FONT_FAMILIES).length).toBeGreaterThan(20);
+    expect(Object.keys(FONT_FAMILIES).length).toBe(14);
     expect(FONT_FAMILIES.dmsans).toBe("DMSans");
     expect(FONT_FAMILIES.inter).toBe("Inter");
   });
 
   it("has scale overrides for specific fonts", () => {
-    expect(FONT_SIZE_SCALE.proggysquare).toBe(1.4);
     expect(FONT_SIZE_SCALE.comicsansms).toBe(1.2);
     expect(FONT_SIZE_SCALE.dmsans).toBeUndefined();
   });

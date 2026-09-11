@@ -8,11 +8,9 @@ const UI_PREFERENCES_RANGE = `${SHEET_NAMES.summary}!L1:L2`;
 const VALID_COLOR_SCHEMES = Object.keys(accents) as ColorSchemePreference[];
 const VALID_LANGUAGES: LanguageMode[] = ["es", "en"];
 const VALID_FONT_PREFERENCES: FontPreference[] = [
-  "dmsans", "serif", "mono", "condensed", "light", "casual",
-  "smallcaps", "inter", "intervariable", "jetbrainsmono",
-  "spacemono", "orbitron", "playfair", "bebasneue", "fredoka",
+  "dmsans", "serif", "condensed", "light", "casual",
+  "smallcaps", "inter", "intervariable", "fredoka",
   "comicneue", "sora", "patrickhand", "plusjakartasans", "comicsansms",
-  "proggysquare",
 ];
 const VALID_FONT_SIZE_SCALES: number[] = [0.85, 0.92, 1.0, 1.08, 1.15];
 

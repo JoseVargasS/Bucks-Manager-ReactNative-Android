@@ -31,25 +31,18 @@ export const SettingsView = memo(function SettingsView({
   const fontLabel: Record<FontPreference, string> = {
     dmsans: copy.system,
     serif: copy.serif,
-    mono: copy.mono,
     condensed: copy.condensed,
     light: copy.lightFont,
     casual: copy.casual,
     smallcaps: copy.smallCaps,
     inter: copy.inter,
     fredoka: copy.fredoka,
-    jetbrainsmono: copy.jetbrainsMono,
-    spacemono: copy.spaceMono,
-    orbitron: copy.orbitron,
-    playfair: copy.playfair,
-    bebasneue: copy.bebasNeue,
     comicneue: copy.comicNeue,
     sora: copy.sora,
     patrickhand: copy.patrickHand,
     plusjakartasans: copy.plusJakartaSans,
     intervariable: copy.interVariable,
     comicsansms: copy.comicSansMS,
-    proggysquare: copy.proggySquare,
   };
   return (
     <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.pageScroll, styles.pageScrollMobile]}>

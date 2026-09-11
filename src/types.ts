@@ -98,22 +98,15 @@ export type LanguageMode = "es" | "en";
 export type FontPreference =
   | "dmsans"
   | "serif"
-  | "mono"
   | "condensed"
   | "light"
   | "casual"
   | "smallcaps"
   | "inter"
   | "fredoka"
-  | "jetbrainsmono"
-  | "spacemono"
-  | "orbitron"
-  | "playfair"
-  | "bebasneue"
   | "comicneue"
   | "sora"
   | "patrickhand"
   | "plusjakartasans"
   | "intervariable"
-  | "comicsansms"
-  | "proggysquare";
+  | "comicsansms";
