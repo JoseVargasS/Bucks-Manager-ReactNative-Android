@@ -1,5 +1,5 @@
 import { memo, useCallback, useRef, useState } from "react";
-import { ScrollView, View } from "react-native";
+import { RefreshControl, ScrollView, View } from "react-native";
 
 import { base } from "@/styles/baseStyles";
 import { dashboardStyles } from "@/components/screens/DashboardView.styles";
@@ -39,6 +39,8 @@ export const DashboardView = memo(function DashboardView({
   goNextMonth,
   onOpenDetail,
   topInset,
+  refreshing,
+  onRefresh,
 }: {
   colors: Palette;
   theme: "dark" | "light";
@@ -56,6 +58,8 @@ export const DashboardView = memo(function DashboardView({
   goNextMonth: () => void;
   onOpenDetail: (tx: Transaction) => void;
   topInset?: number;
+  refreshing: boolean;
+  onRefresh: () => void;
 }) {
   const { tagColorMap, tagLabelMap } = useTagMaps(tagsList);
   const [dashBreakdownTab, setDashBreakdownTab] = useState("expense");
@@ -95,6 +99,9 @@ export const DashboardView = memo(function DashboardView({
     <>
       <ScrollView
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} colors={[colors.primary]} progressBackgroundColor={colors.card} progressViewOffset={topInset ?? 0} />
+        }
         contentContainerStyle={[
           styles.pageScroll,
           styles.pageScrollMobile,

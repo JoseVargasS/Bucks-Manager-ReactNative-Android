@@ -37,6 +37,8 @@ type ExpensesTabProps = {
   goPrevMonth: () => void;
   goNextMonth: () => void;
   tagsList: Tag[];
+  refreshing: boolean;
+  onRefresh: () => void;
 };
 
 type SummaryTabProps = {
@@ -50,6 +52,8 @@ type SummaryTabProps = {
   currencySymbol: string;
   tagsList: Tag[];
   theme: "dark" | "light";
+  refreshing: boolean;
+  onRefresh: () => void;
 };
 
 type DashboardTabProps = {
@@ -69,6 +73,8 @@ type DashboardTabProps = {
   goPrevMonth: () => void;
   goNextMonth: () => void;
   onOpenDetail: (tx: Transaction) => void;
+  refreshing: boolean;
+  onRefresh: () => void;
 };
 
 type SettingsTabProps = {
@@ -98,6 +104,9 @@ type SettingsTabProps = {
   onOpenDeleteAccount: () => void;
   onOpenContact: () => void;
   onOpenRate: () => void;
+  refreshing: boolean;
+  onRefresh: () => void;
+  refreshOffset: number;
 };
 
 type LoadingBarProps = {
@@ -187,6 +196,8 @@ function TabPageImpl(props: TabPageProps) {
               goNextMonth={tabProps.goNextMonth}
               onOpenDetail={tabProps.onOpenDetail}
               topInset={tabProps.contentTopInset}
+              refreshing={tabProps.refreshing}
+              onRefresh={tabProps.onRefresh}
             />
           </FeatureBoundary>
         ) : tab === "expenses" ? (
@@ -217,6 +228,8 @@ function TabPageImpl(props: TabPageProps) {
               goNextMonth={tabProps.goNextMonth}
               topInset={tabProps.contentTopInset}
               tagsList={tabProps.tagsList}
+              refreshing={tabProps.refreshing}
+              onRefresh={tabProps.onRefresh}
             />
           </FeatureBoundary>
         ) : tab === "summary" ? (
@@ -232,6 +245,8 @@ function TabPageImpl(props: TabPageProps) {
               topInset={tabProps.contentTopInset}
               currencySymbol={tabProps.currencySymbol}
               theme={tabProps.theme}
+              refreshing={tabProps.refreshing}
+              onRefresh={tabProps.onRefresh}
             />
           </FeatureBoundary>
         ) : (
@@ -262,6 +277,9 @@ function TabPageImpl(props: TabPageProps) {
               onOpenDeleteAccount={tabProps.onOpenDeleteAccount}
               onOpenContact={tabProps.onOpenContact}
               onOpenRate={tabProps.onOpenRate}
+              refreshing={tabProps.refreshing}
+              onRefresh={tabProps.onRefresh}
+              refreshOffset={tabProps.contentTopInset}
             />
           </FeatureBoundary>
         )}

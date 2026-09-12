@@ -1,5 +1,5 @@
 import { memo } from "react";
-import { ScrollView, View } from "react-native";
+import { RefreshControl, ScrollView, View } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { formatMoney, type SavingsTrendMode } from "@/domain/bucksLogic";
 import { type UiCopy } from "@/i18n";
@@ -24,9 +24,10 @@ import { useSummaryState } from "@/hooks/useSummaryState";
 import { RADIUS } from "@/theme/radii";
 import { T } from "@/theme/typography";
 
-export const SummaryView = memo(function SummaryView({ colors, copy, summaries, transactions, freqIncome, tagsList, availableYears, topInset, currencySymbol, theme }: {
+export const SummaryView = memo(function SummaryView({ colors, copy, summaries, transactions, freqIncome, tagsList, availableYears, topInset, currencySymbol, theme, refreshing, onRefresh }: {
   colors: Palette; copy: UiCopy; summaries: SummaryRow[]; transactions: Transaction[]; freqIncome: Record<string, number>;
   tagsList: Tag[]; availableYears: number[]; topInset?: number; currencySymbol: string; theme: "dark" | "light";
+  refreshing: boolean; onRefresh: () => void;
 }) {
   const state = useSummaryState({ summaries, transactions, freqIncome, tagsList, availableYears, currencySymbol, colors, copy });
   const {
@@ -41,6 +42,9 @@ export const SummaryView = memo(function SummaryView({ colors, copy, summaries, 
     <View style={{ flex: 1 }}>
       <ScrollView
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} colors={[colors.primary]} progressBackgroundColor={colors.card} progressViewOffset={topInset ?? 0} />
+        }
         contentContainerStyle={[styles.pageScroll, styles.pageScrollMobile, { gap: 12 }, topInset !== undefined && { paddingTop: topInset }]}
         onScroll={(e) => { const y = e.nativeEvent.contentOffset.y; scrollY.setValue(y); setScrolled(y > 2); }}
       >

@@ -74,7 +74,7 @@ These rules reflect the current shape of the app and the scale it must support. 
 - Branding is deduplicated: `app.json` points `icon`, all three `adaptiveIcon` images, and `web.favicon` at `./assets/icon-bucks.png` (`backgroundColor #000000`). `assets/` holds only `icon-bucks.png`, `splash.mp4`, `splash-icon-bucks.png` (native poster), plus `fonts/`.
 - `StartupSplash` plays `assets/splash.mp4` via `expo-video` (muted, no loop, `contain`, 260px centered on `SPLASH_BG #000000`); exit needs `exiting && ended` (`playToEnd` or 2300ms fallback) then a 220ms fade. Native `expo-splash-screen` uses `duration: 0, fade: false` so the JS video owns the exit. Icon/video/`app.json` changes need `npx expo prebuild --clean` + `npm run android`; `r` only refreshes JS.
 - Mutations update React state and the local cache first, then write to Sheets and force one reconciliation read.
-- `reloadFromGoogle()` shares one in-flight promise. `pendingSyncRef` prevents an ordinary refresh from replacing optimistic state. Each mutation sets `pendingSyncRef.current = true` before the sync call so the reconciliation does not overwrite the optimistic update.
+- `reloadFromGoogle()` shares one in-flight promise. `pendingSyncRef` prevents an ordinary refresh from replacing optimistic state. Each mutation sets `pendingSyncRef.current = true` before the sync call so the reconciliation does not overwrite the optimistic update. Pull-to-refresh on the four tab screens reuses it as `reloadFromGoogle(token, sheetId, false, true)` (spinner only, no-op while pending/offline); modals and bottom sheets are excluded.
 
 ### Hydration and sync
 

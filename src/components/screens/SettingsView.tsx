@@ -1,5 +1,5 @@
 import { memo, useEffect, useRef } from "react";
-import { Animated, Easing, ScrollView, Pressable, View } from "react-native";
+import { Animated, Easing, RefreshControl, ScrollView, Pressable, View } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { base } from "@/styles/baseStyles";
 import { settingsStyles } from "@/components/screens/SettingsView.styles";
@@ -19,6 +19,7 @@ export const SettingsView = memo(function SettingsView({
   onOpenLanguage, onOpenCurrency, onOpenFont, onOpenFontSize, onOpenColorScheme, onOpenPin, onOpenTags,
   onSwitch, onDisconnect, onOpenExport,
   onOpenPrivacy, onOpenTerms, onOpenDeleteAccount, onOpenContact, onOpenRate,
+  refreshing, onRefresh, refreshOffset,
 }: {
   colors: Palette; copy: UiCopy;
   language: "es" | "en"; currencySymbol: string; fontPreference: FontPreference; fontSizeScale: number;
@@ -31,6 +32,8 @@ export const SettingsView = memo(function SettingsView({
   onSwitch: () => void; onDisconnect: () => void; onOpenExport: () => void;
   onOpenPrivacy: () => void; onOpenTerms: () => void; onOpenDeleteAccount: () => void;
   onOpenContact: () => void; onOpenRate: () => void;
+  refreshing: boolean; onRefresh: () => void;
+  refreshOffset?: number;
 }) {
   const initial = (accountInfo?.email || accountInfo?.name || "B").slice(0, 1).toUpperCase();
   const fontLabel: Record<FontPreference, string> = {
@@ -50,7 +53,12 @@ export const SettingsView = memo(function SettingsView({
     comicsansms: copy.comicSansMS,
   };
   return (
-    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.pageScroll, styles.pageScrollMobile]}>
+    <ScrollView
+      showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} colors={[colors.primary]} progressBackgroundColor={colors.card} progressViewOffset={refreshOffset ?? 0} />
+      }
+      contentContainerStyle={[styles.pageScroll, styles.pageScrollMobile]}>
       <View style={styles.settingsSection}>
         <Text style={[styles.settingsLabel, { color: colors.muted }]}>{copy.account}</Text>
         <View style={[styles.settingsGroup, { backgroundColor: colors.card }]}>

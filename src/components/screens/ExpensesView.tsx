@@ -8,6 +8,7 @@ import {
 } from "react";
 import {
   Animated,
+  RefreshControl,
   SectionList,
   Pressable,
   View,
@@ -192,6 +193,8 @@ export const ExpensesView = memo(function ExpensesView({
   goToday,
   goPrevMonth,
   goNextMonth,
+  refreshing,
+  onRefresh,
 }: {
   colors: Palette;
   theme: "dark" | "light";
@@ -218,6 +221,8 @@ export const ExpensesView = memo(function ExpensesView({
   goToday: () => void;
   goPrevMonth: () => void;
   goNextMonth: () => void;
+  refreshing: boolean;
+  onRefresh: () => void;
 }) {
   const scrollYRef = useRef<Animated.Value | null>(null);
   if (!scrollYRef.current) scrollYRef.current = new Animated.Value(0);
@@ -370,6 +375,9 @@ export const ExpensesView = memo(function ExpensesView({
         style={{ flex: 1 }}
         sections={sections}
         keyExtractor={keyExtractor}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} colors={[colors.primary]} progressBackgroundColor={colors.card} progressViewOffset={topInset ?? 0} />
+        }
         renderItem={renderItem}
         renderSectionHeader={renderSectionHeader}
         ListHeaderComponent={<ExpensesListHeader colors={colors} copy={copy} searchActive={searchActive} onExitSearch={onExitSearch} scrollY={scrollY} periodBar={periodBar} />}

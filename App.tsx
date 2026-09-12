@@ -246,6 +246,15 @@ function AppContent() {
     connectRef.current = syncApi.connectGoogleWorkspace;
   }, [syncApi.connectGoogleWorkspace]);
 
+  // Pull-to-refresh: solo spinner (sin overlay global) y relectura fresca
+  // tras cualquier sync en curso. syncApi se recrea por render, por eso va
+  // por ref para que el callback quede estable y no rompa los memo.
+  const reloadRef = useRef(syncApi.reloadFromGoogle);
+  reloadRef.current = syncApi.reloadFromGoogle;
+  const handleRefresh = useCallback(() => {
+    void reloadRef.current(accessToken, spreadsheetId, false, true);
+  }, [accessToken, spreadsheetId]);
+
   // ─── Tag lifecycle effects ───────────────────────────────────────
   const { tagEditorVisible, openTagEditor, closeTagEditor } = useTagSyncEffects(
     language,
@@ -473,6 +482,8 @@ function AppContent() {
     syncStatusText,
     pendingSync,
     isSyncing,
+    refreshing: isSyncing,
+    onRefresh: handleRefresh,
     selectPeriod,
     goToday,
     goPrevMonth,

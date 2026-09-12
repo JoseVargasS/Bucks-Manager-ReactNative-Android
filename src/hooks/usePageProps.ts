@@ -35,6 +35,8 @@ type UsePagePropsParams = {
   syncStatusText: string;
   pendingSync: boolean;
   isSyncing: boolean;
+  refreshing: boolean;
+  onRefresh: () => void;
   selectPeriod: (month: number, year: number) => void;
   goToday: () => void;
   goPrevMonth: () => void;
@@ -91,7 +93,9 @@ export function usePageProps(p: UsePagePropsParams) {
     goPrevMonth: p.goPrevMonth,
     goNextMonth: p.goNextMonth,
     onOpenDetail: p.handleTransactionPress,
-  }), [contentInset, p.colors, p.theme, p.copy, p.transactions, p.tagsList, p.currencySymbol, p.month, p.year, p.availableYears, p.availableMonths, p.selectPeriod, p.goToday, p.goPrevMonth, p.goNextMonth, p.handleTransactionPress]);
+    refreshing: p.refreshing,
+    onRefresh: p.onRefresh,
+  }), [contentInset, p.colors, p.theme, p.copy, p.transactions, p.tagsList, p.currencySymbol, p.month, p.year, p.availableYears, p.availableMonths, p.selectPeriod, p.goToday, p.goPrevMonth, p.goNextMonth, p.handleTransactionPress, p.refreshing, p.onRefresh]);
 
   const expensesProps = useMemo(() => ({
     contentTopInset: contentInset,
@@ -119,7 +123,9 @@ export function usePageProps(p: UsePagePropsParams) {
     goPrevMonth: p.goPrevMonth,
     goNextMonth: p.goNextMonth,
     tagsList: p.tagsList,
-  }), [contentInset, p.colors, p.theme, p.visibleTransactions, p.searchActive, p.searchText, p.selectedRows, p.currencySymbol, p.copy, p.month, p.year, p.availableYears, p.availableMonths, p.exitSearch, p.handleTransactionPress, p.openEdit, p.requestDeleteSelected, p.openMoveMenu, p.toggleSelection, p.loadOlder, p.selectPeriod, p.goToday, p.goPrevMonth, p.goNextMonth, p.tagsList]);
+    refreshing: p.refreshing,
+    onRefresh: p.onRefresh,
+  }), [contentInset, p.colors, p.theme, p.visibleTransactions, p.searchActive, p.searchText, p.selectedRows, p.currencySymbol, p.copy, p.month, p.year, p.availableYears, p.availableMonths, p.exitSearch, p.handleTransactionPress, p.openEdit, p.requestDeleteSelected, p.openMoveMenu, p.toggleSelection, p.loadOlder, p.selectPeriod, p.goToday, p.goPrevMonth, p.goNextMonth, p.tagsList, p.refreshing, p.onRefresh]);
 
   const summaryProps = useMemo(() => ({
     contentTopInset: contentInset,
@@ -132,7 +138,9 @@ export function usePageProps(p: UsePagePropsParams) {
     currencySymbol: p.currencySymbol,
     tagsList: p.tagsList,
     theme: p.theme,
-  }), [contentInset, p.colors, p.copy, p.summaries, p.transactions, p.freqIncome, p.availableYears, p.currencySymbol, p.tagsList, p.theme]);
+    refreshing: p.refreshing,
+    onRefresh: p.onRefresh,
+  }), [contentInset, p.colors, p.copy, p.summaries, p.transactions, p.freqIncome, p.availableYears, p.currencySymbol, p.tagsList, p.theme, p.refreshing, p.onRefresh]);
 
   const settingsProps = useMemo(() => ({
     contentTopInset: contentInset,
@@ -161,7 +169,10 @@ export function usePageProps(p: UsePagePropsParams) {
     onOpenDeleteAccount: p.openDeleteAccount,
     onOpenContact: p.openContact,
     onOpenRate: p.openRate,
-  }), [contentInset, p.colors, p.copy, p.language, p.accountInfo, p.currencySymbol, p.fontPreference, p.fontSizeScale, p.colorSchemeLabel, p.pinEnabled, p.tagsList.length, p.openLanguagePicker, p.openCurrencyPicker, p.openFontPicker, p.openFontSizePicker, p.openColorSchemePicker, p.handlePinOpen, p.openTagEditor, p.openAccountManager, p.requestDisconnectGoogle, p.openExport, p.openPrivacy, p.openTerms, p.openDeleteAccount, p.openContact, p.openRate]);
+    refreshing: p.refreshing,
+    onRefresh: p.onRefresh,
+    refreshOffset: contentInset,
+  }), [contentInset, p.colors, p.copy, p.language, p.accountInfo, p.currencySymbol, p.fontPreference, p.fontSizeScale, p.colorSchemeLabel, p.pinEnabled, p.tagsList.length, p.openLanguagePicker, p.openCurrencyPicker, p.openFontPicker, p.openFontSizePicker, p.openColorSchemePicker, p.handlePinOpen, p.openTagEditor, p.openAccountManager, p.requestDisconnectGoogle, p.openExport, p.openPrivacy, p.openTerms, p.openDeleteAccount, p.openContact, p.openRate, p.refreshing, p.onRefresh]);
 
   const loadingBarProps = useMemo(() => ({
     visible: Boolean(p.loading || (p.syncStatusText && !p.pendingSync && !p.isSyncing)),
