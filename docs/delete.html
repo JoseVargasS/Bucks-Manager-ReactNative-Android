@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Quipu — Eliminar cuenta y datos</title>
+<meta name="description" content="Cómo eliminar tu cuenta y datos de Quipu — Ahorros & Gastos">
+<style>
+:root{--bg:#F0EDE4;--card:#ffffff;--text:#1a2622;--muted:#5a6660;--accent:#4A6500;--border:#d4c4a8}
+*{box-sizing:border-box}
+body{margin:0;font-family:Inter,system-ui,sans-serif;background:var(--bg);color:var(--text);line-height:1.6}
+.wrap{max-width:780px;margin:0 auto;padding:28px 20px 48px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:28px;box-shadow:0 4px 16px rgba(0,0,0,.06)}
+h1{font-size:28px;margin:0 0 6px}
+.sub{color:var(--muted);font-size:14px;margin:0 0 18px}
+h2{font-size:18px;margin:28px 0 8px}
+p,li{font-size:15px}
+a{color:var(--accent)}a:hover{text-decoration:underline}
+.badge{display:inline-block;background:rgba(74,101,0,.11);color:var(--accent);padding:6px 10px;border-radius:999px;font-size:12px;font-weight:700}
+ol li{margin-bottom:10px}
+.note{background:#eef6d8;border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin:18px 0;font-size:14px}
+hr{border:none;border-top:1px solid var(--border);margin:20px 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="card">
+<span class="badge">QUIPU — AHORROS & GASTOS</span>
+<h1>Eliminar tu cuenta y tus datos</h1>
+<p class="sub">Última actualización: 12 de septiembre de 2026 · Contacto: <a href="mailto:kuskalabs@gmail.com">kuskalabs@gmail.com</a></p>
+
+<p>Quipu <strong>no tiene servidores propios ni cuentas propias</strong>: entras con tu cuenta Google y tus datos viven en <strong>tu Google Sheet privado</strong> y en tu dispositivo. Por eso, "eliminar tu cuenta de Quipu" significa desconectar la app y borrar esos datos. Tienes dos vías:</p>
+
+<h2>Opción A — Desde la app (inmediato)</h2>
+<ol>
+<li>Abre Quipu y entra a <strong>Ajustes</strong>.</li>
+<li>Toca <strong>Cerrar sesión / Desconectar Google</strong>. Esto borra el token, el PIN y el cache local de tu dispositivo al instante.</li>
+<li>(Opcional) En tu Google Drive, manda a papelera el spreadsheet <strong>INCOME AND EXPENSES</strong> para borrar tus transacciones.</li>
+<li>(Opcional) Revoca el acceso en <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener">myaccount.google.com/permissions</a>.</li>
+</ol>
+
+<h2>Opción B — Por email (te ayudamos nosotros)</h2>
+<ol>
+<li>Escríbenos a <a href="mailto:kuskalabs@gmail.com">kuskalabs@gmail.com</a> con asunto <strong>"Eliminar mis datos — Quipu"</strong> desde el email de tu cuenta Google.</li>
+<li>Te confirmamos por email cuando esté listo, en un máximo de <strong>30 días</strong>.</li>
+</ol>
+
+<h2>Qué datos se eliminan y cuáles se conservan</h2>
+<ul>
+<li><strong>Se eliminan:</strong> token OAuth, Sheet ID, PIN, historial local, catálogo de tags, cache de transacciones y preferencias en tu dispositivo (al desconectar/desinstalar). Tus filas del Sheet, al borrar el spreadsheet en Drive.</li>
+<li><strong>Se conservan:</strong> nada en servidores nuestros, porque no tenemos. Google conserva tus datos según sus propias políticas hasta que los borres en Drive.</li>
+<li><strong>Retención adicional:</strong> 0 días en infraestructura propia. Los emails de soporte se borran a los 90 días.</li>
+</ul>
+
+<div class="note">Desarrollador: <strong>Kuska Labs</strong> (cuskalabs) · Paquete: <code>com.kuskalabs.quipu</code> · <a href="mailto:kuskalabs@gmail.com">kuskalabs@gmail.com</a></div>
+
+<hr>
+<p style="font-size:13px;color:var(--muted)">Quipu · Sin backend · Tu Sheet es tu base de datos.</p>
+<p style="font-size:13px"><a href="./privacy.html">Privacidad →</a> · <a href="./terms.html">Términos →</a></p>
+</div>
+</div>
+</body>
+</html>
