@@ -22,7 +22,7 @@ Quipu is an Expo/React Native client with no custom backend. Google Sign-In supp
 - **`usePageProps`** — owns the memoized page-prop blocks (dashboard/expenses/summary/settings/loadingBar + tabPage/header composition) with the same deps the inline memos had. `App.tsx` passes values in and renders from the return.
 - **`useSummaryState`** — lives in `src/hooks/` (used by `SummaryView`); `connectFlow.ts` lives in `src/domain/` (pure offline-first functions, not a hook).
 - **`useAppModals`** — owns the modal refs (transaction, detail, search, option sheet) and the App-level modal state (confirm dialog and merge prompt), plus pass-through of secondary modal visibility. Returns stable `{ refs, openers, closers, state }`.
-- **`useDerivedSyncStatus`** — derives the sync-status text from `authError`/`syncError`/`hasLocalData`/`pendingSync`/`isSyncing`.
+- **`useDerivedSyncStatus`** — derives the sync-status text from `authError`/`syncError`/`hasLocalData`/`pendingSync`/`isSyncing`. Con datos locales nunca muestra "Mostrando datos guardados" (ruido): devuelve `""`.
 
 The three main pages stay mounted inside one animated pager. Primary interaction modals open through refs so opening them does not require a root visibility-state round trip.
 
@@ -36,6 +36,9 @@ Deployment-specific Expo values, including `EAS_PROJECT_ID`, come from `.env` or
 4. If the stored spreadsheet is missing or incompatible, scan Drive in batches of five candidates.
 5. Create `INCOME AND EXPENSES` only when no compatible named sheet is available.
 6. If the stored spreadsheet was trashed in Drive, clear the local cache and start fresh.
+7. Account switch enters directly without picker only if that account was used in the last 10 days (`CACHED_ACCOUNT_MAX_AGE_MS`, `isAccountStale`); otherwise it goes straight to the Google picker.
+8. Foreground resume refreshes the token without UI and retries once on 401/403; background writes use the session token when the SDK stayed on the other account.
+9. Cold start never adopts a token from another account: the sheet owner is resolved via `findAccountBySheet` and a divergent SDK token is ignored (stored token retried, `TOKEN_KEY` untouched).
 
 ## Splash (Video) and First Frame
 
