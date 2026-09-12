@@ -59,6 +59,11 @@ type UsePagePropsParams = {
   openAccountManager: () => void;
   requestDisconnectGoogle: () => void;
   toggleThemeWithCrossfade: () => void;
+  openPrivacy: () => void;
+  openTerms: () => void;
+  openDeleteAccount: () => void;
+  openContact: () => void;
+  openRate: () => void;
 };
 
 /**
@@ -151,7 +156,12 @@ export function usePageProps(p: UsePagePropsParams) {
     onSwitch: p.openAccountManager,
     onDisconnect: p.requestDisconnectGoogle,
     onOpenExport: p.openExport,
-  }), [contentInset, p.colors, p.copy, p.language, p.accountInfo, p.currencySymbol, p.fontPreference, p.fontSizeScale, p.colorSchemeLabel, p.pinEnabled, p.tagsList.length, p.openLanguagePicker, p.openCurrencyPicker, p.openFontPicker, p.openFontSizePicker, p.openColorSchemePicker, p.handlePinOpen, p.openTagEditor, p.openAccountManager, p.requestDisconnectGoogle, p.openExport]);
+    onOpenPrivacy: p.openPrivacy,
+    onOpenTerms: p.openTerms,
+    onOpenDeleteAccount: p.openDeleteAccount,
+    onOpenContact: p.openContact,
+    onOpenRate: p.openRate,
+  }), [contentInset, p.colors, p.copy, p.language, p.accountInfo, p.currencySymbol, p.fontPreference, p.fontSizeScale, p.colorSchemeLabel, p.pinEnabled, p.tagsList.length, p.openLanguagePicker, p.openCurrencyPicker, p.openFontPicker, p.openFontSizePicker, p.openColorSchemePicker, p.handlePinOpen, p.openTagEditor, p.openAccountManager, p.requestDisconnectGoogle, p.openExport, p.openPrivacy, p.openTerms, p.openDeleteAccount, p.openContact, p.openRate]);
 
   const loadingBarProps = useMemo(() => ({
     visible: Boolean(p.loading || (p.syncStatusText && !p.pendingSync && !p.isSyncing)),

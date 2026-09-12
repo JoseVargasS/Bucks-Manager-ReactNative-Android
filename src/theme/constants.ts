@@ -37,6 +37,19 @@ export const GOOGLE_WORKSPACE_SCOPES = [
   "https://www.googleapis.com/auth/spreadsheets",
 ];
 
+const LEGAL_BASE = "https://josevargass.github.io/Bucks-Manager-ReactNative-Android";
+
+export const LEGAL_URLS = {
+  privacy: `${LEGAL_BASE}/privacy.html`,
+  terms: `${LEGAL_BASE}/terms.html`,
+  deleteAccount: `${LEGAL_BASE}/delete.html`,
+};
+
+export const PLAY_PACKAGE = "com.kuskalabs.quipu";
+export const PLAY_STORE_URL = `https://play.google.com/store/apps/details?id=${PLAY_PACKAGE}`;
+export const PLAY_MARKET_URL = `market://details?id=${PLAY_PACKAGE}`;
+export const SUPPORT_EMAIL = "kuskalabs@gmail.com";
+
 export const TAB_ORDER: Tab[] = ["dashboard", "expenses", "summary", "settings"];
 
 export const COLOR_SCHEME_OPTIONS: Array<{

@@ -93,6 +93,11 @@ type SettingsTabProps = {
   onSwitch: () => void;
   onDisconnect: () => void;
   onOpenExport: () => void;
+  onOpenPrivacy: () => void;
+  onOpenTerms: () => void;
+  onOpenDeleteAccount: () => void;
+  onOpenContact: () => void;
+  onOpenRate: () => void;
 };
 
 type LoadingBarProps = {
@@ -252,6 +257,11 @@ function TabPageImpl(props: TabPageProps) {
               onSwitch={tabProps.onSwitch}
               onDisconnect={tabProps.onDisconnect}
               onOpenExport={tabProps.onOpenExport}
+              onOpenPrivacy={tabProps.onOpenPrivacy}
+              onOpenTerms={tabProps.onOpenTerms}
+              onOpenDeleteAccount={tabProps.onOpenDeleteAccount}
+              onOpenContact={tabProps.onOpenContact}
+              onOpenRate={tabProps.onOpenRate}
             />
           </FeatureBoundary>
         )}

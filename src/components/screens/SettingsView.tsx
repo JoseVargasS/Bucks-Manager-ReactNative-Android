@@ -18,6 +18,7 @@ export const SettingsView = memo(function SettingsView({
   colorSchemeLabel, tagsCount,
   onOpenLanguage, onOpenCurrency, onOpenFont, onOpenFontSize, onOpenColorScheme, onOpenPin, onOpenTags,
   onSwitch, onDisconnect, onOpenExport,
+  onOpenPrivacy, onOpenTerms, onOpenDeleteAccount, onOpenContact, onOpenRate,
 }: {
   colors: Palette; copy: UiCopy;
   language: "es" | "en"; currencySymbol: string; fontPreference: FontPreference; fontSizeScale: number;
@@ -28,6 +29,8 @@ export const SettingsView = memo(function SettingsView({
   onOpenColorScheme: () => void;
   onOpenPin: () => void; onOpenTags: () => void;
   onSwitch: () => void; onDisconnect: () => void; onOpenExport: () => void;
+  onOpenPrivacy: () => void; onOpenTerms: () => void; onOpenDeleteAccount: () => void;
+  onOpenContact: () => void; onOpenRate: () => void;
 }) {
   const initial = (accountInfo?.email || accountInfo?.name || "B").slice(0, 1).toUpperCase();
   const fontLabel: Record<FontPreference, string> = {
@@ -100,6 +103,17 @@ export const SettingsView = memo(function SettingsView({
         <Text style={[styles.settingsLabel, { color: colors.muted }]}>{copy.export}</Text>
         <View style={[styles.settingsGroup, { backgroundColor: colors.card }]}>
           <SettingsRow colors={colors} icon="file-export" label={copy.exportMovements} onPress={onOpenExport} last />
+        </View>
+      </View>
+
+      <View style={styles.settingsSection}>
+        <Text style={[styles.settingsLabel, { color: colors.muted }]}>{copy.legalHelp}</Text>
+        <View style={[styles.settingsGroup, { backgroundColor: colors.card }]}>
+          <SettingsRow colors={colors} icon="shield-check" label={copy.privacyPolicy} onPress={onOpenPrivacy} />
+          <SettingsRow colors={colors} icon="file-document" label={copy.termsConditions} onPress={onOpenTerms} />
+          <SettingsRow colors={colors} icon="account-remove" label={copy.deleteAccountData} onPress={onOpenDeleteAccount} />
+          <SettingsRow colors={colors} icon="email" label={copy.contactSupport} onPress={onOpenContact} />
+          <SettingsRow colors={colors} icon="star" label={copy.rateApp} onPress={onOpenRate} last />
         </View>
       </View>
 

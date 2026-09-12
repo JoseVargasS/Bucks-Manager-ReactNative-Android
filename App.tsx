@@ -6,6 +6,7 @@ import {
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import {
   Animated,
+  Linking,
   View,
   StatusBar as NativeStatusBar,
 } from "react-native";
@@ -46,6 +47,10 @@ import {
 import {
   TAB_ORDER,
   COLOR_SCHEME_OPTIONS,
+  LEGAL_URLS,
+  PLAY_MARKET_URL,
+  PLAY_STORE_URL,
+  SUPPORT_EMAIL,
 } from "@/theme/constants";
 import { useFinancialState } from "@/hooks/useFinancialState";
 import { useAppModals } from "@/hooks/useAppModals";
@@ -417,6 +422,23 @@ function AppContent() {
     selectedRows,
   });
 
+  // ─── Legal & store links ─────────────────────────────────────────
+  const openUrl = useCallback((url: string) => {
+    Linking.openURL(url).catch(() => undefined);
+  }, []);
+  const openPrivacy = useCallback(() => openUrl(LEGAL_URLS.privacy), [openUrl]);
+  const openTerms = useCallback(() => openUrl(LEGAL_URLS.terms), [openUrl]);
+  const openDeleteAccount = useCallback(() => openUrl(LEGAL_URLS.deleteAccount), [openUrl]);
+  const openContact = useCallback(() => openUrl(`mailto:${SUPPORT_EMAIL}`), [openUrl]);
+  const openRate = useCallback(async () => {
+    try {
+      const supported = await Linking.canOpenURL(PLAY_MARKET_URL);
+      await Linking.openURL(supported ? PLAY_MARKET_URL : PLAY_STORE_URL);
+    } catch {
+      // ignore
+    }
+  }, []);
+
   // ─── Memoised page props (extracted hook) ────────────────────────
   const { tabPageProps, headerProps } = usePageProps({
     tab,
@@ -474,6 +496,11 @@ function AppContent() {
     openAccountManager,
     requestDisconnectGoogle,
     toggleThemeWithCrossfade,
+    openPrivacy,
+    openTerms,
+    openDeleteAccount,
+    openContact,
+    openRate,
   });
 
   // ─── Shell lifecycle: splash, sheet wiring, PIN gate, resume ──
