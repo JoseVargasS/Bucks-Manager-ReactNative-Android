@@ -3,6 +3,16 @@ import { AppState, type Animated } from "react-native";
 import { hideAsync } from "expo-splash-screen";
 import { logError } from "@/utils/errorHandler";
 
+// Log corto para el reintento fallido: cuenta + status, nunca el JSON crudo.
+function shortForegroundError(error: unknown, accountEmail?: string): Error {
+  const msg = error instanceof Error ? error.message : String(error);
+  const status = msg.match(/Google API (\d+)/)?.[1];
+  if (status === "401" || status === "403") {
+    return new Error(`Google ${status} al reanudar (cuenta ${accountEmail || "?"}), reintento con token fresco falló`);
+  }
+  return new Error(msg.slice(0, 160));
+}
+
 type ForegroundSyncDeps = {
   accessToken: string;
   spreadsheetId: string;
@@ -16,6 +26,9 @@ type ForegroundSyncDeps = {
     showLoader?: boolean,
     forceFresh?: boolean,
   ) => Promise<void>;
+  refreshSessionToken?: () => Promise<string | null>;
+  isAuthFailure?: (error: unknown) => boolean;
+  accountEmail?: string;
 };
 
 /**
@@ -34,6 +47,9 @@ export function useForegroundSync({
   unlockAnim,
   snapThemeProgress,
   reloadFromGoogle,
+  refreshSessionToken,
+  isAuthFailure,
+  accountEmail,
 }: ForegroundSyncDeps) {
   const onForegroundRef = useRef<() => void>(() => {});
   const foregroundReloadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -47,6 +63,12 @@ export function useForegroundSync({
   pinGatedRef.current = pinGated;
   const reloadFromGoogleRef = useRef(reloadFromGoogle);
   reloadFromGoogleRef.current = reloadFromGoogle;
+  const refreshTokenRef = useRef(refreshSessionToken);
+  refreshTokenRef.current = refreshSessionToken;
+  const isAuthFailureRef = useRef(isAuthFailure);
+  isAuthFailureRef.current = isAuthFailure;
+  const accountEmailRef = useRef(accountEmail);
+  accountEmailRef.current = accountEmail;
   const unlockAnimRef = useRef(unlockAnim);
   unlockAnimRef.current = unlockAnim;
   const snapThemeProgressRef = useRef(snapThemeProgress);
@@ -63,13 +85,33 @@ export function useForegroundSync({
         if (foregroundReloadTimerRef.current)
           clearTimeout(foregroundReloadTimerRef.current);
         foregroundReloadTimerRef.current = setTimeout(() => {
-          // Usa refs actuales para no disparar reload con sheetId viejo tras A→B
-          const freshToken = accessTokenRef.current;
-          const freshSheetId = spreadsheetIdRefForFg.current;
-          if (!freshToken || !freshSheetId) return;
-          if (freshSheetId !== sheetId) return;
-          reloadFromGoogleRef.current(freshToken, freshSheetId, false)
-            .catch((error) => logError(error, "foreground:reload"));
+          void (async () => {
+            // Usa refs actuales para no disparar reload con sheetId viejo tras A→B
+            const freshSheetId = spreadsheetIdRefForFg.current;
+            if (!freshSheetId) return;
+            if (freshSheetId !== sheetId) return;
+            // El token en memoria puede haber perdido vigencia en fondo: se
+            // refresca sin UI antes del reload (fallback al actual si falla).
+            const current = accessTokenRef.current;
+            const refreshed = await refreshTokenRef.current?.().catch(() => null);
+            const t = refreshed || current;
+            if (!t) return;
+            try {
+              await reloadFromGoogleRef.current(t, freshSheetId, false);
+            } catch (error) {
+              // Un reintento con token recién refrescado ante 401/403; si igual
+              // falla, log corto (sin el JSON crudo) con la cuenta para diagnóstico.
+              if (isAuthFailureRef.current?.(error)) {
+                const retry = await refreshTokenRef.current?.().catch(() => null);
+                if (retry && retry !== t) {
+                  await reloadFromGoogleRef.current(retry, freshSheetId, false)
+                    .catch((retryError) => logError(shortForegroundError(retryError, accountEmailRef.current), "foreground:reload"));
+                  return;
+                }
+              }
+              logError(shortForegroundError(error, accountEmailRef.current), "foreground:reload");
+            }
+          })();
         }, 1500);
       }
     };

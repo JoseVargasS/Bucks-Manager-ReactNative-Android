@@ -17,7 +17,7 @@ import { readHistory, writeHistory as writeHistoryApi } from "@/api/historyOps";
 import { calculateSummaries } from "@/domain/bucksLogic";
 import { loadFinancialCache, deleteFinancialCache, loadOfflineCache } from "@/data/localCache";
 import { mergeTagsFromSheet, saveTags } from "@/utils/tags";
-import { saveConnectedAccount } from "@/data/connectedAccounts";
+import { saveConnectedAccount, findAccountBySheet } from "@/data/connectedAccounts";
 import { TOKEN_KEY, SHEET_KEY } from "@/theme/constants";
 import type { LanguageMode, Tag, Transaction, SummaryRow, HistoryEntry } from "@/types";
 import type { UiPreferencesSnapshot } from "@/hooks/usePreferences";
@@ -40,6 +40,7 @@ export interface GoogleSyncApi {
   refreshStoredSession: (token: string, sheetId: string, hadCache: boolean) => Promise<void>;
   reloadFromGoogle: (token?: string, sheetId?: string, showLoader?: boolean, forceFresh?: boolean) => Promise<void>;
   syncGoogleInBackground: (task: (freshToken: string) => Promise<void>, title: string) => void;
+  refreshSessionToken: () => Promise<string | null>;
   connectGoogleWorkspace: (token: string, preferredSheetId?: string, forceScan?: boolean, wasOffline?: boolean) => Promise<void>;
   selectSpreadsheet: (token: string, sheetId: string, showLoader?: boolean) => Promise<void>;
   writeUiPreferences: (snapshot: UiPreferencesSnapshot) => void;
@@ -81,6 +82,8 @@ export function useGoogleSync(
     teardownSession, disconnectGoogle, resetFinancialState,
     pendingSyncRef,
     setConnectionStatus,
+    accountInfo,
+    setAccountInfo,
   } = session;
   const { applyFinancialState, persistFinancialState, hasLocalDataRef, freqIncomeRef, transactions: txList } = fin;
   const { tagsList, setTagsList } = tags;
@@ -149,7 +152,21 @@ export function useGoogleSync(
     const work = (async () => {
       try {
         const fresh = await getWorkspaceAccessToken(false);
-        activeToken = fresh.accessToken || token;
+        const candidate = fresh.accessToken || token;
+        // HALLAZGO 1: el SDK puede estar parado en otra cuenta (el fast switch
+        // no pasa por UI). Si el sheet guardado tiene dueño conocido y el token
+        // fresco es de otro, no se adopta ni se persiste: se reintenta con el
+        // guardado y el catch común deja offline amable o pide login.
+        const owner = await findAccountBySheet(sheetId);
+        const ownerEmail = (owner?.email || "").toLowerCase();
+        const sdkEmail = (syncAccountInfoBase()?.email || "").toLowerCase();
+        if (owner && ownerEmail && sdkEmail && sdkEmail !== ownerEmail) {
+          await reloadFromGoogle(token, sheetId, false);
+          setAuthError("");
+          setAccountInfo({ name: owner.name, email: owner.email });
+          return;
+        }
+        activeToken = candidate;
         setAuthError("");
         setAccessToken(activeToken);
         syncAccountInfo();
@@ -296,6 +313,40 @@ export function useGoogleSync(
     return task;
   }
 
+  // Token para escrituras: el SDK sigue al último usuario que vio UI de Google,
+  // pero el fast switch no pasa por UI — si el SDK quedó en la otra cuenta, el
+  // token de sesión manda (si no, cada escritura de fondo da 403 cruzado).
+  async function getEffectiveWriteToken(): Promise<string> {
+    const appEmail = (accountInfo?.email || "").toLowerCase();
+    const sdkEmail = (syncAccountInfoBase()?.email || "").toLowerCase();
+    if (appEmail && sdkEmail && sdkEmail !== appEmail) {
+      if (!accessToken) throw new Error(copy.sessionExpired);
+      return accessToken;
+    }
+    const tokens = await GoogleSignin.getTokens();
+    return tokens.accessToken || accessToken;
+  }
+
+  // Token fresco sin UI para el reload de foreground. Nunca lanza: null si no
+  // se pudo refrescar (se reintenta con el token en memoria). Si el SDK quedó
+  // en la otra cuenta, no se acepta su token (sería 403 seguro).
+  async function refreshSessionToken(): Promise<string | null> {
+    try {
+      const appEmail = (accountInfo?.email || "").toLowerCase();
+      const fresh = await getWorkspaceAccessToken(false, appEmail || undefined);
+      if (!fresh.accessToken) return null;
+      const sdkEmail = (syncAccountInfoBase()?.email || "").toLowerCase();
+      if (appEmail && sdkEmail && sdkEmail !== appEmail) return null;
+      if (fresh.accessToken !== accessToken) {
+        setAccessToken(fresh.accessToken);
+        await setItemAsync(TOKEN_KEY, fresh.accessToken).catch(() => undefined);
+      }
+      return fresh.accessToken;
+    } catch {
+      return null;
+    }
+  }
+
   function syncGoogleInBackground(
     task: (freshToken: string) => Promise<void>,
     title: string,
@@ -305,8 +356,7 @@ export function useGoogleSync(
     syncQueueRef.current = syncQueueRef.current
       .catch(() => undefined)
       .then(async () => {
-        const tokens = await GoogleSignin.getTokens();
-        const fresh = tokens.accessToken || "";
+        const fresh = await getEffectiveWriteToken();
         if (!fresh) throw new Error(copy.sessionExpired);
         setAccessToken(fresh);
         await setItemAsync(TOKEN_KEY, fresh).catch(() => undefined);
@@ -458,9 +508,14 @@ export function useGoogleSync(
     } catch (error) {
       setConnectionStatus(null);
       session.setOffline(true);
-      setSyncError(errMsg(error));
+      // ponytail: el 401/403 se relanza para que el switch caiga al flujo
+      // silent/picker en vez de quedarse en sesión rota; el Alert crudo con el
+      // JSON de Google nunca se muestra (errMsg lo mapea a "Sesión expirada").
+      const friendly = authErr(error) ? copy.sessionExpired : errMsg(error);
+      setSyncError(friendly);
+      if (authErr(error)) throw new Error(friendly, { cause: error });
       if (!hasLocalDataRef.current)
-        Alert.alert("Google Sheets", errMsg(error));
+        Alert.alert("Google Sheets", friendly);
     } finally {
       setLoading(false);
       setIsSyncing(false);
@@ -472,6 +527,7 @@ export function useGoogleSync(
     refreshStoredSession,
     reloadFromGoogle,
     syncGoogleInBackground,
+    refreshSessionToken,
     connectGoogleWorkspace,
     selectSpreadsheet,
     writeUiPreferences,

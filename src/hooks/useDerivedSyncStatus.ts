@@ -18,12 +18,12 @@ export function useDerivedSyncStatus({
   copy,
 }: SyncStatusInput): string {
   if (authError) return authError;
-  if (syncError) return hasLocalData ? copy.showingSavedData : syncError;
+  // ponytail: "Mostrando datos guardados" era puro ruido — con datos locales
+  // no se muestra nada, al user no le interesa el estado del sync.
+  if (syncError) return hasLocalData ? "" : syncError;
   if (pendingSync) return copy.pendingSyncStatus;
   if (isSyncing) {
-    return hasLocalData
-      ? `${copy.showingSavedData} · ${copy.syncing.toLowerCase()}`
-      : copy.syncing;
+    return hasLocalData ? "" : copy.syncing;
   }
   return "";
 }

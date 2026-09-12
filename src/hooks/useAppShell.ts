@@ -24,6 +24,9 @@ type UseAppShellParams = {
   pinVerified: boolean;
   snapThemeProgress: () => void;
   reloadFromGoogle: () => Promise<void>;
+  refreshSessionToken: () => Promise<string | null>;
+  isAuthFailure: (error: unknown) => boolean;
+  accountEmail?: string;
   wireRemoteHistory: (apply: (entries: HistoryEntry[]) => void) => void;
   wireRemoteUiPreferences: (apply: (prefs: UiPreferencesSnapshot) => void) => void;
   wireMergePrompt: (cb: (cfg: MergePromptWireConfig) => void) => void;
@@ -50,6 +53,9 @@ export function useAppShell({
   pinVerified,
   snapThemeProgress,
   reloadFromGoogle,
+  refreshSessionToken,
+  isAuthFailure,
+  accountEmail,
   wireRemoteHistory,
   wireRemoteUiPreferences,
   wireMergePrompt,
@@ -96,6 +102,9 @@ export function useAppShell({
     unlockAnim,
     snapThemeProgress,
     reloadFromGoogle,
+    refreshSessionToken,
+    isAuthFailure,
+    accountEmail,
   });
 
   return { splashWanted, splashVisible, hideSplash, postSplashBlack, pinGated, unlockAnim };

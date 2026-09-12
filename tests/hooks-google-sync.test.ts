@@ -262,6 +262,69 @@ describe("useGoogleSync", () => {
     }
   });
 
+  // ─── HALLAZGO 1: arranque en frio con SDK en otra cuenta ───
+
+  test("arranque en frio no adopta ni persiste token de otra cuenta", async () => {
+    const secureStore = g.__bucksSecureStoreMock;
+    secureStore.reset();
+    const { saveConnectedAccount } = await import("../src/data/connectedAccounts.ts");
+    await saveConnectedAccount({ email: "b@x.com", name: "B", lastUsedAt: new Date().toISOString(), spreadsheetId: "sheet-1", scopesGranted: true });
+    await secureStore.setItemAsync("bucks_google_access_token", "stored-b-tok");
+    const prevUser = g.__bucksGoogleSigninMock.getCurrentUser;
+    g.__bucksGoogleSigninMock.getCurrentUser = () => ({ data: { user: { email: "a@x.com" } } });
+    const original = globalThis.fetch;
+    globalThis.fetch = defaultSheetsHandler([]) as any;
+    try {
+      let account: any = null;
+      let offlineValue: boolean | undefined;
+      const session = makeSession({
+        setAccountInfo: (v: any) => { account = v; },
+        setOffline: (v: boolean) => { offlineValue = v; },
+      });
+      const api = useGoogleSync(session, emptyFin, emptyTags, emptyHelpers, { current: null });
+
+      await api.refreshStoredSession("stored-b-tok", "sheet-1", true);
+      expect(await secureStore.getItemAsync("bucks_google_access_token")).toBe("stored-b-tok");
+      expect(account?.email).toBe("b@x.com");
+      expect(offlineValue).not.toBe(true);
+    } finally {
+      globalThis.fetch = original;
+      g.__bucksGoogleSigninMock.getCurrentUser = prevUser;
+      secureStore.reset();
+    }
+  });
+
+  test("arranque en frio divergido con token muerto deja offline sin corromper", async () => {
+    const secureStore = g.__bucksSecureStoreMock;
+    secureStore.reset();
+    const { saveConnectedAccount } = await import("../src/data/connectedAccounts.ts");
+    await saveConnectedAccount({ email: "b@x.com", name: "B", lastUsedAt: new Date().toISOString(), spreadsheetId: "sheet-1", scopesGranted: true });
+    await secureStore.setItemAsync("bucks_google_access_token", "dead-tok");
+    const prevUser = g.__bucksGoogleSigninMock.getCurrentUser;
+    g.__bucksGoogleSigninMock.getCurrentUser = () => ({ data: { user: { email: "a@x.com" } } });
+    const original = globalThis.fetch;
+    globalThis.fetch = (async () => json({ error: { code: 401, message: "invalid", status: "UNAUTHENTICATED" } }, 401)) as any;
+    try {
+      let offlineValue: boolean | undefined;
+      let authErrorMsg = "";
+      const session = makeSession({
+        setOffline: (v: boolean) => { offlineValue = v; },
+        setAuthError: (v: string) => { authErrorMsg = v; },
+      });
+      const helpers = { ...emptyHelpers, authErr: () => true };
+      const api = useGoogleSync(session, emptyFin, emptyTags, helpers, { current: null });
+
+      await api.refreshStoredSession("dead-tok", "sheet-1", true);
+      expect(await secureStore.getItemAsync("bucks_google_access_token")).toBe("dead-tok");
+      expect(offlineValue).toBe(true);
+      expect(authErrorMsg.length).toBeGreaterThan(0);
+    } finally {
+      globalThis.fetch = original;
+      g.__bucksGoogleSigninMock.getCurrentUser = prevUser;
+      secureStore.reset();
+    }
+  });
+
   test("refreshStoredSession sets syncError on unknown error without cache", async () => {
     const secureStore = g.__bucksSecureStoreMock;
     secureStore.reset();
@@ -762,15 +825,59 @@ describe("useGoogleSync", () => {
     }
   });
 
+  test("connectGoogleWorkspace with expired token rejects friendly without raw Alert", async () => {
+    const secureStore = g.__bucksSecureStoreMock;
+    secureStore.reset();
+    const original = globalThis.fetch;
+    globalThis.fetch = (async () => json({ error: { code: 401, message: "Request had invalid authentication credentials.", status: "UNAUTHENTICATED" } }, 401)) as any;
+    const alertCalls: any[][] = [];
+    const prevAlert = g.__bucksAlertMock.alert;
+    g.__bucksAlertMock.alert = (...args: any[]) => { alertCalls.push(args); };
+    try {
+      let syncError = "";
+      const session = makeSession({ setSyncError: (v: string) => { syncError = v; } });
+      const helpers = { ...emptyHelpers, authErr: () => true };
+      const api = useGoogleSync(session, emptyFin, emptyTags, helpers, { current: null });
+
+      await expect(api.connectGoogleWorkspace("expired-tok", "preferred-id")).rejects.toThrow(/Session expired/);
+      expect(syncError).toBe("Session expired");
+      expect(alertCalls.length).toBe(0);
+    } finally {
+      globalThis.fetch = original;
+      g.__bucksAlertMock.alert = prevAlert;
+      secureStore.reset();
+    }
+  });
+
   // ─── syncGoogleInBackground empty token ───
 
-  test("syncGoogleInBackground throws when token is empty", async () => {
+  test("syncGoogleInBackground usa token de sesion si el SDK no da token", async () => {
+    const original = globalThis.fetch;
+    globalThis.fetch = defaultSheetsHandler([]) as any;
+    try {
+      g.__bucksGoogleSigninMock.getTokens = async () => ({ accessToken: "", idToken: "" });
+      let synced = false;
+      let syncError = "";
+      const session = makeSession({ setSyncError: (v: string) => { syncError = v; } });
+      const api = useGoogleSync(session, emptyFin, emptyTags, emptyHelpers, { current: null });
+
+      api.syncGoogleInBackground(async () => { synced = true; }, "sync");
+      await new Promise((r) => setTimeout(r, 30));
+      expect(synced).toBe(true);
+      expect(syncError).toBe("");
+    } finally {
+      globalThis.fetch = original;
+      g.__bucksGoogleSigninMock.getTokens = async () => ({ accessToken: "mock-token", idToken: "mock-id" });
+    }
+  });
+
+  test("syncGoogleInBackground falla solo sin token del SDK ni de sesion", async () => {
     const original = globalThis.fetch;
     globalThis.fetch = defaultSheetsHandler([]) as any;
     try {
       g.__bucksGoogleSigninMock.getTokens = async () => ({ accessToken: "", idToken: "" });
       let syncError = "";
-      const session = makeSession({ setSyncError: (v: string) => { syncError = v; } });
+      const session = makeSession({ accessToken: "", setSyncError: (v: string) => { syncError = v; } });
       const api = useGoogleSync(session, emptyFin, emptyTags, emptyHelpers, { current: null });
 
       api.syncGoogleInBackground(async () => {}, "sync");
@@ -779,6 +886,60 @@ describe("useGoogleSync", () => {
     } finally {
       globalThis.fetch = original;
       g.__bucksGoogleSigninMock.getTokens = async () => ({ accessToken: "mock-token", idToken: "mock-id" });
+    }
+  });
+
+  test("refreshSessionToken devuelve token fresco y lo persiste", async () => {
+    const secureStore = g.__bucksSecureStoreMock;
+    secureStore.reset();
+    try {
+      const api = useGoogleSync(makeSession(), emptyFin, emptyTags, emptyHelpers, { current: null });
+      await expect(api.refreshSessionToken()).resolves.toBe("fresh-tok");
+      expect(await secureStore.getItemAsync("bucks_google_access_token")).toBe("fresh-tok");
+    } finally {
+      secureStore.reset();
+    }
+  });
+
+  test("refreshSessionToken devuelve null si no se puede refrescar", async () => {
+    const session = makeSession({ getWorkspaceAccessToken: async () => { throw new Error("offline"); } });
+    const api = useGoogleSync(session, emptyFin, emptyTags, emptyHelpers, { current: null });
+    await expect(api.refreshSessionToken()).resolves.toBeNull();
+  });
+
+  test("syncGoogleInBackground usa token de sesion si el SDK quedo en otra cuenta", async () => {
+    const prevUser = g.__bucksGoogleSigninMock.getCurrentUser;
+    const prevTokens = g.__bucksGoogleSigninMock.getTokens;
+    g.__bucksGoogleSigninMock.getCurrentUser = () => ({ data: { user: { email: "a@x.com" } } });
+    g.__bucksGoogleSigninMock.getTokens = async () => ({ accessToken: "sdk-a-tok", idToken: "" });
+    try {
+      let received = "";
+      const session = makeSession({ accountInfo: { email: "b@x.com" } });
+      const api = useGoogleSync(session, emptyFin, emptyTags, emptyHelpers, { current: null });
+      api.syncGoogleInBackground(async (t) => { received = t; }, "sync");
+      await new Promise((r) => setTimeout(r, 30));
+      expect(received).toBe("tok");
+    } finally {
+      g.__bucksGoogleSigninMock.getCurrentUser = prevUser;
+      g.__bucksGoogleSigninMock.getTokens = prevTokens;
+    }
+  });
+
+  test("syncGoogleInBackground usa token del SDK si coincide la cuenta", async () => {
+    const prevUser = g.__bucksGoogleSigninMock.getCurrentUser;
+    const prevTokens = g.__bucksGoogleSigninMock.getTokens;
+    g.__bucksGoogleSigninMock.getCurrentUser = () => ({ data: { user: { email: "b@x.com" } } });
+    g.__bucksGoogleSigninMock.getTokens = async () => ({ accessToken: "sdk-tok", idToken: "" });
+    try {
+      let received = "";
+      const session = makeSession({ accountInfo: { email: "b@x.com" } });
+      const api = useGoogleSync(session, emptyFin, emptyTags, emptyHelpers, { current: null });
+      api.syncGoogleInBackground(async (t) => { received = t; }, "sync");
+      await new Promise((r) => setTimeout(r, 30));
+      expect(received).toBe("sdk-tok");
+    } finally {
+      g.__bucksGoogleSigninMock.getCurrentUser = prevUser;
+      g.__bucksGoogleSigninMock.getTokens = prevTokens;
     }
   });
 
