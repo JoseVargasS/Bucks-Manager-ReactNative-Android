@@ -10,6 +10,9 @@ import type { Tab } from "@/types";
 
 export function useTabNavigation() {
   const [tab, setTab] = useState<Tab>("dashboard");
+  // Solo durante el slide: el strip se cachea como textura GPU y el
+  // composite de 880 vistas por frame (~9-16ms a 120Hz) colapsa a 1 capa.
+  const [paging, setPaging] = useState(false);
   const tabRef = useRef<Tab>(tab);
   const pagerRef = useRef<Animated.Value | null>(null);
   if (!pagerRef.current) pagerRef.current = new Animated.Value(0);
@@ -23,16 +26,18 @@ export function useTabNavigation() {
     (next: Tab) => {
       if (next === tabRef.current) return;
       tabRef.current = next;
+      setPaging(true);
       pagerTranslateX.stopAnimation();
       Animated.timing(pagerTranslateX, {
         toValue: -TAB_ORDER.indexOf(next) * tabWidth,
         duration: ANIM_TAB_PAGER,
         easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
-      }).start();
-      requestAnimationFrame(() => {
-        if (tabRef.current !== next) return;
-        setTab(next);
+      }).start(({ finished }) => {
+        setPaging(false);
+        // El commit (880 vistas) cae en reposo, no sobre el slide de 210ms.
+        // El focus visual ya viajo optimista en el BottomNav.
+        if (finished && tabRef.current === next) setTab(next);
       });
     },
     [pagerTranslateX, tabWidth],
@@ -50,6 +55,7 @@ export function useTabNavigation() {
     tab,
     setTab,
     tabRef,
+    paging,
     pagerTranslateX,
     tabWidth,
     statusBarInset,

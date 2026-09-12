@@ -396,6 +396,7 @@ function AppContent() {
   const tabNav = useTabNavigation();
   const {
     tab,
+    paging,
     pagerTranslateX,
     tabWidth,
     headerTopInset,
@@ -619,6 +620,7 @@ function AppContent() {
           ]}
         >
           <Animated.View
+            renderToHardwareTextureAndroid={paging}
             style={{
               width: tabWidth * TAB_ORDER.length,
               height: "100%",

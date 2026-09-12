@@ -1,12 +1,13 @@
-import { memo, useCallback, useEffect, useRef, useState } from "react";
+import { memo, useCallback, useRef, useState } from "react";
 import { Animated, Pressable } from "react-native";
 import Svg, { Path } from "react-native-svg";
 import { useColors } from "@/theme/ThemeContext";
 import { Text } from "./AppText";
 import { RADIUS } from "@/theme/radii";
 
-const GOOGLE_COLORS = ["#4285F4", "#EA4335", "#FBBC05", "#34A853", "#4285F4"];
-const LOOP_DURATION = 1800;
+// Azul Google fijo: el pulso en loop despertaba el hilo JS en cada frame
+// por un adorno. Calma visual y bateria a cambio de nada funcional.
+const GOOGLE_BLUE = "#4285F4";
 
 const GoogleIcon = memo(function GoogleIcon({ size = 28 }: { size?: number }) {
   return (
@@ -40,27 +41,8 @@ export const ConnectBanner = memo(function ConnectBanner({
 }) {
   const { card, shadow } = useColors();
   const [dismissed, setDismissed] = useState(false);
-  const pulse = useRef<Animated.Value | null>(null);
-  if (!pulse.current) pulse.current = new Animated.Value(0);
   const fabOpacity = useRef<Animated.Value | null>(null);
   if (!fabOpacity.current) fabOpacity.current = new Animated.Value(1);
-
-  useEffect(() => {
-    const anim = Animated.loop(
-      Animated.timing(pulse.current!, {
-        toValue: 1,
-        duration: LOOP_DURATION,
-        useNativeDriver: false,
-      }),
-    );
-    anim.start();
-    return () => anim.stop();
-  }, []);
-
-  const pillColor = pulse.current!.interpolate({
-    inputRange: GOOGLE_COLORS.map((_, i) => i / (GOOGLE_COLORS.length - 1)),
-    outputRange: GOOGLE_COLORS,
-  });
 
   const handleClose = useCallback(() => {
     Animated.timing(fabOpacity.current!, {
@@ -91,7 +73,7 @@ export const ConnectBanner = memo(function ConnectBanner({
             paddingHorizontal: 14,
             paddingVertical: 9,
             borderRadius: RADIUS["2xl"],
-            backgroundColor: pillColor,
+            backgroundColor: GOOGLE_BLUE,
             elevation: 4,
             shadowColor: "#000",
             shadowOffset: { width: 0, height: 2 },
@@ -134,7 +116,7 @@ export const ConnectBanner = memo(function ConnectBanner({
             bottom: 0,
             borderRadius: RADIUS.pill,
             borderWidth: 1,
-            borderColor: pillColor,
+            borderColor: GOOGLE_BLUE,
           }}
           pointerEvents="none"
         />

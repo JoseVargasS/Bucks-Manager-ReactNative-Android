@@ -22,6 +22,8 @@ export const ConnectingOverlay = memo(function ConnectingOverlay({
   if (!barAnim.current) barAnim.current = new Animated.Value(0);
 
   useEffect(() => {
+    // Solo anima visible: el loop en JS despierta el hilo en cada frame.
+    if (!status) return;
     const anim = Animated.loop(
       Animated.sequence([
         Animated.timing(barAnim.current!, { toValue: 1, duration: BAR_CYCLE_MS / 2, useNativeDriver: false }),
@@ -30,7 +32,7 @@ export const ConnectingOverlay = memo(function ConnectingOverlay({
     );
     anim.start();
     return () => anim.stop();
-  }, []);
+  }, [status]);
 
   const barColor = barAnim.current!.interpolate({
     inputRange: [0, 0.5, 1],

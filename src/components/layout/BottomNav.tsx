@@ -60,10 +60,10 @@ export const BottomNav = memo(function BottomNav({
   );
   const selectTab = useCallback(
     (next: Tab) => {
-      if (next === tab) return;
+      // Sin guard local: changeTab deduplica por tabRef (vive durante el slide).
       setTab(next);
     },
-    [tab, setTab],
+    [setTab],
   );
 
   return (
@@ -129,12 +129,17 @@ const BottomNavItem = memo(function BottomNavItem({
   testID?: string;
 }) {
   const { primary, primarySoft, muted, text } = useColors();
-  const accent = active ? primary : muted;
   const { pressed, onPressIn, onPressOut } = usePressAnimation();
   const localActiveRef = useRef<Animated.Value | null>(null);
   if (!localActiveRef.current) localActiveRef.current = new Animated.Value(active ? 1 : 0);
   const localActive = localActiveRef.current;
   const prevActive = useRef(active);
+  // Todo lo visual sale de localActive (arranca optimista al presionar y
+  // persigue el slide de 210ms): crossfade nativo, sin snaps de color.
+  const inactiveOpacity = localActive.interpolate({
+    inputRange: [0, 1],
+    outputRange: [1, 0],
+  });
 
   useLayoutEffect(() => {
     if (active !== prevActive.current) {
@@ -217,13 +222,33 @@ const BottomNavItem = memo(function BottomNavItem({
             opacity: pressed,
           }}
         />
-        <MaterialCommunityIcons name={icon} size={21} color={accent} />
-        <Text
-          numberOfLines={1}
-          style={[styles.bottomNavLabel, { color: active ? text : muted }]}
-        >
-          {label}
-        </Text>
+        <View style={{ width: 21, height: 21 }}>
+          <Animated.View pointerEvents="none" style={{ position: "absolute", opacity: inactiveOpacity }}>
+            <MaterialCommunityIcons name={icon} size={21} color={muted} />
+          </Animated.View>
+          <Animated.View pointerEvents="none" style={{ position: "absolute", opacity: localActive }}>
+            <MaterialCommunityIcons name={icon} size={21} color={primary} />
+          </Animated.View>
+        </View>
+        <View>
+          <Text
+            numberOfLines={1}
+            style={[styles.bottomNavLabel, { color: muted }]}
+          >
+            {label}
+          </Text>
+          <Animated.View
+            pointerEvents="none"
+            style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, opacity: localActive }}
+          >
+            <Text
+              numberOfLines={1}
+              style={[styles.bottomNavLabel, { color: text }]}
+            >
+              {label}
+            </Text>
+          </Animated.View>
+        </View>
         <Animated.View
           style={{
             width: 4,
