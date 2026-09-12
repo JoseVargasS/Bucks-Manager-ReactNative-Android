@@ -58,6 +58,29 @@ export async function getWorkspaceAccessToken(interactive: boolean, targetEmail?
   return GoogleSignin.getTokens();
 }
 
+// Info del token sin lanzar: null si vencido/sin red. Nunca expone el token,
+// solo email + scopes (para diagnóstico redactado y pre-validación).
+export async function getTokenInfo(accessToken: string): Promise<{ email?: string; scope?: string } | null> {
+  if (!accessToken) return null;
+  try {
+    const res = await fetch(`https://www.googleapis.com/oauth2/v3/tokeninfo?access_token=${encodeURIComponent(accessToken)}`);
+    if (!res.ok) return null;
+    return (await res.json()) as { email?: string; scope?: string };
+  } catch {
+    return null;
+  }
+}
+
+// true si el token sigue vigente y trae los scopes de Workspace.
+// No lanza: cualquier fallo (red, token vencido) es false. Sirve para validar
+// el token cacheado antes del fast-path sin tocar la sesión actual.
+export async function isTokenAlive(accessToken: string): Promise<boolean> {
+  const info = await getTokenInfo(accessToken);
+  if (!info) return false;
+  const tokenScopes = new Set((info.scope || "").split(" ").filter(Boolean));
+  return GOOGLE_WORKSPACE_SCOPES.every((s) => tokenScopes.has(s));
+}
+
 export function syncAccountInfo(): {
   name?: string;
   email?: string;

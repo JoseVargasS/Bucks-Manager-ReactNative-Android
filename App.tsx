@@ -124,7 +124,9 @@ function AppContent() {
     toggleTheme,
     saveTheme,
   );
-  const errMsg = useCallback((error: unknown) => getErrorMessage(error, copy.syncError), [copy.syncError]);
+  // ponytail: los 401/403 nunca muestran el JSON crudo de Google — se mapean
+  // a "Sesión expirada" para que ningún Alert/syncError exponga el dump.
+  const errMsg = useCallback((error: unknown) => isAuthError(error, copy.syncError) ? copy.sessionExpired : getErrorMessage(error, copy.syncError), [copy.syncError, copy.sessionExpired]);
   const authErr = useCallback((error: unknown) => isAuthError(error, copy.syncError), [copy.syncError]);
 
   // ─── Pin (called early so restorePinState is available for bootstrap) ──
@@ -529,6 +531,9 @@ function AppContent() {
     pinVerified,
     snapThemeProgress,
     reloadFromGoogle: syncApi.reloadFromGoogle,
+    refreshSessionToken: syncApi.refreshSessionToken,
+    isAuthFailure: authErr,
+    accountEmail: accountInfo?.email,
     wireRemoteHistory: syncApi.wireRemoteHistory,
     wireRemoteUiPreferences: syncApi.wireRemoteUiPreferences,
     wireMergePrompt: syncApi.wireMergePrompt,

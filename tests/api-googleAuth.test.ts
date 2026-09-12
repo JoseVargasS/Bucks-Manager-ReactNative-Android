@@ -7,7 +7,7 @@ beforeEach(() => {
   g.__bucksGoogleSigninMock.addScopes = async () => ({});
 });
 
-import { getWorkspaceAccessToken, syncAccountInfo } from "@/api/googleAuth";
+import { getWorkspaceAccessToken, getTokenInfo, isTokenAlive, syncAccountInfo } from "@/api/googleAuth";
 import { GoogleSignin } from "@react-native-google-signin/google-signin";
 
 const mockGoogleSignin = GoogleSignin as jest.Mocked<typeof GoogleSignin>;
@@ -67,6 +67,58 @@ describe("getWorkspaceAccessToken", () => {
     mockGoogleSignin.addScopes = jest.fn().mockResolvedValue({ type: "error" });
 
     await expect(getWorkspaceAccessToken(true)).rejects.toThrow("No se autorizaron");
+  });
+});
+
+describe("isTokenAlive", () => {
+  const SCOPES = "https://www.googleapis.com/auth/drive.metadata.readonly https://www.googleapis.com/auth/spreadsheets";
+  const originalFetch = globalThis.fetch;
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  test("true con token vigente y scopes completos", async () => {
+    globalThis.fetch = (async () => new Response(JSON.stringify({ scope: SCOPES }), { status: 200 })) as any;
+    await expect(isTokenAlive("tok")).resolves.toBe(true);
+  });
+
+  test("false con token vencido", async () => {
+    globalThis.fetch = (async () => new Response(JSON.stringify({ error: "invalid_token" }), { status: 400 })) as any;
+    await expect(isTokenAlive("tok")).resolves.toBe(false);
+  });
+
+  test("false sin scopes de workspace", async () => {
+    globalThis.fetch = (async () => new Response(JSON.stringify({ scope: "openid email" }), { status: 200 })) as any;
+    await expect(isTokenAlive("tok")).resolves.toBe(false);
+  });
+
+  test("false sin token o sin red", async () => {
+    await expect(isTokenAlive("")).resolves.toBe(false);
+    globalThis.fetch = (async () => { throw new Error("network"); }) as any;
+    await expect(isTokenAlive("tok")).resolves.toBe(false);
+  });
+});
+
+describe("getTokenInfo", () => {
+  const SCOPES = "https://www.googleapis.com/auth/drive.metadata.readonly https://www.googleapis.com/auth/spreadsheets";
+  const originalFetch = globalThis.fetch;
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  test("devuelve email y scopes con token vigente", async () => {
+    globalThis.fetch = (async () => new Response(JSON.stringify({ email: "a@x.com", scope: SCOPES }), { status: 200 })) as any;
+    await expect(getTokenInfo("tok")).resolves.toEqual({ email: "a@x.com", scope: SCOPES });
+  });
+
+  test("null con token vencido, sin token o sin red", async () => {
+    globalThis.fetch = (async () => new Response("{}", { status: 400 })) as any;
+    await expect(getTokenInfo("tok")).resolves.toBeNull();
+    await expect(getTokenInfo("")).resolves.toBeNull();
+    globalThis.fetch = (async () => { throw new Error("network"); }) as any;
+    await expect(getTokenInfo("tok")).resolves.toBeNull();
   });
 });
 

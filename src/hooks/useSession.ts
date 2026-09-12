@@ -3,9 +3,9 @@ import { Alert } from "react-native";
 import Constants from "expo-constants";
 import { GoogleSignin } from "@react-native-google-signin/google-signin";
 import { deleteItemAsync, getItemAsync, setItemAsync } from "expo-secure-store";
-import { getWorkspaceAccessToken as getWorkspaceAccessTokenBase, syncAccountInfo as syncAccountInfoBase } from "@/api/googleAuth";
+import { getWorkspaceAccessToken as getWorkspaceAccessTokenBase, syncAccountInfo as syncAccountInfoBase, isTokenAlive } from "@/api/googleAuth";
 import { deleteFinancialCache, deleteOfflineCache } from "@/data/localCache";
-import { saveConnectedAccount, removeConnectedAccount, loadConnectedAccounts } from "@/data/connectedAccounts";
+import { saveConnectedAccount, removeConnectedAccount, loadConnectedAccounts, isAccountStale } from "@/data/connectedAccounts";
 import { type UiCopy } from "@/i18n";
 import { TOKEN_KEY, SHEET_KEY } from "@/theme/constants";
 
@@ -188,7 +188,8 @@ export function useSession(
       await finalizeSignIn(tokens.accessToken, wasOfflineBefore);
     } catch (error) {
       setConnectionStatus(null);
-      const message = error instanceof Error ? error.message : copy.googleSignInError;
+      // ponytail: errMsg mapea 401/403 a "Sesión expirada" — nunca el JSON crudo.
+      const message = error instanceof Error ? errMsg(error) : copy.googleSignInError;
       const isDeveloperError = message.includes("DEVELOPER_ERROR") || message.includes("code: 10");
       Alert.alert("Google", isDeveloperError ? copy.oauthConfigRejected : message);
     } finally {
@@ -211,8 +212,16 @@ export function useSession(
       const accounts = await loadConnectedAccounts();
       const target = accounts.find((a) => a.email.toLowerCase() === targetEmail.toLowerCase());
       let preferredSheetId = target?.spreadsheetId || "";
-      // Fast path: si la cuenta ya tiene token y Drive, entra directo sin Google UI ni picker
-      if (target?.accessToken && target?.scopesGranted && target?.spreadsheetId) {
+      // Entrada directa sin picker solo si la cuenta se usó en los últimos 10
+      // días; pasada esa fecha se va directo al picker (fast-path y silent).
+      const directEntry = !!target && !isAccountStale(target.lastUsedAt);
+      // Fast path: si la cuenta ya tiene token y Drive, entra directo sin Google UI ni picker.
+      // El token se pre-valida con tokeninfo (sin UI ni estado): si venció se
+      // salta al silent/picker con la sesión de A intacta — nunca se limpia A
+      // antes de saber que B funciona.
+      const cachedToken = directEntry ? target?.accessToken : undefined;
+      const cachedAlive = !!cachedToken && (await isTokenAlive(cachedToken));
+      if (cachedAlive && target?.accessToken && target?.scopesGranted && target?.spreadsheetId) {
         try {
           await runSwitchCleanup();
           await setItemAsync(TOKEN_KEY, target.accessToken);
@@ -231,34 +240,37 @@ export function useSession(
           setConnectionStatus("loading");
         }
       }
-      // Intenta silent primero si la cuenta ya tenía Drive (sin popup)
+      // Intenta silent primero si la cuenta ya tenía Drive (sin popup).
+      // Con más de 10 días sin uso se salta al picker de frente.
       const alreadyGranted = !!target?.scopesGranted;
       let token: string | null = null;
       let silentOk = false;
       let effectiveEmail = targetEmail;
-      try {
-        const silent = await GoogleSignin.signInSilently();
-        const silentEmail = (silent.type === "success" ? ((silent.data as unknown as { user?: { email?: string }; email?: string })?.user?.email || (silent.data as unknown as { email?: string })?.email || "") : "").toLowerCase();
-        if (silent.type === "success" && silentEmail === targetEmail.toLowerCase()) {
-          try {
-            const tokens = await getWorkspaceAccessToken(alreadyGranted ? false : true, targetEmail);
-            if (tokens.accessToken) {
-              token = tokens.accessToken;
-              silentOk = true;
-            }
-          } catch (_e) {
-            if (alreadyGranted) {
-              const tokens = await getWorkspaceAccessToken(true, targetEmail);
+      if (directEntry) {
+        try {
+          const silent = await GoogleSignin.signInSilently();
+          const silentEmail = (silent.type === "success" ? ((silent.data as unknown as { user?: { email?: string }; email?: string })?.user?.email || (silent.data as unknown as { email?: string })?.email || "") : "").toLowerCase();
+          if (silent.type === "success" && silentEmail === targetEmail.toLowerCase()) {
+            try {
+              const tokens = await getWorkspaceAccessToken(alreadyGranted ? false : true, targetEmail);
               if (tokens.accessToken) {
                 token = tokens.accessToken;
                 silentOk = true;
               }
-            } else {
-              throw _e;
+            } catch (_e) {
+              if (alreadyGranted) {
+                const tokens = await getWorkspaceAccessToken(true, targetEmail);
+                if (tokens.accessToken) {
+                  token = tokens.accessToken;
+                  silentOk = true;
+                }
+              } else {
+                throw _e;
+              }
             }
           }
-        }
-      } catch (_e) { void _e; }
+        } catch (_e) { void _e; }
+      }
       if (!silentOk) {
         // Fallback: picker real (como el banner) — más confiable que accountName hint
         await GoogleSignin.signOut().catch(() => undefined);
@@ -292,7 +304,8 @@ export function useSession(
       await onConnectGoogleWorkspace(token, preferredSheetId, !preferredSheetId, false);
     } catch (error) {
       setConnectionStatus(null);
-      const message = error instanceof Error ? error.message : copy.googleSignInError;
+      // ponytail: errMsg mapea 401/403 a "Sesión expirada" — nunca el JSON crudo.
+      const message = error instanceof Error ? errMsg(error) : copy.googleSignInError;
       Alert.alert("Google", message);
     } finally {
       setLoading(false);

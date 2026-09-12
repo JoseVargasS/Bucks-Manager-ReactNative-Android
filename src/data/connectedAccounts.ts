@@ -1,4 +1,5 @@
 import * as SecureStore from "expo-secure-store";
+import { CACHED_ACCOUNT_MAX_AGE_MS } from "@/theme/constants";
 import { logError } from "@/utils/errorHandler";
 
 export type ConnectedAccount = {
@@ -8,6 +9,8 @@ export type ConnectedAccount = {
   spreadsheetId?: string;
   scopesGranted?: boolean;
   accessToken?: string;
+  // Token cacheado para el switch directo sin picker. Dura ~1h: el fast-path
+  // lo intenta y si venció cae en silencio al flujo silent/picker.
 };
 
 const CONNECTED_ACCOUNTS_KEY = "bucks_connected_accounts";
@@ -16,6 +19,15 @@ function isConnectedAccount(v: unknown): v is ConnectedAccount {
   if (!v || typeof v !== "object") return false;
   const c = v as Partial<ConnectedAccount>;
   return typeof c.email === "string" && c.email.length > 0 && typeof c.lastUsedAt === "string";
+}
+
+// true si la cuenta lleva más de 10 días sin usarse (o fecha inválida):
+// toca picker de nuevo en vez de entrar directo.
+export function isAccountStale(lastUsedAt: string | undefined, nowMs = Date.now()): boolean {
+  if (!lastUsedAt) return true;
+  const t = new Date(lastUsedAt).getTime();
+  if (!Number.isFinite(t)) return true;
+  return nowMs - t > CACHED_ACCOUNT_MAX_AGE_MS;
 }
 
 export async function loadConnectedAccounts(): Promise<ConnectedAccount[]> {
@@ -56,6 +68,14 @@ export async function removeConnectedAccount(email: string): Promise<void> {
   } catch (e) {
     logError(e, "connectedAccounts:remove");
   }
+}
+
+// Dueño conocido de un sheet (HALLAZGO 1): evita adoptar en frío el token de
+// otra cuenta cuando el SDK quedó parado en ella tras un fast switch.
+export async function findAccountBySheet(spreadsheetId: string): Promise<ConnectedAccount | null> {
+  if (!spreadsheetId) return null;
+  const list = await loadConnectedAccounts();
+  return list.find((a) => a.spreadsheetId === spreadsheetId) || null;
 }
 
 export async function clearConnectedAccounts(): Promise<void> {

@@ -32,6 +32,10 @@ export const SPLASH_TEXT = "#f0ede4";
 export const TOKEN_KEY = "bucks_google_access_token";
 export const SHEET_KEY = "bucks_spreadsheet_id";
 
+// Acceso directo sin picker al cambiar de cuenta: vale 10 días desde el
+// último uso; pasado ese tiempo se pide picker de nuevo.
+export const CACHED_ACCOUNT_MAX_AGE_MS = 10 * 24 * 60 * 60 * 1000;
+
 export const GOOGLE_WORKSPACE_SCOPES = [
   "https://www.googleapis.com/auth/drive.metadata.readonly",
   "https://www.googleapis.com/auth/spreadsheets",
