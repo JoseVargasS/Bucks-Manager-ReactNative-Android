@@ -95,7 +95,7 @@ The list path must stay cheap even when a user accumulates thousands of rows ove
 - Preserve `removeClippedSubviews={false}` on the Android transaction list unless emulator/device testing proves the historical blank-row regression is gone.
 - `SectionList` virtualizes; do not introduce custom virtualization that breaks its keyExtractor contract.
 - The financial cache, summaries, and frequent-income map are precached on transaction read. Do not re-parse dates inside sort/filter/group passes.
-- The pager translates on the native driver (`useNativeDriver: true`) so the JS thread stays free for list work. The App `tab` state commits on slide completion (heavy tree rests idle); `BottomNav` focus is optimistic/local from press, so visuals glide with the slide. While sliding, the strip sets `renderToHardwareTextureAndroid` so 880 views composite as one layer on 120Hz panels (measured: kills 150ms freezes).
+- The pager translates on the native driver (`useNativeDriver: true`) so the JS thread stays free for list work. The App `tab` state commits on slide completion (heavy tree rests idle); `BottomNav` focus is optimistic/local from press (outgoing clears instantly, incoming glides with the slide — never two lit tabs), so visuals glide with the slide. While sliding, the strip sets `renderToHardwareTextureAndroid` so 880 views composite as one layer on 120Hz panels (measured: kills 150ms freezes).
 
 ### Memoization
 

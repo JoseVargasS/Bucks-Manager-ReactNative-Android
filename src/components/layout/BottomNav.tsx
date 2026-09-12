@@ -1,4 +1,4 @@
-import { memo, useMemo, useCallback, useLayoutEffect, useRef } from "react";
+import { memo, useEffect, useMemo, useCallback, useLayoutEffect, useRef, useState } from "react";
 import { Animated, Easing, Pressable, View } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { base } from "@/styles/baseStyles";
@@ -58,13 +58,21 @@ export const BottomNav = memo(function BottomNav({
     () => withAlpha(borderStrong, isDark ? 0.26 : 0.54),
     [isDark, borderStrong],
   );
+  const [pressedTab, setPressedTab] = useState<Tab | null>(null);
   const selectTab = useCallback(
     (next: Tab) => {
+      // Focus local al instante (sin esperar el commit de App al llegar).
+      setPressedTab(next);
       // Sin guard local: changeTab deduplica por tabRef (vive durante el slide).
       setTab(next);
     },
     [setTab],
   );
+  // El presionado manda hasta que App lo alcanza; ahi se suelta solo.
+  useEffect(() => {
+    if (pressedTab !== null && pressedTab === tab) setPressedTab(null);
+  }, [pressedTab, tab]);
+  const isActive = (id: Tab) => (pressedTab ?? tab) === id;
 
   return (
     <View style={styles.bottomNav}>
@@ -80,14 +88,14 @@ export const BottomNav = memo(function BottomNav({
       />
       <View style={styles.bottomNavContent}>
         <BottomNavItem
-          active={tab === "dashboard"}
+          active={isActive("dashboard")}
           icon="view-dashboard"
           label={copy.dashboard}
           onPress={() => selectTab("dashboard")}
           testID="tab-dashboard"
         />
         <BottomNavItem
-          active={tab === "expenses"}
+          active={isActive("expenses")}
           icon="view-dashboard-outline"
           label={copy.expenses}
           onPress={() => selectTab("expenses")}
@@ -95,14 +103,14 @@ export const BottomNav = memo(function BottomNav({
         />
         <BottomAddButton onPress={onAdd} />
         <BottomNavItem
-          active={tab === "summary"}
+          active={isActive("summary")}
           icon="chart-line"
           label={copy.summary}
           onPress={() => selectTab("summary")}
           testID="tab-summary"
         />
         <BottomNavItem
-          active={tab === "settings"}
+          active={isActive("settings")}
           icon="cog-outline"
           label={copy.settings}
           onPress={() => selectTab("settings")}
@@ -145,12 +153,17 @@ const BottomNavItem = memo(function BottomNavItem({
     if (active !== prevActive.current) {
       prevActive.current = active;
       localActive.stopAnimation();
-      Animated.timing(localActive, {
-        toValue: active ? 1 : 0,
-        duration: ANIM_TAB_PAGER,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }).start();
+      if (active) {
+        Animated.timing(localActive, {
+          toValue: 1,
+          duration: ANIM_TAB_PAGER,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }).start();
+      } else {
+        // La saliente se apaga al instante: jamas dos focos prendidos.
+        localActive.setValue(0);
+      }
     }
   }, [active, localActive]);
 
