@@ -31,7 +31,7 @@
     },
     "light": {
       "bg": "#F0EDE4",
-      "card": "#ffffff",
+      "card": "#fffdf8",
       "input": "#e8e0cc",
       "border": "#d4c4a8",
       "borderStrong": "#b8a088",
@@ -91,7 +91,7 @@
     },
     "light": {
       "bg": "#f4ede6",
-      "card": "#fcf3e9",
+      "card": "#fffaf3",
       "input": "#ebe1d6",
       "border": "#d8c8b8",
       "borderStrong": "#a89878",
@@ -151,7 +151,7 @@
     },
     "light": {
       "bg": "#f4ecf4",
-      "card": "#f9ecf9",
+      "card": "#fdf7fd",
       "input": "#e8dce8",
       "border": "#d0bcd0",
       "borderStrong": "#9882a0",
@@ -211,7 +211,7 @@
     },
     "light": {
       "bg": "#FFF9FA",
-      "card": "#f2f2f2",
+      "card": "#f6e3e9",
       "input": "#fce8ec",
       "border": "#ecc4cc",
       "borderStrong": "#c08a96",
@@ -271,7 +271,7 @@
     },
     "light": {
       "bg": "#f4f4f4",
-      "card": "#f2f2f2",
+      "card": "#ffffff",
       "input": "#e8e8e8",
       "border": "#c8c8c8",
       "borderStrong": "#8a8a8a",
@@ -331,7 +331,7 @@
     },
     "light": {
       "bg": "#eef4fc",
-      "card": "#e5f0ff",
+      "card": "#ffffff",
       "input": "#dce8f6",
       "border": "#b8cce4",
       "borderStrong": "#7898b8",
@@ -391,7 +391,7 @@
     },
     "light": {
       "bg": "#fce8dc",
-      "card": "#feefe7",
+      "card": "#fff7f0",
       "input": "#f0d8c4",
       "border": "#d8b8a0",
       "borderStrong": "#a07868",
@@ -451,7 +451,7 @@
     },
     "light": {
       "bg": "#F4F5F6",
-      "card": "#f2f2f2",
+      "card": "#ffffff",
       "input": "#E7E8E9",
       "border": "#D3D5D9",
       "borderStrong": "#A7ABB4",

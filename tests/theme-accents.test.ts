@@ -1,4 +1,5 @@
 import { accents } from "@/theme/accents";
+import { getContrastRatio } from "@/theme/colors";
 import type { ColorSchemePreference } from "@/theme/accents";
 
 const schemeNames: ColorSchemePreference[] = [
@@ -41,5 +42,12 @@ describe("accents", () => {
       expect(darkBg).toMatch(/^#[0-9a-fA-F]{6}$/);
       expect(lightBg).toMatch(/^#[0-9a-fA-F]{6}$/);
     }
+  });
+
+  // Las cards claras deben distinguirse del fondo (verificado con sky:
+  // bg #eef4fc vs card #e5f0ff era ~1.04 y se veía un solo fondo).
+  test.each(schemeNames)("%s light card stands out from bg", (name) => {
+    const { bg, card } = accents[name].light;
+    expect(getContrastRatio(card, bg)).toBeGreaterThanOrEqual(1.09);
   });
 });
