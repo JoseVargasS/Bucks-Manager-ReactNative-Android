@@ -63,26 +63,26 @@ export const COLOR_SCHEME_OPTIONS: Array<{
 }> = [
   {
     value: "cyprus",
-    labelEs: "Chipre",
-    labelEn: "Cyprus",
+    labelEs: "Lima",
+    labelEn: "Lime",
     icon: "leaf",
   },
   {
     value: "vulcanico",
-    labelEs: "Volcánico",
-    labelEn: "Vulcanico",
+    labelEs: "Lava",
+    labelEn: "Lava",
     icon: "fire",
   },
   {
     value: "charcoalline",
-    labelEs: "Carbón Línea",
-    labelEn: "Charcoal Line",
+    labelEs: "Lila",
+    labelEn: "Lilac",
     icon: "lightning-bolt",
   },
   {
     value: "truepink",
-    labelEs: "Rosa Verdad",
-    labelEn: "True Pink",
+    labelEs: "Rosa",
+    labelEn: "Pink",
     icon: "heart",
   },
   {
@@ -94,8 +94,8 @@ export const COLOR_SCHEME_OPTIONS: Array<{
   { value: "sky", labelEs: "Cielo", labelEn: "Sky", icon: "weather-night" },
   {
     value: "bridal",
-    labelEs: "Nupcial",
-    labelEn: "Bridal",
+    labelEs: "Durazno",
+    labelEn: "Peach",
     icon: "flower-tulip",
   },
   {
