@@ -39,10 +39,13 @@ export const GOOGLE_WORKSPACE_SCOPES = [
 
 const LEGAL_BASE = "https://josevargass.github.io/Bucks-Manager-ReactNative-Android";
 
+type LegalLang = "es" | "en";
+
+// ponytail: localized legal pages (privacy-es.html / privacy-en.html, …)
 export const LEGAL_URLS = {
-  privacy: `${LEGAL_BASE}/privacy.html`,
-  terms: `${LEGAL_BASE}/terms.html`,
-  deleteAccount: `${LEGAL_BASE}/delete.html`,
+  privacy: (lang: LegalLang) => `${LEGAL_BASE}/privacy-${lang}.html`,
+  terms: (lang: LegalLang) => `${LEGAL_BASE}/terms-${lang}.html`,
+  deleteAccount: (lang: LegalLang) => `${LEGAL_BASE}/delete-${lang}.html`,
 };
 
 export const PLAY_PACKAGE = "com.kuskalabs.quipu";

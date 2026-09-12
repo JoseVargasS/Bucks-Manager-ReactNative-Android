@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Quipu — Privacy Policy</title>
+<meta name="description" content="Quipu privacy policy — Savings & Expenses. No backend, your data lives in your private Google Sheet.">
+<style>
+:root{--bg:#F0EDE4;--card:#ffffff;--text:#1a2622;--muted:#5a6660;--accent:#4A6500;--border:#d4c4a8}
+*{box-sizing:border-box}html{scroll-behavior:smooth}
+body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--text);line-height:1.6}
+.wrap{max-width:780px;margin:0 auto;padding:28px 20px 48px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:28px;box-shadow:0 4px 16px rgba(0,0,0,.06)}
+h1{font-size:28px;margin:0 0 6px;letter-spacing:-.3px}
+.sub{color:var(--muted);margin:0 0 18px;font-size:14px}
+h2{font-size:18px;margin:28px 0 8px}
+p,li{font-size:15px}
+a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
+.badge{display:inline-block;background:rgba(74,101,0,.11);color:var(--accent);padding:6px 10px;border-radius:999px;font-size:12px;font-weight:700;letter-spacing:.3px}
+.toc{background:#eef6d8;border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin:18px 0}
+.toc a{display:block;padding:4px 0;font-size:14px}
+.kv{display:grid;grid-template-columns:140px 1fr;gap:8px;background:#f8fbff;border:1px solid var(--border);border-radius:10px;padding:12px;font-size:14px}
+@media(max-width:640px){.kv{grid-template-columns:1fr}}
+hr{border:none;border-top:1px solid var(--border);margin:20px 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="card">
+<span class="badge">QUIPU — SAVINGS & EXPENSES</span>
+<h1>Privacy Policy</h1>
+<p class="sub">Last updated: September 12, 2026 · Contact: <a href="mailto:kuskalabs@gmail.com">kuskalabs@gmail.com</a></p>
+
+<div class="kv">
+<div><strong>App</strong></div><div>Quipu — Savings & Expenses. No backend of its own.</div>
+<div><strong>Region</strong></div><div>Pe / LatAm and global. Languages: ES / EN.</div>
+<div><strong>Contact</strong></div><div><a href="mailto:kuskalabs@gmail.com">kuskalabs@gmail.com</a></div>
+</div>
+
+<div class="toc">
+<strong>Contents</strong>
+<a href="#summary">1. Summary</a>
+<a href="#data">2. What data we collect</a>
+<a href="#use">3. What we use it for</a>
+<a href="#scopes">4. Google scopes</a>
+<a href="#storage">5. Where your data lives</a>
+<a href="#sharing">6. Sharing with third parties</a>
+<a href="#retention">7. Retention and deletion</a>
+<a href="#security">8. Security</a>
+<a href="#rights">9. Your rights</a>
+<a href="#children">10. Children</a>
+<a href="#changes">11. Changes</a>
+</div>
+
+<h2 id="summary">1. Summary</h2>
+<p>Quipu helps you track income and expenses. <strong>We have no servers of our own.</strong> Your information lives in <strong>your private Google Sheet</strong> in your Drive and in your phone's encrypted local storage (<code>SecureStore</code> for token/PIN). We do not sell or share your data.</p>
+
+<h2 id="data">2. What data we collect</h2>
+<ul>
+<li><strong>Google account:</strong> name and email provided by Google Sign-In (only to display your account and link your Sheet).</li>
+<li><strong>OAuth token and Sheet ID:</strong> stored locally with <code>SecureStore</code> and in the local cache to work offline.</li>
+<li><strong>Transactions you type:</strong> date, amount, detail, type (<code>FREQUENT/NON-FREQUENT INCOME/EXPENSE</code>), tags and creation time. They stay in your Sheet.</li>
+<li><strong>Cosmetic preferences:</strong> language, currency symbol, font and palette (synced to <code>MONTHLY SUMMARY!L1:L2</code> if you enable Sheets).</li>
+<li><strong>Local PIN (optional):</strong> if you enable a PIN, it only lives encrypted on your device, never leaves it.</li>
+</ul>
+<p>We do not collect location, contacts, or third-party data.</p>
+
+<h2 id="use">3. What we use it for</h2>
+<ul>
+<li>Authenticating you and connecting your Drive/Sheets.</li>
+<li>Finding/creating your <code>INCOME AND EXPENSES</code> spreadsheet and reading/writing your movements.</li>
+<li>Showing your offline balance from cache and reconciling on reconnect.</li>
+</ul>
+
+<h2 id="scopes">4. Google scopes (incremental)</h2>
+<p>We only request these two <strong>after</strong> you pick an account (initial login requests no scopes):</p>
+<ul>
+<li><code>https://www.googleapis.com/auth/drive.metadata.readonly</code> — list/find your Sheet in Drive (metadata only, never reads arbitrary files).</li>
+<li><code>https://www.googleapis.com/auth/spreadsheets</code> — read/write your finance Sheet.</li>
+</ul>
+<p>You can revoke access at any time at <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener">myaccount.google.com/permissions</a>.</p>
+
+<h2 id="storage">5. Where your data lives</h2>
+<ul>
+<li><strong>Google Drive / Sheets:</strong> your <code>INCOME AND EXPENSES</code> spreadsheet (tabs <code>INCOME AND EXPENSES</code> and <code>MONTHLY SUMMARY</code>) is your database.</li>
+<li><strong>Device:</strong> local JSON cache and <code>SecureStore</code> (token, Sheet ID, PIN, 30-day history and tag catalogue). The app paints cache first and revalidates in the background.</li>
+</ul>
+<p>If you trash your Sheet in Drive, the app clears its cache and starts fresh.</p>
+
+<h2 id="sharing">6. Sharing with third parties</h2>
+<p>We share nothing. Only Google as authentication and storage provider (under their policies). No third-party analytics or ads.</p>
+
+<h2 id="retention">7. Retention and deletion</h2>
+<ul>
+<li>Your transactions live as long as you keep your Sheet.</li>
+<li>You can delete everything from the app (Disconnect Google) or by deleting the Sheet in Drive and clearing app data. The PIN is deleted when disabled.</li>
+<li>Local history is purged after 30 days.</li>
+</ul>
+
+<h2 id="security">8. Security</h2>
+<ul>
+<li>Incremental OAuth with <code>GoogleSignin.addScopes()</code> only before reading/writing Drive/Sheets.</li>
+<li>Tokens in <code>SecureStore</code> (keychain/keystore). Traffic encrypted in transit (HTTPS).</li>
+<li>Mutations with a serialized queue (<code>syncQueue</code>) and reconciliation so offline data is never lost.</li>
+</ul>
+
+<h2 id="rights">9. Your rights</h2>
+<p>You can access, correct or delete your data by deleting rows in your Sheet or the whole sheet, and by revoking access. Write to <a href="mailto:kuskalabs@gmail.com">kuskalabs@gmail.com</a> and we will respond.</p>
+
+<h2 id="children">10. Children</h2>
+<p>App for ages 13 and up. Not directed at children.</p>
+
+<h2 id="changes">11. Changes</h2>
+<p>We will publish changes here with a new date. Material changes will be announced on the Play listing.</p>
+
+<hr>
+<p style="font-size:13px;color:var(--muted)">Quipu · Package: <code>com.kuskalabs.quipu</code> · No backend · Your Sheet is your database.</p>
+<p style="font-size:13px"><a href="./terms-en.html">Terms & Conditions →</a> · <a href="mailto:kuskalabs@gmail.com">kuskalabs@gmail.com</a></p>
+</div>
+</div>
+</body>
+</html>

@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Quipu — Delete account and data</title>
+<meta name="description" content="How to delete your Quipu account and data — Savings & Expenses">
+<style>
+:root{--bg:#F0EDE4;--card:#ffffff;--text:#1a2622;--muted:#5a6660;--accent:#4A6500;--border:#d4c4a8}
+*{box-sizing:border-box}
+body{margin:0;font-family:Inter,system-ui,sans-serif;background:var(--bg);color:var(--text);line-height:1.6}
+.wrap{max-width:780px;margin:0 auto;padding:28px 20px 48px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:28px;box-shadow:0 4px 16px rgba(0,0,0,.06)}
+h1{font-size:28px;margin:0 0 6px}
+.sub{color:var(--muted);font-size:14px;margin:0 0 18px}
+h2{font-size:18px;margin:28px 0 8px}
+p,li{font-size:15px}
+a{color:var(--accent)}a:hover{text-decoration:underline}
+.badge{display:inline-block;background:rgba(74,101,0,.11);color:var(--accent);padding:6px 10px;border-radius:999px;font-size:12px;font-weight:700}
+ol li{margin-bottom:10px}
+.note{background:#eef6d8;border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin:18px 0;font-size:14px}
+hr{border:none;border-top:1px solid var(--border);margin:20px 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="card">
+<span class="badge">QUIPU — SAVINGS & EXPENSES</span>
+<h1>Delete your account and your data</h1>
+<p class="sub">Last updated: September 12, 2026 · Contact: <a href="mailto:kuskalabs@gmail.com">kuskalabs@gmail.com</a></p>
+
+<p>Quipu <strong>has no servers or accounts of its own</strong>: you sign in with your Google account and your data lives in <strong>your private Google Sheet</strong> and on your device. So "deleting your Quipu account" means disconnecting the app and deleting that data. You have two ways:</p>
+
+<h2>Option A — From the app (immediate)</h2>
+<ol>
+<li>Open Quipu and go to <strong>Settings</strong>.</li>
+<li>Tap <strong>Sign out / Disconnect Google</strong>. This deletes the token, PIN and local cache from your device instantly.</li>
+<li>(Optional) In your Google Drive, trash the <strong>INCOME AND EXPENSES</strong> spreadsheet to delete your transactions.</li>
+<li>(Optional) Revoke access at <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener">myaccount.google.com/permissions</a>.</li>
+</ol>
+
+<h2>Option B — By email (we help you)</h2>
+<ol>
+<li>Write to <a href="mailto:kuskalabs@gmail.com">kuskalabs@gmail.com</a> with subject <strong>"Delete my data — Quipu"</strong> from your Google account email.</li>
+<li>We confirm by email when done, within a maximum of <strong>30 days</strong>.</li>
+</ol>
+
+<h2>What data is deleted and what is kept</h2>
+<ul>
+<li><strong>Deleted:</strong> OAuth token, Sheet ID, PIN, local history, tag catalogue, transaction cache and preferences on your device (on disconnect/uninstall). Your Sheet rows, when you delete the spreadsheet in Drive.</li>
+<li><strong>Kept:</strong> nothing on our servers, because we have none. Google keeps your data under its own policies until you delete it in Drive.</li>
+<li><strong>Extra retention:</strong> 0 days on our own infrastructure. Support emails are deleted after 90 days.</li>
+</ul>
+
+<div class="note">Developer: <strong>Kuska Labs</strong> (cuskalabs) · Package: <code>com.kuskalabs.quipu</code> · <a href="mailto:kuskalabs@gmail.com">kuskalabs@gmail.com</a></div>
+
+<hr>
+<p style="font-size:13px;color:var(--muted)">Quipu · No backend · Your Sheet is your database.</p>
+<p style="font-size:13px"><a href="./privacy-en.html">Privacy →</a> · <a href="./terms-en.html">Terms →</a></p>
+</div>
+</div>
+</body>
+</html>

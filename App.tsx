@@ -426,9 +426,10 @@ function AppContent() {
   const openUrl = useCallback((url: string) => {
     Linking.openURL(url).catch(() => undefined);
   }, []);
-  const openPrivacy = useCallback(() => openUrl(LEGAL_URLS.privacy), [openUrl]);
-  const openTerms = useCallback(() => openUrl(LEGAL_URLS.terms), [openUrl]);
-  const openDeleteAccount = useCallback(() => openUrl(LEGAL_URLS.deleteAccount), [openUrl]);
+  const legalLang = language === "en" ? "en" : "es";
+  const openPrivacy = useCallback(() => openUrl(LEGAL_URLS.privacy(legalLang)), [openUrl, legalLang]);
+  const openTerms = useCallback(() => openUrl(LEGAL_URLS.terms(legalLang)), [openUrl, legalLang]);
+  const openDeleteAccount = useCallback(() => openUrl(LEGAL_URLS.deleteAccount(legalLang)), [openUrl, legalLang]);
   const openContact = useCallback(() => openUrl(`mailto:${SUPPORT_EMAIL}`), [openUrl]);
   const openRate = useCallback(async () => {
     try {
