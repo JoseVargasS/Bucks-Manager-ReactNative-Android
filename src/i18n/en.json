@@ -191,6 +191,7 @@
   "pendingSyncStatus": "Pending sync",
   "savedData": "Saved data",
   "tagSaveError": "The changes could not be saved.",
+  "tagDuplicateError": "Another tag already uses that name.",
   "sessionExpired": "Session expired. Please sign in again.",
   "deleteSelection": "Delete selection",
   "undoAction": "Undo",

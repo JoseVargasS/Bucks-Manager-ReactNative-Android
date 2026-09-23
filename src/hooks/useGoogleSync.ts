@@ -10,13 +10,21 @@ import {
   readSummaries,
   readTagsCatalog,
   readUiPreferences,
+  writeTagsCatalog,
   writeUiPreferences as writeUiPreferencesApi,
   buildUiPreferences,
 } from "@/api/googleWorkspace";
 import { readHistory, writeHistory as writeHistoryApi } from "@/api/historyOps";
 import { calculateSummaries } from "@/domain/bucksLogic";
 import { loadFinancialCache, deleteFinancialCache, loadOfflineCache } from "@/data/localCache";
-import { mergeTagsFromSheet, saveTags } from "@/utils/tags";
+import {
+  applyTagTombstones,
+  clearDeletedTagIds,
+  getDeletedTagIdsSync,
+  loadDeletedTagIds,
+  mergeTagsFromSheet,
+  saveTags,
+} from "@/utils/tags";
 import { saveConnectedAccount, findAccountBySheet } from "@/data/connectedAccounts";
 import { TOKEN_KEY, SHEET_KEY } from "@/theme/constants";
 import type { LanguageMode, Tag, Transaction, SummaryRow, HistoryEntry } from "@/types";
@@ -48,6 +56,7 @@ export interface GoogleSyncApi {
   writeHistory: (entries: HistoryEntry[]) => void;
   wireRemoteHistory: (apply: (entries: HistoryEntry[]) => void) => void;
   wireMergePrompt: (cb: (cfg: { localCount: number; remoteCount: number; onMerge: () => void; onRemoteOnly: () => void }) => void) => void;
+  writeTagsNow: (tags: Tag[]) => void;
 }
 
 export function useGoogleSync(
@@ -267,7 +276,17 @@ export function useGoogleSync(
       applyFinancialState(tx, nextSummaries, nextFreqIncome, syncedAt);
       lastRemoteTxCountRef.current = tx.length;
       lastRemoteTxsRef.current = tx;
-      const mergedTags = mergeTagsFromSheet(tagsListRef.current, sheetTags, tx, tagColors, language);
+      await loadDeletedTagIds().catch(() => undefined);
+      let mergedTags = mergeTagsFromSheet(tagsListRef.current, sheetTags, tx, tagColors, language);
+      // Borrados locales pendientes: el sheet aún trae el tag viejo, no resucitar.
+      // Los que el sheet ya no trae convergieron y se auto-limpian.
+      const tombstoned = getDeletedTagIdsSync();
+      if (tombstoned.size) {
+        const sheetIds = new Set(sheetTags.map((t) => t.id));
+        const converged = [...tombstoned].filter((id) => !sheetIds.has(id));
+        if (converged.length) void clearDeletedTagIds(converged);
+        mergedTags = applyTagTombstones(mergedTags, tombstoned);
+      }
       if (mergedTags !== tagsListRef.current) {
         saveTags(mergedTags).catch(() => undefined);
         setTagsList(mergedTags);
@@ -425,6 +444,20 @@ export function useGoogleSync(
     [spreadsheetId, copy.syncError],
   );
 
+  // Escritura inmediata del catálogo ante ediciones del usuario (crear,
+  // renombrar, borrar): sin esperar el debounce, para que un reload no pise
+  // el cambio local con el valor viejo del sheet. Sin sheet: no-op.
+  const writeTagsNow = useCallback(
+    (tags: Tag[]) => {
+      if (!spreadsheetId) return;
+      syncGoogleInBackground(async (freshToken) => {
+        await writeTagsCatalog(freshToken, spreadsheetId, tags);
+      }, copy.syncError);
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [spreadsheetId, copy.syncError],
+  );
+
   const wireRemoteHistory = useCallback(
     (applyRemote: (entries: HistoryEntry[]) => void) => {
       remoteHistoryRef.current = applyRemote;
@@ -535,5 +568,6 @@ export function useGoogleSync(
     writeHistory,
     wireRemoteHistory,
     wireMergePrompt,
+    writeTagsNow,
   };
 }

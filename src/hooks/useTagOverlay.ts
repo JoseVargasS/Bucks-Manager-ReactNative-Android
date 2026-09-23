@@ -65,7 +65,7 @@ export function useTagOverlay({
     if (!label || !creatingTagFor) return;
     const newId = slugifyTagLabel(label);
     const newTag: Tag = { id: newId, label, color: createTagColor };
-    saveTags([...tags, newTag]).catch(() => {});
+    saveTags([...tags.filter((t) => t.id !== newId), newTag]).catch(() => {});
     onAddTag?.(newTag);
     setFormDraft((current) => ({
       ...current,

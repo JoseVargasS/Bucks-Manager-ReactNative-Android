@@ -16,7 +16,7 @@ const styles = { ...base, ...recordModalStyles };
 import { type Palette } from "@/theme/colors";
 import { type Tag } from "@/types";
 import { type UiCopy } from "@/i18n";
-import { loadTags, saveTags, slugifyTagLabel, DEFAULT_TAG_COLOR } from "@/utils/tags";
+import { loadTags, saveTags, slugifyTagLabel, DEFAULT_TAG_COLOR, addDeletedTagIds, isDuplicateTagLabel } from "@/utils/tags";
 import { useModalTransition } from "@/components/ui/useModalTransition";
 import { useKeyboardOffset } from "@/components/ui/useKeyboardOffset";
 import { ColorPicker } from "@/components/ui/ColorPicker";
@@ -29,6 +29,7 @@ export function TagEditorModal({
   tags,
   setTags,
   onClose,
+  onCommitTags,
 }: {
   visible: boolean;
   colors: Palette;
@@ -36,6 +37,7 @@ export function TagEditorModal({
   tags: Tag[];
   setTags: (t: Tag[]) => void;
   onClose: () => void;
+  onCommitTags?: (t: Tag[]) => void;
 }) {
   const [newLabel, setNewLabel] = useState("");
   const [newColor, setNewColor] = useState(colors.tagColors[0]);
@@ -50,6 +52,9 @@ export function TagEditorModal({
   const commitTags = useCallback(
     (next: Tag[]) => {
       setTags(next);
+      // Subida inmediata al sheet (si hay cuenta): sin esperar el debounce,
+      // para que un reload no pise el cambio con el valor viejo del sheet.
+      onCommitTags?.(next);
       persistQueue.current = persistQueue.current!
         .catch(() => undefined)
         .then(() => saveTags(next))
@@ -58,7 +63,7 @@ export function TagEditorModal({
           Alert.alert(copy.tagsTitle, copy.tagSaveError);
         });
     },
-    [copy.languageCode, copy.tagsTitle, copy.tagSaveError, setTags],
+    [copy.languageCode, copy.tagsTitle, copy.tagSaveError, setTags, onCommitTags],
   );
 
   const startEdit = useCallback((tag: Tag) => {
@@ -70,16 +75,22 @@ export function TagEditorModal({
   const cancelEdit = useCallback(() => setEditingId(null), []);
 
   const saveEdit = useCallback(() => {
-    if (!editingId || !editingLabel.trim()) return;
+    const label = editingLabel.trim();
+    if (!editingId || !label) return;
+    // Dos tags con el mismo nombre colapsan en la próxima carga: bloquear.
+    if (isDuplicateTagLabel(tags, editingId, label)) {
+      Alert.alert(copy.tagsTitle, copy.tagDuplicateError);
+      return;
+    }
     commitTags(
       tags.map((tag) =>
         tag.id === editingId
-          ? { ...tag, label: editingLabel.trim(), color: editingColor }
+          ? { ...tag, label, color: editingColor }
           : tag,
       ),
     );
     setEditingId(null);
-  }, [commitTags, editingColor, editingId, editingLabel, tags]);
+  }, [commitTags, editingColor, editingId, editingLabel, tags, copy.tagsTitle, copy.tagDuplicateError]);
 
   const handleAdd = () => {
     const label = newLabel.trim();
@@ -95,7 +106,11 @@ export function TagEditorModal({
   };
 
   const handleDelete = useCallback(
-    (id: string) => commitTags(tags.filter((tag) => tag.id !== id)),
+    (id: string) => {
+      // Tombstone explícito: si no hay internet, el reload no debe resucitarlo.
+      void addDeletedTagIds([id]);
+      commitTags(tags.filter((tag) => tag.id !== id));
+    },
     [commitTags, tags],
   );
 

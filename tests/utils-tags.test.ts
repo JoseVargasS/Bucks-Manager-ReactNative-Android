@@ -2,12 +2,24 @@ describe("tags", () => {
   let mergeTagsFromSheet: typeof import("../src/utils/tags").mergeTagsFromSheet;
   let labelForTagId: typeof import("../src/utils/tags").labelForTagId;
   let migrateTransactionTags: typeof import("../src/utils/tags").migrateTransactionTags;
+  let applyTagTombstones: typeof import("../src/utils/tags").applyTagTombstones;
+  let isDuplicateTagLabel: typeof import("../src/utils/tags").isDuplicateTagLabel;
+  let loadDeletedTagIds: typeof import("../src/utils/tags").loadDeletedTagIds;
+  let addDeletedTagIds: typeof import("../src/utils/tags").addDeletedTagIds;
+  let clearDeletedTagIds: typeof import("../src/utils/tags").clearDeletedTagIds;
+  let getDeletedTagIdsSync: typeof import("../src/utils/tags").getDeletedTagIdsSync;
 
   beforeAll(async () => {
     const mod = await import("../src/utils/tags");
     mergeTagsFromSheet = mod.mergeTagsFromSheet;
     labelForTagId = mod.labelForTagId;
     migrateTransactionTags = mod.migrateTransactionTags;
+    applyTagTombstones = mod.applyTagTombstones;
+    isDuplicateTagLabel = mod.isDuplicateTagLabel;
+    loadDeletedTagIds = mod.loadDeletedTagIds;
+    addDeletedTagIds = mod.addDeletedTagIds;
+    clearDeletedTagIds = mod.clearDeletedTagIds;
+    getDeletedTagIdsSync = mod.getDeletedTagIdsSync;
   });
 
   const currentTags = [
@@ -157,5 +169,50 @@ describe("tags", () => {
     ];
     const result = mergeTagsFromSheet(localDefaults, sheetTags, [], []);
     expect(result.find((t: any) => t.id === "default-comida")!.color).toBe("#800080");
+  });
+
+  // --- Tombstones: el borrado offline no debe resucitar en el reload ---
+  test("applyTagTombstones filters deleted ids and keeps the rest", () => {
+    const tags = [
+      { id: "custom-taxi", label: "Taxi", color: "#111111" },
+      { id: "custom-vivienda", label: "Vivienda", color: "#222222" },
+    ];
+    expect(applyTagTombstones(tags as any, new Set())).toBe(tags);
+    const result = applyTagTombstones(tags as any, new Set(["custom-taxi"]));
+    expect(result.map((t: any) => t.id)).toEqual(["custom-vivienda"]);
+  });
+
+  test("deleted custom ids persist and clear on demand", async () => {
+    await loadDeletedTagIds();
+    expect(getDeletedTagIdsSync().size).toBe(0);
+    // Los defaults nunca se marcan: los gobierna el sheet.
+    await addDeletedTagIds(["default-comida", "custom-taxi"]);
+    expect([...getDeletedTagIdsSync()]).toEqual(["custom-taxi"]);
+    await clearDeletedTagIds(["custom-taxi"]);
+    expect(getDeletedTagIdsSync().size).toBe(0);
+  });
+
+  test("tombstoned custom survives a reload-style merge until sheet converges", () => {
+    const merged = [
+      { id: "default-comida", label: "Comida", color: "#f59e0b" },
+      { id: "custom-taxi", label: "Taxi", color: "#2333e7" },
+    ];
+    // Sheet viejo aún trae el tag: el filtro lo saca del merge.
+    const filtered = applyTagTombstones(merged as any, new Set(["custom-taxi"]));
+    expect(filtered.map((t: any) => t.id)).toEqual(["default-comida"]);
+  });
+
+  // --- Renombres: no permitir duplicar el nombre de otro tag ---
+  test("isDuplicateTagLabel detects collisions ignoring case and self", () => {
+    const tags = [
+      { id: "custom-taxi", label: "Taxi", color: "#111111" },
+      { id: "custom-pb", label: "Transporte Pb", color: "#222222" },
+    ];
+    expect(isDuplicateTagLabel(tags as any, "custom-pb", "taxi")).toBe(true);
+    expect(isDuplicateTagLabel(tags as any, "custom-pb", "  TAXI  ")).toBe(true);
+    // Renombrar manteniendo el propio nombre no es duplicado.
+    expect(isDuplicateTagLabel(tags as any, "custom-taxi", "Taxi")).toBe(false);
+    expect(isDuplicateTagLabel(tags as any, "custom-pb", "Nuevo")).toBe(false);
+    expect(isDuplicateTagLabel(tags as any, "custom-pb", "   ")).toBe(false);
   });
 });

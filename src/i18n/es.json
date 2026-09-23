@@ -191,6 +191,7 @@
   "pendingSyncStatus": "Pendiente de sincronizar",
   "savedData": "Datos guardados",
   "tagSaveError": "No se pudieron guardar los cambios.",
+  "tagDuplicateError": "Ya existe otra etiqueta con ese nombre.",
   "sessionExpired": "Sesión expirada. Vuelve a iniciar sesión.",
   "deleteSelection": "Eliminar selección",
   "undoAction": "Deshacer",

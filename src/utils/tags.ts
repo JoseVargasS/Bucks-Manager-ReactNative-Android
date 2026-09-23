@@ -80,6 +80,77 @@ export async function saveTags(tags: Tag[]): Promise<void> {
   await SecureStore.setItemAsync(TAGS_KEY, JSON.stringify(tags));
 }
 
+const DELETED_TAGS_KEY = "bucks_deleted_tags";
+
+// ponytail: ids de tags borrados por el usuario cuyo borrado aún no converge
+// al sheet (p. ej. se borró sin internet). El reload filtra estos ids para
+// que el catálogo viejo del sheet no los resucite. Se auto-limpian cuando el
+// sheet ya no los trae. Solo customs: los defaults los gobierna el sheet.
+let deletedTagIdsCache: Set<string> | null = null;
+
+export function getDeletedTagIdsSync(): Set<string> {
+  return deletedTagIdsCache ?? new Set();
+}
+
+export async function loadDeletedTagIds(): Promise<Set<string>> {
+  try {
+    const raw = await SecureStore.getItemAsync(DELETED_TAGS_KEY);
+    deletedTagIdsCache = new Set(raw ? (JSON.parse(raw) as string[]) : []);
+  } catch {
+    if (!deletedTagIdsCache) deletedTagIdsCache = new Set();
+  }
+  return new Set(deletedTagIdsCache);
+}
+
+async function persistDeletedTagIds(): Promise<void> {
+  try {
+    await SecureStore.setItemAsync(
+      DELETED_TAGS_KEY,
+      JSON.stringify([...(deletedTagIdsCache ?? [])]),
+    );
+  } catch {
+    // best-effort: el borrado local ya quedó, el sheet converge después
+  }
+}
+
+export async function addDeletedTagIds(ids: string[]): Promise<void> {
+  const custom = ids.filter((id) => id && !id.startsWith("default-"));
+  if (!custom.length) return;
+  if (!deletedTagIdsCache) await loadDeletedTagIds();
+  let changed = false;
+  for (const id of custom) {
+    if (!deletedTagIdsCache!.has(id)) {
+      deletedTagIdsCache!.add(id);
+      changed = true;
+    }
+  }
+  if (changed) await persistDeletedTagIds();
+}
+
+export async function clearDeletedTagIds(ids: string[]): Promise<void> {
+  if (!deletedTagIdsCache?.size) return;
+  let changed = false;
+  for (const id of ids) {
+    if (deletedTagIdsCache.delete(id)) changed = true;
+  }
+  if (changed) await persistDeletedTagIds();
+}
+
+/** Saca del merge los ids con borrado pendiente (el sheet aún trae el viejo). */
+export function applyTagTombstones(tags: Tag[], tombstoned: Set<string>): Tag[] {
+  if (!tombstoned.size) return tags;
+  return tags.filter((t) => !tombstoned.has(t.id));
+}
+
+/** true si otro tag ya usa ese label (bloquea renombres duplicados). */
+export function isDuplicateTagLabel(tags: Tag[], editingId: string, label: string): boolean {
+  const key = label.trim().toLocaleLowerCase();
+  if (!key) return false;
+  return tags.some(
+    (t) => t.id !== editingId && t.label.trim().toLocaleLowerCase() === key,
+  );
+}
+
 export function abbreviateTag(label: string): string {
   if (label.length <= 6) return label;
   return label.slice(0, 5) + ".";

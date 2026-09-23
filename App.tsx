@@ -73,6 +73,7 @@ import { useTagSyncEffects } from "@/hooks/useTagSync";
 import { useHistoryPanel } from "@/hooks/useHistoryPanel";
 import { useTransactionActions } from "@/hooks/useTransactionActions";
 import { getErrorMessage, isAuthError } from "@/utils/errorHandler";
+import { clearDeletedTagIds } from "@/utils/tags";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { ConnectBanner } from "@/components/ui/ConnectBanner";
 import { ConnectingOverlay } from "@/components/ui/ConnectingOverlay";
@@ -244,17 +245,41 @@ function AppContent() {
     { errMsg, authErr, copy: copy as unknown as { syncError: string; sessionExpired: string; showingSavedData: string; pendingSyncStatus: string; syncing: string; deleteRecord: string; deleteSelection: string; moveRecord: string; moveRecordError: string; undoAction: string }, tagColors: colors.tagColors, language },
     reloadPromiseRef,
   );
+
+  // Ediciones de tags hechas por el usuario (editor o crear desde registro):
+  // limpian tombstones de los ids presentes y suben al sheet de inmediato,
+  // sin esperar el debounce, para que un reload no los pise con valores viejos.
+  const handleUserSetTags = useCallback((next: Tag[]) => {
+    void clearDeletedTagIds(next.map((t) => t.id));
+    setTagsList(next);
+  }, []);
+  const handleAddTag = useCallback((tag: Tag) => {
+    void clearDeletedTagIds([tag.id]);
+    const next = [...tagsList.filter((t) => t.id !== tag.id), tag];
+    setTagsList(next);
+    syncApi.writeTagsNow(next);
+  }, [tagsList, syncApi]);
   useEffect(() => {
     connectRef.current = syncApi.connectGoogleWorkspace;
   }, [syncApi.connectGoogleWorkspace]);
 
-  // Pull-to-refresh: solo spinner (sin overlay global) y relectura fresca
-  // tras cualquier sync en curso. syncApi se recrea por render, por eso va
-  // por ref para que el callback quede estable y no rompa los memo.
+  // Pull-to-refresh: el spinner solo responde al jalón del usuario, nunca a
+  // los syncs de fondo (guardar registro, escrituras con debounce, foreground:
+  // esos van en silencio y los datos aparecen solos). Contador en vez de
+  // booleano para que un doble jalón no apague el spinner antes de tiempo.
+  // syncApi se recrea por render, por eso va por ref para no romper los memo.
   const reloadRef = useRef(syncApi.reloadFromGoogle);
   reloadRef.current = syncApi.reloadFromGoogle;
+  const [refreshCount, setRefreshCount] = useState(0);
   const handleRefresh = useCallback(() => {
-    void reloadRef.current(accessToken, spreadsheetId, false, true);
+    setRefreshCount((c) => c + 1);
+    const done = () => setRefreshCount((c) => Math.max(0, c - 1));
+    const p = reloadRef.current(accessToken, spreadsheetId, false, true);
+    if (!p) {
+      done();
+      return;
+    }
+    void p.then(done, done);
   }, [accessToken, spreadsheetId]);
 
   // ─── Tag lifecycle effects ───────────────────────────────────────
@@ -485,7 +510,7 @@ function AppContent() {
     syncStatusText,
     pendingSync,
     isSyncing,
-    refreshing: isSyncing,
+    refreshing: refreshCount > 0,
     onRefresh: handleRefresh,
     selectPeriod,
     goToday,
@@ -688,7 +713,7 @@ function AppContent() {
         copy={copy}
         currencySymbol={currencySymbol}
         onSubmit={mutations.submitDraft}
-        onAddTag={(tag) => setTagsList((prev) => [...prev.filter((t) => t.id !== tag.id), tag])}
+        onAddTag={handleAddTag}
       />
       <DetailModal
         ref={modals.refs.detailModalRef}
@@ -740,8 +765,9 @@ function AppContent() {
           colors={colors}
           copy={copy}
           tags={tagsList}
-          setTags={setTagsList}
+          setTags={handleUserSetTags}
           onClose={modals.closers.closeTagEditor}
+          onCommitTags={(next) => syncApi.writeTagsNow(next)}
         />
       </Suspense>
       <MergePromptModal

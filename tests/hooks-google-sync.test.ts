@@ -464,6 +464,48 @@ describe("useGoogleSync", () => {
     }
   });
 
+  // ─── writeTagsNow ───
+
+  test("writeTagsNow is a no-op when no spreadsheet is selected", async () => {
+    const original = globalThis.fetch;
+    let called = false;
+    const handler: any = () => { called = true; return json({}); };
+    globalThis.fetch = handler;
+    try {
+      const api = useGoogleSync(makeSession({ spreadsheetId: "" }), emptyFin, emptyTags, emptyHelpers, { current: null });
+      api.writeTagsNow([{ id: "custom-taxi", label: "Taxi", color: "#2333e7" }]);
+      await new Promise((r) => setTimeout(r, 10));
+      expect(called).toBe(false);
+    } finally {
+      globalThis.fetch = original;
+    }
+  });
+
+  test("writeTagsNow hits K1:K2 with header + catalogue when a sheet is selected", async () => {
+    const original = globalThis.fetch;
+    const requests: { url: string; method: string; body: any }[] = [];
+    const handler: any = async (input: any, init: any = {}) => {
+      const url = decodeURIComponent(String(input));
+      const body = init.body ? JSON.parse(init.body) : null;
+      requests.push({ url, method: init.method || "GET", body });
+      return json({});
+    };
+    globalThis.fetch = handler;
+    try {
+      const api = useGoogleSync(makeSession({ spreadsheetId: "sheet-xyz" }), emptyFin, emptyTags, emptyHelpers, { current: null });
+      const tags = [{ id: "custom-taxi", label: "Taxi", color: "#2333e7" }];
+      api.writeTagsNow(tags as any);
+      await new Promise((r) => setTimeout(r, 30));
+      const put = requests.find(({ method }) => method === "PUT");
+      expect(put).toBeTruthy();
+      expect(put!.url).toContain("MONTHLY SUMMARY!K1:K2");
+      expect(put!.body.values[0][0]).toBe("TAGS CATALOGUE");
+      expect(JSON.parse(put!.body.values[1][0])).toEqual(tags);
+    } finally {
+      globalThis.fetch = original;
+    }
+  });
+
   // ─── connectGoogleWorkspace ───
 
   test("connectGoogleWorkspace uses preferred sheet when available", async () => {
