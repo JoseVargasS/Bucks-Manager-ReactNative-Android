@@ -24,7 +24,7 @@ The app is built to scale to thousands of transactions per user across many year
 - Do not show demo finance data during app startup.
 - If there is no Google session, show the minimal Quipu login screen with only Google sign-in.
 - Treat Google Drive data as private user data. Read or write Drive/Sheets only through the app runtime or when the user explicitly authorizes it.
-- Do not commit `.env`, OAuth secrets, spreadsheet IDs, `.expo/`, logs, `dist/`, build outputs, or `node_modules/`.
+- Do not commit `.env`, OAuth secrets, spreadsheet IDs, `.expo/`, logs, `dist/`, build outputs, `store-listing/` (regenerable artwork with real user data), or `node_modules/`.
 - Keep deployment-specific IDs such as `EAS_PROJECT_ID` in `.env` or build environment variables, not hardcoded in source.
 - Treat `DESIGN.md` as a local design brief, not a durable repo contract. Fold lasting decisions into this file and `README.md` instead.
 - Keep the Google Sheets transaction contract unchanged. UI chrome can switch between Spanish and English from Settings, while user-entered transaction descriptions must stay exactly as typed.
@@ -60,7 +60,7 @@ Use:
 npm run android
 ```
 
-The script in `scripts/run-android.ps1` sets Java and Android SDK paths and targets a physical ADB-authorized phone. Use `npx expo start` only when a compatible development build is already installed on the phone.
+The script in `scripts/run-android.ps1` sets Java and Android SDK paths and targets a physical ADB-authorized phone. Use `npx expo start` only when a compatible development build is already installed on the phone. WiFi ADB works the same as USB (`adb pair` once, then `adb connect`). `npm run android:release` builds the release APK with Gradle and installs it over the debug build — never uninstall first, or local data (tags, preferences, PIN, pending records) is wiped.
 
 ## Architecture and Performance Invariants
 
@@ -74,7 +74,7 @@ These rules reflect the current shape of the app and the scale it must support. 
 - Branding is deduplicated: `app.json` points `icon`, all three `adaptiveIcon` images, and `web.favicon` at `./assets/icon-bucks.png` (`backgroundColor #000000`). `assets/` holds only `icon-bucks.png`, `splash.mp4`, `splash-icon-bucks.png` (native poster), plus `fonts/`.
 - `StartupSplash` plays `assets/splash.mp4` via `expo-video` (muted, no loop, `contain`, 260px centered on `SPLASH_BG #000000`); exit needs `exiting && ended` (`playToEnd` or 2300ms fallback) then a 220ms fade. Native `expo-splash-screen` uses `duration: 0, fade: false` so the JS video owns the exit. Icon/video/`app.json` changes need `npx expo prebuild --clean` + `npm run android`; `r` only refreshes JS.
 - Mutations update React state and the local cache first, then write to Sheets and force one reconciliation read.
-- `reloadFromGoogle()` shares one in-flight promise. `pendingSyncRef` prevents an ordinary refresh from replacing optimistic state. Each mutation sets `pendingSyncRef.current = true` before the sync call so the reconciliation does not overwrite the optimistic update. Pull-to-refresh on the four tab screens reuses it as `reloadFromGoogle(token, sheetId, false, true)` (spinner only, no-op while pending/offline); modals and bottom sheets are excluded.
+- `reloadFromGoogle()` shares one in-flight promise. `pendingSyncRef` prevents an ordinary refresh from replacing optimistic state. Each mutation sets `pendingSyncRef.current = true` before the sync call so the reconciliation does not overwrite the optimistic update. Pull-to-refresh on the four tab screens reuses it as `reloadFromGoogle(token, sheetId, false, true)` (manual spinner only via `refreshCount`, no-op while pending/offline); background syncs never drive the spinner. Modals and bottom sheets are excluded.
 
 ### Hydration and sync
 
@@ -84,7 +84,7 @@ These rules reflect the current shape of the app and the scale it must support. 
 - Add, edit, delete, and move interactions must update locally before remote reconciliation.
 - Add frequent income as a normal transaction with type `INGRESO FRECUENTE`; the legacy monthly summary value is read-only fallback data.
 - If column F already has the normalized `Tags` header, do not repeat tag migration or formatting writes.
-- On `reloadFromGoogle`: read the tag catalogue from `MONTHLY SUMMARY!K2`, merge with in-memory `tagsList` using `mergeTagsFromSheet` which starts from sheet tags (source of truth) and adds only local custom tags not yet synced. The debounced write-back uses `writeTagsCatalog` to push the full local catalogue to the sheet so deletions and label updates propagate.
+- On `reloadFromGoogle`: read the tag catalogue from `MONTHLY SUMMARY!K2`, merge with in-memory `tagsList` using `mergeTagsFromSheet` which starts from sheet tags (source of truth) and adds only local custom tags not yet synced. The debounced write-back uses `writeTagsCatalog` to push the full local catalogue to the sheet so deletions and label updates propagate. User tag edits additionally call `writeTagsNow` immediately (same `syncQueue`) so a reload cannot clobber them with stale sheet values. Offline deletes leave tombstones (`bucks_deleted_tags`) that the reload filters until the sheet converges; renames to an existing label are blocked by `isDuplicateTagLabel`.
 - If the stored spreadsheet was trashed in Drive, clear the local cache and start fresh without erroring out.
 
 ### Render and re-render budget
@@ -139,12 +139,18 @@ Do not re-merge these contexts. Do not introduce a global "settings" context tha
 - Tag persistence uses the catalogue at the current language. The catalogue must always include the six default ids (`default-salud`, `default-comida`, `default-viaje`, `default-transporte`, `default-ocio`, `default-educacion`) even when the user hides them in the UI.
 
 ### Cloud-synced UI preferences
-
 - Cosmetic preferences (language, currency symbol, font, accent scheme) are persisted to `MONTHLY SUMMARY!L1:L2` (L1 = header `UI PREFERENCES`, L2 = compact JSON `{ v: 1, language, currencySymbol, fontPreference, colorScheme }`). PIN, token, and history stay device-local.
 - `usePreferences.save*()` schedules a 1.5s debounced write that runs through the same `syncQueue` as tags and transactions. `sanitizeUiPreferences` drops unknown / out-of-vocabulary fields so a corrupted sheet row never reaches state.
 - On `reloadFromGoogle`, `readUiPreferences` is the 4th parallel read. If the sheet carries a value, `useGoogleSync` calls `usePreferences.applyRemotePreferences` to overwrite the local copy. The sheet wins; SecureStore only leads the UI between launch and the first successful sync.
 - `App.tsx` wires the two hooks bidirectionally: `wireSheetPersistence(scheduleUiPreferencesWrite)` (preferences → sheet) and `wireRemoteUiPreferences(applyRemotePreferences)` (sheet → preferences).
 - New spreadsheets initialize L1:L2 with a `sky` scheme and detected device language so the user always sees a coherent first-run look.
+
+### Session and multi-account
+
+- Account switching is silent-first with no day limit: fast-path on a tokeninfo-validated cached token, then `signInSilently`, then `signIn` with an `accountName` hint so Google enters directly without the chooser. The picker is only a degradation fallback. Consent is one-time per account (Google remembers grants); never re-request scopes that are already granted.
+- Persist the fresh access token to the `connectedAccounts` record on every successful auth (connect, silent, picker, fast-path), not just the first connect.
+- Snapshot the current session (token, sheetId, accountInfo) before `runSwitchCleanup`; if the target account fails or the user cancels, restore A via `onConnectGoogleWorkspace` instead of leaving the user logged out.
+- `GoogleSignin.configure()` is always called bare except for the switch fallback hint; the `finally` re-applies bare config to clear the hint. Do not add scopes to `configure()` — Workspace scopes stay incremental via `addScopes()`.
 
 ### Mutation pipeline
 
@@ -169,7 +175,7 @@ Before committing app changes, run:
 npm run ci
 ```
 
-`npm run ci` checks formatting, unused symbols, strict types, tests, and coverage thresholds. For cleanup work, also verify every deleted file is unreachable from `index.ts` or an Expo config/build entry.
+`npm run ci` checks formatting, unused symbols, strict types, and the full jest suite. There is no coverage gate (`test:coverage` is informational only). For cleanup work, also verify every deleted file is unreachable from `index.ts` or an Expo config/build entry.
 
 When possible, also install/run on a real Android device. For performance work, capture one focused flow with `gfxinfo`, Perfetto, or Simpleperf; do not treat a broad or unstable emulator run as timing evidence.
 

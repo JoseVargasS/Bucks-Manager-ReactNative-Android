@@ -1,6 +1,17 @@
 # Quipu — Ahorros & Gastos
 
-React Native/Expo Android version of the Bucks Manager Google Apps Script app. Rebranded as **Quipu** for launch (Play titles: ES `Quipu – Ahorros & Gastos`, EN `Quipu – Money Manager`).
+Your money, clear at a glance. Quipu is a private finance tracker for
+Android: income, expenses, tags, and yearly analysis, with your data living
+in your own Google Sheet — no custom backend, no third-party servers.
+
+- Track income and expenses with color tags and daily history.
+- Monthly KPIs, per-tag breakdown, and a full yearly analysis with alerts.
+- Every record syncs to your private Google Sheet; multi-account supported.
+- Spanish and English UI, light and dark themes, customizable palette.
+
+Play titles: ES `Quipu – Ahorros & Gastos`, EN `Quipu – Money Manager`.
+
+React Native/Expo Android version of the Bucks Manager Google Apps Script app. Rebranded as **Quipu** for launch.
 
 The app has no custom backend. Each user signs in with Google and uses a private Google Sheet as the database.
 
@@ -85,7 +96,7 @@ Supported transaction types:
 - Financial amounts should use tabular numbers where supported.
 - On the Gastos screen, the active period label lives in the header subtitle so the period dropdowns stay high and compact.
 - Bottom navigation is a compact translucent floating bar; the add button should protrude slightly above it without increasing or clipping the bar.
-- Settings includes local preferences for language, currency symbol, and font style. DM Sans matches the GAS app and is the default; each alternate font is previewed in the selector. Currency starts from the device locale when no saved preference exists.
+- Settings includes local preferences for language, currency symbol, and font style. Inter is the default; each alternate font is previewed in the selector. Currency starts from the device locale when no saved preference exists.
 - On the first launch, language and currency start from the device locale. Google account actions allow switching/adding an account or revoking the current account without deleting its spreadsheet.
 - Bottom tab focus changes immediately on press while the pager animates; modal open/close interactions should also feel nearly instant.
 - The Analysis screen is optimized for mobile readability with compact KPI rows, chart labels, and a simplified monthly table.
@@ -121,7 +132,7 @@ npm run format:check
 npm run eslint:fix
 ```
 
-`test:coverage` enforces the initial critical-code thresholds: 85% lines, 85% branches, and 85% functions. See [TESTING.md](./TESTING.md) for scope, conventions, and known limits.
+`test:coverage` prints an informational coverage report. There are no enforced coverage thresholds; `npm run ci` does not check coverage. See [TESTING.md](./TESTING.md) for scope, conventions, and known limits.
 
 Install/run on a physical Android phone:
 
@@ -137,7 +148,11 @@ Build a release APK locally and install it on the connected phone (no Metro serv
 npm run android:release
 ```
 
-`android:release` runs `eas build --local` against the `preview` profile, writes `build-preview.apk` in the project root, and installs it on the ADB device with `adb install -r`. Use it to validate a packaged build on a real phone.
+`android:release` runs the same script with the `release` variant: it compiles with Gradle directly (`assembleRelease`, all ABIs), signs with the debug key, and installs over the existing app with `adb install -r -d`. Use it to validate a packaged build on a real phone — and to take final screenshots without the dev-launcher gear.
+
+Install the release **over** the debug build, never uninstall first: same package and signature means your local data (tags, preferences, PIN, pending records) survives. Uninstalling wipes `SecureStore` and the local cache.
+
+WiFi ADB works the same as USB: `adb pair` once, then `adb connect <ip>:<port>` on the same network, keep the phone awake, and run the commands above.
 
 Build a development-client APK in the EAS cloud (so a tester can install a pre-built dev client and connect to your Metro):
 
@@ -154,6 +169,13 @@ npx expo start
 ```
 
 The QR flow only works after the phone already has a compatible dev build installed. It opens the JavaScript bundle in the installed app. It does not compile or install the native Android app.
+
+## Play Store
+
+- Listing languages: Spanish first; add the English listing only when ready (EN artwork is generated from the same templates on demand).
+- Phone screenshots: 1080×1920 portrait (built at 2x for crispness). Feature graphic: 1024×500 PNG. App icon: `assets/icon-bucks.png` (512px export for the store).
+- Artwork sources live in the gitignored local folder `store-listing/` (`template.html` + `shoot.mjs`, Playwright). Regenerate with `node store-listing/shoot.mjs es`; never commit screenshots — they contain real user data.
+- Publish a locally built release (`npm run android:release`) for final validation and store screenshots: no dev gear, real performance.
 
 ## Google OAuth
 
@@ -188,6 +210,8 @@ assets/splash-icon-bucks.png    Native splash poster (frame of splash.mp4, black
 src/api/googleAuth.ts           Google Sign-In and token management
 src/api/googleWorkspace.ts      Google Drive and Sheets integration
 src/api/sheetFormats.ts         Sheet date/number/header parsing
+src/data/connectedAccounts.ts   Multi-account registry (sheet, scopes, cached token per account)
+src/hooks/useSession.ts         Session, login, and silent-first multi-account switching
 src/domain/bucksLogic.ts        Sheet contract, summaries, dates, and transaction rules
 src/data/localCache.ts          Local-first financial cache
 src/hooks/useFinancialState.ts      Aggregated financial state + wrapper methods
@@ -268,6 +292,8 @@ Both servers are configured as MCP entries in Claude Code, Codex CLI, Gemini CLI
 - Dropdown selection components (`Select`) open an `OptionSheet` (bottom sheet via Modal) instead of an inline dropdown or portal. This avoids Android z-index issues with nested ScrollViews.
 - Transaction tags store stable ids, not labels. Custom tags keep the label the user typed; default tags are translated through the catalogue and keep their colour. `migrateTagReferences` rewrites legacy label refs to ids once when the tag catalogue finishes loading.
 - Tag catalogue (including colours) is persisted in sheet cell `MONTHLY SUMMARY!K2` so custom tag colours survive app data clear and device changes.
+- User tag edits (create, rename, delete) write through `writeTagsNow` immediately; offline deletes leave tombstones so the next reload does not resurrect them.
+- The pull-to-refresh spinner is manual-only: background syncs stay silent and update data in place.
 - Every reusable UI primitive is `React.memo`-wrapped. New UI primitives must be memoized at creation time.
 
 ## Branding Assets
@@ -278,7 +304,7 @@ Both servers are configured as MCP entries in Claude Code, Codex CLI, Gemini CLI
 
 ## Repository Hygiene
 
-- Do not commit `.env`, OAuth secrets, user spreadsheet IDs, `.expo/`, logs, `dist/`, build outputs, or `node_modules/`.
+- Do not commit `.env`, OAuth secrets, user spreadsheet IDs, `.expo/`, logs, `dist/`, build outputs, `store-listing/` (regenerable artwork with real user data), or `node_modules/`.
 - Keep design briefs such as `DESIGN.md` local unless they become durable repo documentation.
 - Put durable agent/developer guidance in `AGENTS.md`.
 - Google Drive inspection from Codex should be read-only unless the user explicitly asks to modify a Drive file.

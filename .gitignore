@@ -57,3 +57,6 @@ coverage/
 # generated native folders
 /ios
 /android
+
+# Play Store promo artwork (regenerable via template.html + shoot.mjs; screenshots contain personal data)
+store-listing/
