@@ -1,5 +1,4 @@
 import * as SecureStore from "expo-secure-store";
-import { CACHED_ACCOUNT_MAX_AGE_MS } from "@/theme/constants";
 import { logError } from "@/utils/errorHandler";
 
 export type ConnectedAccount = {
@@ -19,15 +18,6 @@ function isConnectedAccount(v: unknown): v is ConnectedAccount {
   if (!v || typeof v !== "object") return false;
   const c = v as Partial<ConnectedAccount>;
   return typeof c.email === "string" && c.email.length > 0 && typeof c.lastUsedAt === "string";
-}
-
-// true si la cuenta lleva más de 10 días sin usarse (o fecha inválida):
-// toca picker de nuevo en vez de entrar directo.
-export function isAccountStale(lastUsedAt: string | undefined, nowMs = Date.now()): boolean {
-  if (!lastUsedAt) return true;
-  const t = new Date(lastUsedAt).getTime();
-  if (!Number.isFinite(t)) return true;
-  return nowMs - t > CACHED_ACCOUNT_MAX_AGE_MS;
 }
 
 export async function loadConnectedAccounts(): Promise<ConnectedAccount[]> {

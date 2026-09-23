@@ -5,7 +5,7 @@ import { GoogleSignin } from "@react-native-google-signin/google-signin";
 import { deleteItemAsync, getItemAsync, setItemAsync } from "expo-secure-store";
 import { getWorkspaceAccessToken as getWorkspaceAccessTokenBase, syncAccountInfo as syncAccountInfoBase, isTokenAlive } from "@/api/googleAuth";
 import { deleteFinancialCache, deleteOfflineCache } from "@/data/localCache";
-import { saveConnectedAccount, removeConnectedAccount, loadConnectedAccounts, isAccountStale } from "@/data/connectedAccounts";
+import { saveConnectedAccount, removeConnectedAccount, loadConnectedAccounts } from "@/data/connectedAccounts";
 import { type UiCopy } from "@/i18n";
 import { TOKEN_KEY, SHEET_KEY } from "@/theme/constants";
 
@@ -163,7 +163,7 @@ export function useSession(
     syncAccountInfo();
     const info = syncAccountInfoBase();
     if (info?.email) {
-      void saveConnectedAccount({ email: info.email, name: info.name, lastUsedAt: new Date().toISOString() });
+      void saveConnectedAccount({ email: info.email, name: info.name, lastUsedAt: new Date().toISOString(), accessToken: token, scopesGranted: true });
     }
     await onConnectGoogleWorkspace(token, savedSheetId || "", !savedSheetId, wasOffline);
   }
@@ -199,7 +199,10 @@ export function useSession(
     }
   }
 
-  // Switch directo sin picker para cuentas ya conectadas (usa accountName hint + silent)
+  // Switch directo sin picker para cuentas ya conectadas. Sin puerta de días:
+  // siempre se intenta en silencio primero y la vigencia real la decide Google
+  // (tokeninfo/silent); solo si eso falla se va al picker. La sesión actual
+  // nunca se pierde: si la destino no confirma o cancelan, se restaura A tal cual.
   async function switchToAccount(targetEmail: string) {
     const current = (accountInfo?.email || syncAccountInfoBase()?.email || "").toLowerCase();
     if (!targetEmail || targetEmail.toLowerCase() === current) return;
@@ -207,46 +210,60 @@ export function useSession(
     setLoading(true);
     setAccountTransition(true);
     setConnectionStatus("loading");
+    // Snapshot de A: por si B no confirma, se vuelve sin haber perdido nada.
+    const snapshot = { token: accessToken, sheetId: spreadsheetId, info: accountInfo };
+    const restoreSessionA = async () => {
+      if (!snapshot.token || !snapshot.sheetId) {
+        await clearGoogleSession().catch(() => undefined);
+        return;
+      }
+      await setItemAsync(TOKEN_KEY, snapshot.token).catch(() => undefined);
+      await setItemAsync(SHEET_KEY, snapshot.sheetId).catch(() => undefined);
+      setAccessToken(snapshot.token);
+      setSpreadsheetId(snapshot.sheetId);
+      if (snapshot.info) setAccountInfo(snapshot.info);
+      setSyncError("");
+      setOffline(false);
+      await onConnectGoogleWorkspace(snapshot.token, snapshot.sheetId, false, false).catch(() => undefined);
+    };
+    let cleanedForSwitch = false;
     try {
       await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
       const accounts = await loadConnectedAccounts();
       const target = accounts.find((a) => a.email.toLowerCase() === targetEmail.toLowerCase());
       let preferredSheetId = target?.spreadsheetId || "";
-      // Entrada directa sin picker solo si la cuenta se usó en los últimos 10
-      // días; pasada esa fecha se va directo al picker (fast-path y silent).
-      const directEntry = !!target && !isAccountStale(target.lastUsedAt);
-      // Fast path: si la cuenta ya tiene token y Drive, entra directo sin Google UI ni picker.
-      // El token se pre-valida con tokeninfo (sin UI ni estado): si venció se
-      // salta al silent/picker con la sesión de A intacta — nunca se limpia A
-      // antes de saber que B funciona.
-      const cachedToken = directEntry ? target?.accessToken : undefined;
+      // Fast path: token cacheado pre-validado con tokeninfo (sin UI ni estado).
+      // Si venció se sigue al silent/picker con la sesión de A intacta.
+      const cachedToken = target?.accessToken;
       const cachedAlive = !!cachedToken && (await isTokenAlive(cachedToken));
       if (cachedAlive && target?.accessToken && target?.scopesGranted && target?.spreadsheetId) {
+        await runSwitchCleanup();
+        cleanedForSwitch = true;
+        await setItemAsync(TOKEN_KEY, target.accessToken);
+        setAccessToken(target.accessToken);
+        setAccountInfo({ name: target.name, email: target.email });
+        setIsFirstRemoteLoad(true);
+        setSyncError("");
         try {
-          await runSwitchCleanup();
-          await setItemAsync(TOKEN_KEY, target.accessToken);
-          setAccessToken(target.accessToken);
-          setAccountInfo({ name: target.name, email: target.email });
-          setIsFirstRemoteLoad(true);
-          setSyncError("");
           await onConnectGoogleWorkspace(target.accessToken, target.spreadsheetId, false, false);
-          void saveConnectedAccount({ email: target.email, lastUsedAt: new Date().toISOString() });
+          void saveConnectedAccount({ email: target.email, lastUsedAt: new Date().toISOString(), accessToken: target.accessToken });
           return;
-        } catch (_e) { void _e;
-          // Token cacheado vencido — limpia y cae al flujo con Google
+        } catch {
+          // B no confirmó: restaura A y sigue al flujo con Google sin haber perdido nada.
           void saveConnectedAccount({ email: target.email, lastUsedAt: new Date().toISOString(), accessToken: undefined });
-          await clearGoogleSession().catch(() => undefined);
+          await restoreSessionA();
+          cleanedForSwitch = false;
           setAccountTransition(true);
           setConnectionStatus("loading");
         }
       }
-      // Intenta silent primero si la cuenta ya tenía Drive (sin popup).
-      // Con más de 10 días sin uso se salta al picker de frente.
+      // Intenta silent primero si la cuenta ya es conocida (sin popup ni puerta
+      // de días: si el silencio falla, recién ahí va al picker).
       const alreadyGranted = !!target?.scopesGranted;
       let token: string | null = null;
       let silentOk = false;
       let effectiveEmail = targetEmail;
-      if (directEntry) {
+      if (target) {
         try {
           const silent = await GoogleSignin.signInSilently();
           const silentEmail = (silent.type === "success" ? ((silent.data as unknown as { user?: { email?: string }; email?: string })?.user?.email || (silent.data as unknown as { email?: string })?.email || "") : "").toLowerCase();
@@ -256,6 +273,7 @@ export function useSession(
               if (tokens.accessToken) {
                 token = tokens.accessToken;
                 silentOk = true;
+                void saveConnectedAccount({ email: targetEmail, lastUsedAt: new Date().toISOString(), accessToken: tokens.accessToken });
               }
             } catch (_e) {
               if (alreadyGranted) {
@@ -263,6 +281,7 @@ export function useSession(
                 if (tokens.accessToken) {
                   token = tokens.accessToken;
                   silentOk = true;
+                  void saveConnectedAccount({ email: targetEmail, lastUsedAt: new Date().toISOString(), accessToken: tokens.accessToken });
                 }
               } else {
                 throw _e;
@@ -272,10 +291,12 @@ export function useSession(
         } catch (_e) { void _e; }
       }
       if (!silentOk) {
-        // Fallback: picker real (como el banner) — más confiable que accountName hint
+        // Fallback con hint: se avisa al SDK qué cuenta se quiere para que
+        // entre directo sin mostrar el selector (el permiso ya vive). Si la
+        // cuenta no está en el celu o el permiso murió, Google muestra el
+        // selector solo como degradación segura.
         await GoogleSignin.signOut().catch(() => undefined);
-        // Limpia hint previo para no confundir al SDK
-        try { GoogleSignin.configure(); } catch (_e) { void _e; }
+        try { GoogleSignin.configure({ accountName: targetEmail }); } catch (_e) { void _e; }
         const response = await GoogleSignin.signIn();
         if (response.type !== "success") { setConnectionStatus(null); return; }
         const signedEmail = ((response.data as unknown as { user?: { email?: string }; email?: string })?.user?.email || (response.data as unknown as { email?: string })?.email || targetEmail) as string;
@@ -291,6 +312,7 @@ export function useSession(
       }
       if (!token) throw new Error(copy.googleSignInError);
       await runSwitchCleanup();
+      cleanedForSwitch = true;
       // Usa el sheetId guardado para este email si existe, evita rescan Drive
       await setItemAsync(TOKEN_KEY, token);
       setAccessToken(token);
@@ -299,11 +321,13 @@ export function useSession(
       syncAccountInfo();
       const info = syncAccountInfoBase();
       if (info?.email) {
-        void saveConnectedAccount({ email: info.email, name: info.name, lastUsedAt: new Date().toISOString(), spreadsheetId: preferredSheetId || undefined, scopesGranted: true });
+        void saveConnectedAccount({ email: info.email, name: info.name, lastUsedAt: new Date().toISOString(), spreadsheetId: preferredSheetId || undefined, scopesGranted: true, accessToken: token });
       }
       await onConnectGoogleWorkspace(token, preferredSheetId, !preferredSheetId, false);
     } catch (error) {
       setConnectionStatus(null);
+      // Si ya se había limpiado para el switch, restaura A antes de avisar.
+      if (cleanedForSwitch) await restoreSessionA();
       // ponytail: errMsg mapea 401/403 a "Sesión expirada" — nunca el JSON crudo.
       const message = error instanceof Error ? errMsg(error) : copy.googleSignInError;
       Alert.alert("Google", message);

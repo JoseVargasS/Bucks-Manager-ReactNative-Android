@@ -69,7 +69,10 @@ g.__bucksAlertMock = { alert: () => {} };
 g.__bucksGoogleSigninMock = {
   getTokens: async () => ({ accessToken: "mock-token", idToken: "mock-id" }),
   signIn: async () => ({ data: null }),
+  signInSilently: async () => ({ type: "error" }),
   signOut: async () => {},
+  revokeAccess: async () => {},
+  hasPlayServices: async () => {},
   hasPreviousSignIn: () => false,
   getCurrentUser: () => null,
   addScopes: async () => {},
@@ -110,11 +113,14 @@ jest.mock("@react-native-google-signin/google-signin", () => ({
   GoogleSignin: {
     getTokens: async () => g.__bucksGoogleSigninMock.getTokens(),
     signIn: async () => g.__bucksGoogleSigninMock.signIn(),
+    signInSilently: async () => g.__bucksGoogleSigninMock.signInSilently(),
     signOut: async () => g.__bucksGoogleSigninMock.signOut(),
+    revokeAccess: async () => g.__bucksGoogleSigninMock.revokeAccess(),
+    hasPlayServices: async (...args: unknown[]) => g.__bucksGoogleSigninMock.hasPlayServices(...args),
     hasPreviousSignIn: () => g.__bucksGoogleSigninMock.hasPreviousSignIn(),
     getCurrentUser: () => g.__bucksGoogleSigninMock.getCurrentUser(),
     addScopes: async () => g.__bucksGoogleSigninMock.addScopes(),
-    configure: () => g.__bucksGoogleSigninMock.configure(),
+    configure: (...args: unknown[]) => (g.__bucksGoogleSigninMock.configure as (...a: unknown[]) => void)(...args),
   },
 }));
 
