@@ -81,6 +81,64 @@ export async function isTokenAlive(accessToken: string): Promise<boolean> {
   return GOOGLE_WORKSPACE_SCOPES.every((s) => tokenScopes.has(s));
 }
 
+// Recovery silencioso sin UI para arranque/foreground: Android cachea el
+// access token (~1h de vida) y no lo refresca solo, así que un token muerto
+// se limpia con clearCachedAccessToken y se reintenta signInSilently.
+// Nunca lanza: null si no se pudo recuperar (sin red, permiso revocado u
+// otra cuenta). No toca estado ni persiste nada; el llamador decide.
+export async function refreshWorkspaceTokenSilently(
+  targetEmail?: string,
+  staleToken?: string | null,
+): Promise<string | null> {
+  try {
+    if (staleToken) {
+      try {
+        await GoogleSignin.clearCachedAccessToken(staleToken);
+      } catch (_e) { void _e; }
+    }
+    const silent = await GoogleSignin.signInSilently();
+    if (silent.type !== "success") return null;
+    if (targetEmail) {
+      const data = silent.data as unknown as { user?: { email?: string }; email?: string };
+      const email = (data?.user?.email || data?.email || "").toLowerCase();
+      if (email && email !== targetEmail.toLowerCase()) return null;
+    }
+    const tokens = await GoogleSignin.getTokens().catch(() => null) as unknown as { accessToken?: string } | null;
+    const accessToken = tokens?.accessToken || null;
+    if (accessToken && (await isTokenAlive(accessToken))) return accessToken;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+// Silent dirigido a la cuenta dueña para la rama mismatch del arranque: si
+// el SDK quedó parado en otra cuenta, se le indica cuál traer con accountName
+// y se reintenta sin UI. Nunca lanza: null si no se pudo. Restaura siempre
+// configure() pelado para no contaminar otros flujos. No persiste nada.
+export async function refreshOwnerTokenSilently(ownerEmail: string): Promise<string | null> {
+  try {
+    try {
+      GoogleSignin.configure({ accountName: ownerEmail });
+    } catch (_e) { void _e; }
+    const silent = await GoogleSignin.signInSilently();
+    if (silent.type !== "success") return null;
+    const data = silent.data as unknown as { user?: { email?: string }; email?: string };
+    const email = (data?.user?.email || data?.email || "").toLowerCase();
+    if (!email || email !== ownerEmail.toLowerCase()) return null;
+    const tokens = await GoogleSignin.getTokens().catch(() => null) as unknown as { accessToken?: string } | null;
+    const accessToken = tokens?.accessToken || null;
+    if (accessToken && (await isTokenAlive(accessToken))) return accessToken;
+    return null;
+  } catch {
+    return null;
+  } finally {
+    try {
+      GoogleSignin.configure();
+    } catch (_e) { void _e; }
+  }
+}
+
 export function syncAccountInfo(): {
   name?: string;
   email?: string;

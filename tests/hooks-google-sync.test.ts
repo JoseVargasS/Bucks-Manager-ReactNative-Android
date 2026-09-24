@@ -221,18 +221,19 @@ describe("useGoogleSync", () => {
     const secureStore = g.__bucksSecureStoreMock;
     secureStore.reset();
     const original = globalThis.fetch;
-    globalThis.fetch = defaultSheetsHandler([]) as any;
+    globalThis.fetch = (async () => json({ error: { code: 401, message: "invalid", status: "UNAUTHENTICATED" } }, 401)) as any;
     try {
       let teardownCalled = false;
       let offlineValue: boolean | undefined;
       const session = makeSession({
-        getWorkspaceAccessToken: async () => { throw Object.assign(new Error("401"), { status: 401 }); },
+        // El SDK entrega un token muerto: el 401 real viene de la API.
+        getWorkspaceAccessToken: async () => ({ accessToken: "dead-tok" }),
         teardownSession: () => { teardownCalled = true; },
         setOffline: (v: boolean) => { offlineValue = v; },
       });
       const api = useGoogleSync(session, emptyFin, emptyTags, { ...emptyHelpers, authErr: () => true }, { current: null });
 
-      await api.refreshStoredSession("tok", "sheet-1", true);
+      await api.refreshStoredSession("dead-tok", "sheet-1", true);
       expect(teardownCalled).toBe(false);
       expect(offlineValue).toBe(true);
     } finally {
@@ -245,16 +246,16 @@ describe("useGoogleSync", () => {
     const secureStore = g.__bucksSecureStoreMock;
     secureStore.reset();
     const original = globalThis.fetch;
-    globalThis.fetch = defaultSheetsHandler([]) as any;
+    globalThis.fetch = (async () => json({ error: { code: 401, message: "invalid", status: "UNAUTHENTICATED" } }, 401)) as any;
     try {
       let disconnected = false;
       const session = makeSession({
-        getWorkspaceAccessToken: async () => { throw Object.assign(new Error("401"), { status: 401 }); },
+        getWorkspaceAccessToken: async () => ({ accessToken: "dead-tok" }),
         disconnectGoogle: async () => { disconnected = true; },
       });
       const api = useGoogleSync(session, emptyFin, emptyTags, { ...emptyHelpers, authErr: () => true }, { current: null });
 
-      await api.refreshStoredSession("tok", "sheet-1", false);
+      await api.refreshStoredSession("dead-tok", "sheet-1", false);
       expect(disconnected).toBe(true);
     } finally {
       globalThis.fetch = original;
@@ -325,11 +326,110 @@ describe("useGoogleSync", () => {
     }
   });
 
+  test("arranque en frio con token muerto se recupera en silencio sin banner", async () => {
+    const secureStore = g.__bucksSecureStoreMock;
+    secureStore.reset();
+    const { saveConnectedAccount } = await import("../src/data/connectedAccounts.ts");
+    await saveConnectedAccount({ email: "b@x.com", name: "B", lastUsedAt: new Date().toISOString(), spreadsheetId: "sheet-1", scopesGranted: true });
+    await secureStore.setItemAsync("bucks_google_access_token", "dead-tok");
+    const prevUser = g.__bucksGoogleSigninMock.getCurrentUser;
+    const prevSilent = g.__bucksGoogleSigninMock.signInSilently;
+    const prevTokens = g.__bucksGoogleSigninMock.getTokens;
+    const prevClear = g.__bucksGoogleSigninMock.clearCachedAccessToken;
+    g.__bucksGoogleSigninMock.getCurrentUser = () => ({ data: { user: { email: "b@x.com" } } });
+    g.__bucksGoogleSigninMock.signInSilently = async () => ({ type: "success", data: { user: { email: "b@x.com" } } });
+    g.__bucksGoogleSigninMock.getTokens = async () => ({ accessToken: "fresh-tok", idToken: "id" });
+    let cleared: string | null = null;
+    g.__bucksGoogleSigninMock.clearCachedAccessToken = async (t: string) => { cleared = t; return null; };
+    const original = globalThis.fetch;
+    const sheets = defaultSheetsHandler([]) as any;
+    globalThis.fetch = (async (input: any, init: any = {}) => {
+      const url = decodeURIComponent(String(input));
+      if (url.includes("oauth2/v3/tokeninfo")) {
+        if (url.includes("dead-tok")) return json({ error: { code: 401, message: "invalid" } }, 401);
+        return json({ scope: "https://www.googleapis.com/auth/drive.metadata.readonly https://www.googleapis.com/auth/spreadsheets" });
+      }
+      return sheets(input, init);
+    }) as any;
+    try {
+      let offlineValue: boolean | undefined;
+      let authErrorMsg = "unset";
+      const session = makeSession({
+        // El SDK entrega el token cacheado ya vencido, como hace Android.
+        getWorkspaceAccessToken: async () => ({ accessToken: "dead-tok" }),
+        setOffline: (v: boolean) => { offlineValue = v; },
+        setAuthError: (v: string) => { authErrorMsg = v; },
+      });
+      const api = useGoogleSync(session, emptyFin, emptyTags, emptyHelpers, { current: null });
+
+      await api.refreshStoredSession("dead-tok", "sheet-1", true);
+      expect(cleared).toBe("dead-tok");
+      expect(await secureStore.getItemAsync("bucks_google_access_token")).toBe("fresh-tok");
+      expect(offlineValue).not.toBe(true);
+      expect(authErrorMsg).toBe("");
+    } finally {
+      globalThis.fetch = original;
+      g.__bucksGoogleSigninMock.getCurrentUser = prevUser;
+      g.__bucksGoogleSigninMock.signInSilently = prevSilent;
+      g.__bucksGoogleSigninMock.getTokens = prevTokens;
+      g.__bucksGoogleSigninMock.clearCachedAccessToken = prevClear;
+      secureStore.reset();
+    }
+  });
+
+  test("arranque en frio con SDK en otra cuenta trae la dueña en silencio", async () => {
+    const secureStore = g.__bucksSecureStoreMock;
+    secureStore.reset();
+    const { saveConnectedAccount } = await import("../src/data/connectedAccounts.ts");
+    await saveConnectedAccount({ email: "b@x.com", name: "B", lastUsedAt: new Date().toISOString(), spreadsheetId: "sheet-1", scopesGranted: true });
+    await secureStore.setItemAsync("bucks_google_access_token", "dead-tok");
+    const prevUser = g.__bucksGoogleSigninMock.getCurrentUser;
+    const prevSilent = g.__bucksGoogleSigninMock.signInSilently;
+    const prevTokens = g.__bucksGoogleSigninMock.getTokens;
+    // El SDK quedó parado en la otra cuenta con token vivo: el mismatch no
+    // debe adoptar ese token ni rendirse con el guardado muerto.
+    g.__bucksGoogleSigninMock.getCurrentUser = () => ({ data: { user: { email: "a@x.com" } } });
+    g.__bucksGoogleSigninMock.signInSilently = async () => ({ type: "success", data: { user: { email: "b@x.com" } } });
+    g.__bucksGoogleSigninMock.getTokens = async () => ({ accessToken: "b-fresh-tok", idToken: "id" });
+    const original = globalThis.fetch;
+    const sheets = defaultSheetsHandler([]) as any;
+    globalThis.fetch = (async (input: any, init: any = {}) => {
+      const url = decodeURIComponent(String(input));
+      if (url.includes("oauth2/v3/tokeninfo")) {
+        if (url.includes("dead-tok")) return json({ error: { code: 401, message: "invalid" } }, 401);
+        return json({ scope: "https://www.googleapis.com/auth/drive.metadata.readonly https://www.googleapis.com/auth/spreadsheets" });
+      }
+      return sheets(input, init);
+    }) as any;
+    try {
+      let offlineValue: boolean | undefined;
+      let authErrorMsg = "unset";
+      const session = makeSession({
+        getWorkspaceAccessToken: async () => ({ accessToken: "a-live-tok" }),
+        setOffline: (v: boolean) => { offlineValue = v; },
+        setAuthError: (v: string) => { authErrorMsg = v; },
+      });
+      const api = useGoogleSync(session, emptyFin, emptyTags, emptyHelpers, { current: null });
+
+      await api.refreshStoredSession("dead-tok", "sheet-1", true);
+      // Ni el token de la otra cuenta ni el muerto: el fresco de la dueña.
+      expect(await secureStore.getItemAsync("bucks_google_access_token")).toBe("b-fresh-tok");
+      expect(offlineValue).not.toBe(true);
+      expect(authErrorMsg).toBe("");
+    } finally {
+      globalThis.fetch = original;
+      g.__bucksGoogleSigninMock.getCurrentUser = prevUser;
+      g.__bucksGoogleSigninMock.signInSilently = prevSilent;
+      g.__bucksGoogleSigninMock.getTokens = prevTokens;
+      secureStore.reset();
+    }
+  });
+
   test("refreshStoredSession sets syncError on unknown error without cache", async () => {
     const secureStore = g.__bucksSecureStoreMock;
     secureStore.reset();
     const original = globalThis.fetch;
-    globalThis.fetch = defaultSheetsHandler([]) as any;
+    globalThis.fetch = (async () => { throw new Error("network timeout"); }) as any;
     try {
       let syncErrorMsg = "";
       const session = makeSession({
@@ -934,11 +1034,14 @@ describe("useGoogleSync", () => {
   test("refreshSessionToken devuelve token fresco y lo persiste", async () => {
     const secureStore = g.__bucksSecureStoreMock;
     secureStore.reset();
+    const original = globalThis.fetch;
+    globalThis.fetch = (async () => json({ scope: "https://www.googleapis.com/auth/drive.metadata.readonly https://www.googleapis.com/auth/spreadsheets" })) as any;
     try {
       const api = useGoogleSync(makeSession(), emptyFin, emptyTags, emptyHelpers, { current: null });
       await expect(api.refreshSessionToken()).resolves.toBe("fresh-tok");
       expect(await secureStore.getItemAsync("bucks_google_access_token")).toBe("fresh-tok");
     } finally {
+      globalThis.fetch = original;
       secureStore.reset();
     }
   });

@@ -2,8 +2,8 @@ import { Alert } from "react-native";
 import { useCallback, useRef } from "react";
 import { getItemAsync, setItemAsync, deleteItemAsync } from "expo-secure-store";
 import { GoogleSignin } from "@react-native-google-signin/google-signin";
-import { shouldRescanForSheetError } from "@/utils/errorHandler";
-import { syncAccountInfo as syncAccountInfoBase } from "@/api/googleAuth";
+import { logError, shouldRescanForSheetError } from "@/utils/errorHandler";
+import { syncAccountInfo as syncAccountInfoBase, isTokenAlive, refreshWorkspaceTokenSilently, refreshOwnerTokenSilently } from "@/api/googleAuth";
 import {
   isSheetTrashed,
   readTransactions,
@@ -160,20 +160,42 @@ export function useGoogleSync(
     // background (aplica datos remotos cuando la red vuelve).
     const work = (async () => {
       try {
-        const fresh = await getWorkspaceAccessToken(false);
-        const candidate = fresh.accessToken || token;
+        // Dueño conocido primero: su email habilita la rama tokeninfo de
+        // getWorkspaceAccessToken y el recovery no adopta otra cuenta.
+        const owner = await findAccountBySheet(sheetId);
+        const ownerEmail = (owner?.email || "").toLowerCase() || undefined;
+        const fresh = await getWorkspaceAccessToken(false, ownerEmail).catch(() => null);
+        let candidate = fresh?.accessToken || token;
+        // HALLAZGO arranque: Android cachea el access token (~1h de vida) y no
+        // lo refresca solo. Si el candidato está muerto se intenta recovery
+        // silencioso (clearCached + silent + tokeninfo) antes de pedir login.
+        // Sin red o con permiso revocado el recovery da null, candidate sigue
+        // siendo el guardado y el catch común decide (offline amable con caché).
+        if (!(await isTokenAlive(candidate))) {
+          const recovered = await refreshWorkspaceTokenSilently(ownerEmail, candidate).catch(() => null);
+          if (recovered) candidate = recovered;
+        }
         // HALLAZGO 1: el SDK puede estar parado en otra cuenta (el fast switch
         // no pasa por UI). Si el sheet guardado tiene dueño conocido y el token
         // fresco es de otro, no se adopta ni se persiste: se reintenta con el
         // guardado y el catch común deja offline amable o pide login.
-        const owner = await findAccountBySheet(sheetId);
-        const ownerEmail = (owner?.email || "").toLowerCase();
+        const ownerEmailLower = (owner?.email || "").toLowerCase();
         const sdkEmail = (syncAccountInfoBase()?.email || "").toLowerCase();
-        if (owner && ownerEmail && sdkEmail && sdkEmail !== ownerEmail) {
-          await reloadFromGoogle(token, sheetId, false);
-          setAuthError("");
-          setAccountInfo({ name: owner.name, email: owner.email });
-          return;
+        if (owner && ownerEmailLower && sdkEmail && sdkEmail !== ownerEmailLower) {
+          // El SDK está parado en otra cuenta: antes de reintentar con el
+          // guardado (que puede llevar 1h muerto) se intenta traer la dueña
+          // en silencio con accountName, sin UI. Si no se puede, se cae al
+          // flujo previo y el catch común decide (offline amable o login).
+          const ownerToken = await refreshOwnerTokenSilently(owner.email).catch(() => null);
+          logError(new Error(`mismatch en arranque, silent dueño ${ownerToken ? "ok" : "fallo"}`), "session:coldstart");
+          if (ownerToken) {
+            candidate = ownerToken;
+          } else {
+            await reloadFromGoogle(token, sheetId, false);
+            setAuthError("");
+            setAccountInfo({ name: owner.name, email: owner.email });
+            return;
+          }
         }
         activeToken = candidate;
         setAuthError("");
@@ -316,6 +338,10 @@ export function useGoogleSync(
         sheetId,
       );
       if (!forceFresh) setPendingSync(false);
+      // Un reload exitoso prueba sesión viva: limpia la marca de expirada y
+      // el offline para que el banner no quede pegado tras un recovery.
+      setAuthError("");
+      session.setOffline(false);
       if (showLoader) setLoading(false);
       setIsSyncing(false);
       setIsFirstRemoteLoad(false);
@@ -353,14 +379,20 @@ export function useGoogleSync(
     try {
       const appEmail = (accountInfo?.email || "").toLowerCase();
       const fresh = await getWorkspaceAccessToken(false, appEmail || undefined);
-      if (!fresh.accessToken) return null;
+      let candidate = fresh.accessToken || null;
+      // El SDK puede devolver el token cacheado ya vencido: solo se acepta
+      // si tokeninfo lo confirma; si no, recovery silencioso sin UI.
+      if (candidate && !(await isTokenAlive(candidate))) {
+        candidate = await refreshWorkspaceTokenSilently(appEmail || undefined, candidate).catch(() => null);
+      }
+      if (!candidate) return null;
       const sdkEmail = (syncAccountInfoBase()?.email || "").toLowerCase();
       if (appEmail && sdkEmail && sdkEmail !== appEmail) return null;
-      if (fresh.accessToken !== accessToken) {
-        setAccessToken(fresh.accessToken);
-        await setItemAsync(TOKEN_KEY, fresh.accessToken).catch(() => undefined);
+      if (candidate !== accessToken) {
+        setAccessToken(candidate);
+        await setItemAsync(TOKEN_KEY, candidate).catch(() => undefined);
       }
-      return fresh.accessToken;
+      return candidate;
     } catch {
       return null;
     }

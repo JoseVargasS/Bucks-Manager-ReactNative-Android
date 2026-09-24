@@ -39,6 +39,7 @@ Deployment-specific Expo values, including `EAS_PROJECT_ID`, come from `.env` or
 7. Account switch always tries silent entry first with no day limit (validity is decided by Google via tokeninfo/silent; picker only as fallback). The switch fallback passes an `accountName` hint so Google enters directly without the chooser. The fresh token is persisted to the account record on every successful auth, and the previous session is snapshotted before cleanup so a failed/cancelled switch restores account A untouched.
 8. Foreground resume refreshes the token without UI and retries once on 401/403; background writes use the session token when the SDK stayed on the other account.
 9. Cold start never adopts a token from another account: the sheet owner is resolved via `findAccountBySheet` and a divergent SDK token is ignored (stored token retried, `TOKEN_KEY` untouched).
+10. Cold start tolerates the dead Android-cached access token (~1h life, never auto-refreshed by the SDK): the candidate is pre-validated with tokeninfo and, if dead, the cache is cleared (`clearCachedAccessToken`) and `signInSilently` retried without UI before ever flagging expired. If the SDK parked on another account, the owner is fetched silently via `configure({ accountName })` before retrying the stored token. A successful reload clears `authError`/`offline` so the connect banner never sticks after a background recovery.
 
 ## Splash (Video) and First Frame
 
