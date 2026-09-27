@@ -1,6 +1,16 @@
 import { GoogleSignin } from "@react-native-google-signin/google-signin";
+import Constants from "expo-constants";
 import { GOOGLE_WORKSPACE_SCOPES } from "@/theme/constants";
 import { loadConnectedAccounts, saveConnectedAccount } from "@/data/connectedAccounts";
+
+// Base config for every GoogleSignin.configure() call: anchors the Cloud
+// project explicitly via webClientId so Google need not resolve it from
+// package+cert alone. Never carries scopes (those stay incremental via
+// addScopes) and stays empty when the ID is missing (dev/tests).
+export function googleSigninBaseConfig(): { webClientId?: string } {
+  const id = Constants.expoConfig?.extra?.googleWebClientId as string | undefined;
+  return id ? { webClientId: id } : {};
+}
 
 export async function getWorkspaceAccessToken(interactive: boolean, targetEmail?: string) {
   let current = GoogleSignin.getCurrentUser();
@@ -119,7 +129,7 @@ export async function refreshWorkspaceTokenSilently(
 export async function refreshOwnerTokenSilently(ownerEmail: string): Promise<string | null> {
   try {
     try {
-      GoogleSignin.configure({ accountName: ownerEmail });
+      GoogleSignin.configure({ ...googleSigninBaseConfig(), accountName: ownerEmail });
     } catch (_e) { void _e; }
     const silent = await GoogleSignin.signInSilently();
     if (silent.type !== "success") return null;
@@ -134,7 +144,7 @@ export async function refreshOwnerTokenSilently(ownerEmail: string): Promise<str
     return null;
   } finally {
     try {
-      GoogleSignin.configure();
+      GoogleSignin.configure({ ...googleSigninBaseConfig() });
     } catch (_e) { void _e; }
   }
 }

@@ -3,6 +3,7 @@ import { AppState } from "react-native";
 import { GoogleSignin } from "@react-native-google-signin/google-signin";
 import { hideAsync } from "expo-splash-screen";
 import { logError } from "@/utils/errorHandler";
+import { googleSigninBaseConfig } from "@/api/googleAuth";
 
 const BOOTSTRAP_TIMEOUT_MS = 8000;
 
@@ -17,7 +18,7 @@ export function useBootstrap(
 
   useEffect(() => {
     try {
-      GoogleSignin.configure();
+      GoogleSignin.configure({ ...googleSigninBaseConfig() });
     } catch (error) {
       // eslint-disable-next-line no-console
       console.warn("[bootstrap] GoogleSignin.configure failed:", error);
@@ -56,7 +57,7 @@ export function useBootstrap(
     const sub = AppState.addEventListener("change", (next) => {
       if (next !== "active") return;
       try {
-        GoogleSignin.configure();
+        GoogleSignin.configure({ ...googleSigninBaseConfig() });
       } catch (error) {
         logError(error, "bootstrap:googleSigninReconfigure");
       }

@@ -3,7 +3,7 @@ import { Alert } from "react-native";
 import Constants from "expo-constants";
 import { GoogleSignin } from "@react-native-google-signin/google-signin";
 import { deleteItemAsync, getItemAsync, setItemAsync } from "expo-secure-store";
-import { getWorkspaceAccessToken as getWorkspaceAccessTokenBase, syncAccountInfo as syncAccountInfoBase, isTokenAlive } from "@/api/googleAuth";
+import { getWorkspaceAccessToken as getWorkspaceAccessTokenBase, syncAccountInfo as syncAccountInfoBase, isTokenAlive, googleSigninBaseConfig } from "@/api/googleAuth";
 import { deleteFinancialCache, deleteOfflineCache } from "@/data/localCache";
 import { saveConnectedAccount, removeConnectedAccount, loadConnectedAccounts } from "@/data/connectedAccounts";
 import { type UiCopy } from "@/i18n";
@@ -296,7 +296,7 @@ export function useSession(
         // cuenta no está en el celu o el permiso murió, Google muestra el
         // selector solo como degradación segura.
         await GoogleSignin.signOut().catch(() => undefined);
-        try { GoogleSignin.configure({ accountName: targetEmail }); } catch (_e) { void _e; }
+        try { GoogleSignin.configure({ ...googleSigninBaseConfig(), accountName: targetEmail }); } catch (_e) { void _e; }
         const response = await GoogleSignin.signIn();
         if (response.type !== "success") { setConnectionStatus(null); return; }
         const signedEmail = ((response.data as unknown as { user?: { email?: string }; email?: string })?.user?.email || (response.data as unknown as { email?: string })?.email || targetEmail) as string;
@@ -335,7 +335,7 @@ export function useSession(
       setLoading(false);
       setIsFirstRemoteLoad(false);
       setAccountTransition(false);
-      try { GoogleSignin.configure(); } catch (_e) { void _e; }
+      try { GoogleSignin.configure({ ...googleSigninBaseConfig() }); } catch (_e) { void _e; }
     }
   }
 

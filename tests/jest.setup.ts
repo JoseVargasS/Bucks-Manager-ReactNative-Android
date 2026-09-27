@@ -66,6 +66,7 @@ g.__bucksFileSystemMock = {
 };
 
 g.__bucksAlertMock = { alert: () => {} };
+g.__bucksExpoConstantsMock = { expoConfig: { extra: {} } };
 g.__bucksGoogleSigninMock = {
   getTokens: async () => ({ accessToken: "mock-token", idToken: "mock-id" }),
   signIn: async () => ({ data: null }),
@@ -104,6 +105,11 @@ jest.mock("expo-print", () => ({
 
 jest.mock("expo-sharing", () => ({
   shareAsync: (...args: unknown[]) => g.__bucksExpoSharingMock?.shareAsync?.(...args) ?? Promise.resolve(),
+}));
+
+jest.mock("expo-constants", () => ({
+  default: g.__bucksExpoConstantsMock,
+  expoConfig: (g.__bucksExpoConstantsMock as { expoConfig: unknown }).expoConfig,
 }));
 
 jest.mock("@expo/vector-icons/MaterialCommunityIcons", () => ({
