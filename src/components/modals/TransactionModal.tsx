@@ -213,9 +213,8 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
   if (!transition.modalVisible) return null;
 
   const overlayItem = tagsOpenFor ? lineItems.find((li) => li.id === tagsOpenFor) : null;
-  const availableTags = overlayItem
-    ? tags.filter((t) => !(overlayItem.tags || []).includes(t.id))
-    : [];
+  const availableTags = overlayItem ? tags : [];
+  const attachedTagIds = overlayItem ? overlayItem.tags || [] : [];
 
    return (
       <Animated.View
@@ -439,6 +438,7 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
           {tagsOpenFor && tagsReady && isExpense && (
             <TagOverlay
               availableTags={availableTags}
+              selectedIds={attachedTagIds}
               onToggleTag={(tagId) => handleToggleTag(tagsOpenFor!, tagId)}
               onCreateTagClick={() => {
                 startCreateTagFlow();

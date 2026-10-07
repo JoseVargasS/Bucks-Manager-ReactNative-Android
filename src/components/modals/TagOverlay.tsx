@@ -22,6 +22,7 @@ const tagOptionStyles = StyleSheet.create({
 
 export function TagOverlay({
   availableTags,
+  selectedIds = [],
   onToggleTag,
   onCreateTagClick,
   colors,
@@ -29,6 +30,7 @@ export function TagOverlay({
   frame,
 }: {
   availableTags: Tag[];
+  selectedIds?: string[];
   onToggleTag: (tagId: string) => void;
   onCreateTagClick: () => void;
   colors: Palette;
@@ -59,18 +61,24 @@ export function TagOverlay({
       >
         {availableTags.length > 0 && (
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 8 }}>
-            {availableTags.map((tag) => (
-              <Pressable
-                key={tag.id}
-                style={[tagOptionStyles.selectOptionRow, { width: "48%", backgroundColor: colors.input }]}
-                onPress={() => onToggleTag(tag.id)}
-              >
-                <View style={{ width: 10, height: 10, borderRadius: RADIUS.pill, backgroundColor: tag.color }} />
-                <Text numberOfLines={1} style={[tagOptionStyles.selectOptionLabel, { color: colors.text }]}>
-                  {tag.label}
-                </Text>
-              </Pressable>
-            ))}
+            {availableTags.map((tag) => {
+              const selected = selectedIds.includes(tag.id);
+              return (
+                <Pressable
+                  key={tag.id}
+                  style={[tagOptionStyles.selectOptionRow, { width: "48%", backgroundColor: selected ? colors.primarySoft : colors.input, borderWidth: selected ? 1 : 0, borderColor: colors.primary }]}
+                  onPress={() => onToggleTag(tag.id)}
+                >
+                  <View style={{ width: 10, height: 10, borderRadius: RADIUS.pill, backgroundColor: tag.color }} />
+                  <Text numberOfLines={1} style={[tagOptionStyles.selectOptionLabel, { color: colors.text }]}>
+                    {tag.label}
+                  </Text>
+                  {selected && (
+                    <MaterialCommunityIcons name="check" size={16} color={colors.primary} />
+                  )}
+                </Pressable>
+              );
+            })}
           </View>
         )}
         <View style={{ borderTopWidth: availableTags.length > 0 ? 0.5 : 0, borderColor: colors.border, paddingTop: 8 }}>
