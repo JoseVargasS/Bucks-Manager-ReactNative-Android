@@ -5,6 +5,7 @@ import type { Transaction } from "@/types";
 import { UI_MONTH_NAMES, type UiCopy } from "@/i18n";
 import { Text } from "@/components/ui/AppText";
 import { TransactionRow, type TagButtonRef } from "@/components/screens/TransactionRow";
+import type { TagBubble } from "@/components/screens/TagBubble";
 import { base } from "@/styles/baseStyles";
 import { RADIUS } from "@/theme/radii";
 
@@ -16,6 +17,7 @@ export const DashboardRecentList = memo(function DashboardRecentList({
   tagColorMap,
   tagLabelMap,
   tagButtonRefs,
+  setTagBubble,
   onOpenDetail,
 }: {
   colors: Palette;
@@ -25,6 +27,7 @@ export const DashboardRecentList = memo(function DashboardRecentList({
   tagColorMap: Record<string, string>;
   tagLabelMap: Record<string, string>;
   tagButtonRefs: React.MutableRefObject<Record<number, TagButtonRef | null>>;
+  setTagBubble: (bubble: TagBubble | null) => void;
   onOpenDetail: (tx: Transaction) => void;
 }) {
   if (transactions.length === 0) {
@@ -92,7 +95,7 @@ export const DashboardRecentList = memo(function DashboardRecentList({
               onOpenDetail={onOpenDetail}
               onMove={() => {}}
               onToggleSelection={() => {}}
-              setTagBubble={() => {}}
+              setTagBubble={setTagBubble}
               tagButtonRefs={tagButtonRefs}
             />
           </Fragment>

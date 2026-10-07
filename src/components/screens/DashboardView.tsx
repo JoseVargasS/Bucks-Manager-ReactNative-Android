@@ -1,4 +1,4 @@
-import { memo, useCallback, useRef, useState } from "react";
+import { memo, useCallback, useLayoutEffect, useRef, useState } from "react";
 import { RefreshControl, ScrollView, View } from "react-native";
 
 import { base } from "@/styles/baseStyles";
@@ -13,6 +13,7 @@ import { Text } from "@/components/ui/AppText";
 import { T } from "@/theme/typography";
 import { useTagMaps } from "@/hooks/useTagMaps";
 import type { TagButtonRef } from "@/components/screens/TransactionRow";
+import { TagBubblePopup, type TagBubble } from "@/components/screens/TagBubble";
 import { PeriodControls } from "@/components/layout/PeriodControls";
 import { DashboardBubble } from "@/components/ui/DashboardBubble";
 import { useModalTransition } from "@/components/ui/useModalTransition";
@@ -68,6 +69,18 @@ export const DashboardView = memo(function DashboardView({
   const [bubbleKind, setBubbleKind] = useState<BubbleKind | null>(null);
   const [bubbleFrame, setBubbleFrame] = useState({ x: 0, y: 0, width: 0, height: 0 });
   const bubbleTransition = useModalTransition(Boolean(bubbleKind), 6, 0.95, () => setBubbleKind(null));
+  const [tagBubble, setTagBubble] = useState<TagBubble | null>(null);
+  const [displayTagBubble, setDisplayTagBubble] = useState<TagBubble | null>(
+    null,
+  );
+  const tagBubbleTransition = useModalTransition(Boolean(tagBubble), 6, 0.99);
+  const closeTagBubble = useCallback(() => setTagBubble(null), []);
+  const currentTagBubble = tagBubble || displayTagBubble;
+
+  useLayoutEffect(() => {
+    if (tagBubble) setDisplayTagBubble(tagBubble);
+  }, [tagBubble]);
+
   const incomeCardRef = useRef<View>(null);
   const expenseCardRef = useRef<View>(null);
   const balanceCardRef = useRef<View>(null);
@@ -99,6 +112,7 @@ export const DashboardView = memo(function DashboardView({
     <>
       <ScrollView
         showsVerticalScrollIndicator={false}
+        onScrollBeginDrag={closeTagBubble}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} colors={[colors.primary]} progressBackgroundColor={colors.card} progressViewOffset={topInset ?? 0} />
         }
@@ -175,6 +189,7 @@ export const DashboardView = memo(function DashboardView({
             tagColorMap={tagColorMap}
             tagLabelMap={tagLabelMap}
             tagButtonRefs={tagButtonRefs}
+            setTagBubble={setTagBubble}
             onOpenDetail={handleDetail}
           />
         </View>
@@ -198,6 +213,18 @@ export const DashboardView = memo(function DashboardView({
           />
         )}
       </DashboardBubble>
+      {currentTagBubble && (
+        <TagBubblePopup
+          data={currentTagBubble}
+          visible={tagBubbleTransition.modalVisible}
+          containerStyle={tagBubbleTransition.containerStyle}
+          panelStyle={tagBubbleTransition.panelStyle}
+          tagColorMap={tagColorMap}
+          tagLabelMap={tagLabelMap}
+          colors={colors}
+          onClose={closeTagBubble}
+        />
+      )}
     </>
   );
 });
