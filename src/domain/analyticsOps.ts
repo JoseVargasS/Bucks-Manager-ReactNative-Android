@@ -20,7 +20,13 @@ export type NonFreqSpike = {
 
 export type LinePoint = { y: number; value: number | null };
 
-export type SavingsTrendMode = "income" | "expense";
+export type SavingsTrendMode = "income" | "expense" | "net";
+
+export function savingsNetBounds(rows: SummaryRow[]): { min: number; max: number } {
+  if (!rows.length) return { min: 0, max: 1 };
+  const nets = rows.map((r) => r.netMonthly);
+  return { min: Math.min(0, ...nets), max: Math.max(1, ...nets) };
+}
 
 export function aggregateExpensesByTag(
   transactions: Transaction[],
@@ -148,6 +154,14 @@ export function computeSavingsLinePoints(
   plotH: number,
 ): LinePoint[] {
   if (!rows.length) return [];
+  if (mode === "net") {
+    const { min, max } = savingsNetBounds(rows);
+    const span = max - min || 1;
+    return rows.map((row) => {
+      const y = baseY - ((row.netMonthly - min) / span) * plotH;
+      return { y, value: null };
+    });
+  }
   const max = Math.max(1, ...rows.map((r) => Math.max(r.totalIncome, Math.abs(r.totalExpense), 1)));
   if (mode === "expense") {
     return rows.map((row) => {

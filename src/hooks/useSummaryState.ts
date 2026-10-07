@@ -160,7 +160,8 @@ export function useSummaryState({
   const trendSegmentOptions = useMemo(() => [
     { key: "income", label: copy.income },
     { key: "expense", label: copy.expensesLabel },
-  ], [copy.income, copy.expensesLabel]);
+    { key: "net", label: copy.balance },
+  ], [copy.income, copy.expensesLabel, copy.balance]);
 
   const subLabel = isAllYears
     ? `${chartRows.length} ${copy.yearsAnalyzed} (${filtered.length} ${filtered.length === 1 ? copy.monthsAnalyzedSingular : copy.monthsAnalyzed})`

@@ -958,6 +958,53 @@ describe("bucksLogic", () => {
     expect(points[1].y).toBe(158);
   });
 
+  test("computeSavingsLinePoints net mode orders by netMonthly", () => {
+    const rows = [
+      monthRow("January 2026", 100, 0, 0, 0),
+      monthRow("February 2026", 500, 0, 0, -100),
+      monthRow("March 2026", 1000, 0, 0, 0),
+    ];
+    const points = computeSavingsLinePoints(rows, "net", 158, 126);
+    expect(points.length).toBe(3);
+    expect(points[0].y).toBeGreaterThan(points[2].y);
+    expect(points[2].y).toBe(158 - 126);
+  });
+
+  test("computeSavingsLinePoints net mode puts negatives below zero line", () => {
+    const rows = [
+      monthRow("January 2026", 500, 0, 0, 0),
+      monthRow("February 2026", 0, 0, 0, -500),
+    ];
+    const points = computeSavingsLinePoints(rows, "net", 158, 126);
+    expect(points.length).toBe(2);
+    // min = -500, max = 500 -> cero al medio (158 - 63)
+    expect(points[0].y).toBeLessThan(158 - 63);
+    expect(points[1].y).toBeGreaterThan(158 - 63);
+  });
+
+  test("computeSavingsLinePoints net mode handles all-negative rows", () => {
+    const rows = [
+      monthRow("January 2026", 0, 0, 0, -100),
+      monthRow("February 2026", 0, 0, 0, -500),
+    ];
+    const points = computeSavingsLinePoints(rows, "net", 158, 126);
+    expect(points.length).toBe(2);
+    // cero arriba, el menos negativo mas alto que el mas negativo
+    expect(points[0].y).toBeLessThan(points[1].y);
+    expect(points[1].y).toBe(158);
+  });
+
+  test("computeSavingsLinePoints net mode handles all-zero rows", () => {
+    const rows = [
+      monthRow("January 2026", 0, 0, 0, 0),
+      monthRow("February 2026", 0, 0, 0, 0),
+    ];
+    const points = computeSavingsLinePoints(rows, "net", 158, 126);
+    expect(points.length).toBe(2);
+    expect(points[0].y).toBe(158);
+    expect(points[1].y).toBe(158);
+  });
+
   function monthRow(monthYear: string, freqInc: number, nonFreqInc: number, freqExp: number, nonFreqExp: number) {
     const totalInc = freqInc + nonFreqInc;
     const totalExp = freqExp + nonFreqExp;
