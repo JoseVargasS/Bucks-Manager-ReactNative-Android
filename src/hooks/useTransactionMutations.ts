@@ -5,6 +5,7 @@ import {
   uniqueMonthKeys,
 } from "@/domain/bucksLogic";
 import { transactionToDraft } from "@/utils/transactions";
+import { markFreshCreatedAt } from "@/utils/freshRows";
 import { addHistoryEntry, removeHistoryEntry } from "@/utils/history";
 import {
   saveTransaction,
@@ -154,6 +155,7 @@ export function useTransactionMutations(
       ? uniqueMonthKeys([currentEdit, optimistic])
       : uniqueMonthKeys([optimistic]);
     applyTransactionUpdate(next, affectedMonths);
+    markFreshCreatedAt([optimistic.createdAtMs]);
     if (!currentEdit) {
       const txDate = new Date(optimistic.rawDate);
       if (!Number.isNaN(txDate.getTime())) {

@@ -98,14 +98,15 @@ export function ConfirmModal({
           style={styles.optionBackdrop}
           onPress={onClose}
         />
-        <Animated.View
-          style={[
-            styles.recordModal,
-            { backgroundColor: colors.card },
-            transition.panelStyle,
-          ]}
-        >
-          <View style={[styles.recordHeader, { borderColor: colors.border }]}>
+          <Animated.View
+            style={[
+              styles.recordModal,
+              { backgroundColor: colors.card },
+              transition.panelStyle,
+            ]}
+          >
+            <Animated.View style={transition.contentStyle}>
+            <View style={[styles.recordHeader, { borderColor: colors.border }]}>
             <Text style={[styles.recordTitle, { color: colors.text }]}>
               <MaterialCommunityIcons name={icon} size={19} color={accent} />{" "}
               {title}
@@ -209,9 +210,10 @@ export function ConfirmModal({
                   {actionLabel}
                 </Text>
               </Pressable>
+              </View>
             </View>
-          </View>
-        </Animated.View>
+            </Animated.View>
+          </Animated.View>
       </Animated.View>
     </Modal>
   );

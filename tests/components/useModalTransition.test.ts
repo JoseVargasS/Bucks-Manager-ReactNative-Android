@@ -41,6 +41,13 @@ describe("useModalTransition", () => {
     expect(r.panelStyle.transform).toHaveLength(2);
   });
 
+  it("returns contentStyle with opacity and single translateY", async () => {
+    const { result } = await renderHook(() => useModalTransition(true));
+    const r = result.current as ReturnType<typeof useModalTransition>;
+    expect(r.contentStyle).toHaveProperty("opacity");
+    expect(r.contentStyle.transform).toHaveLength(1);
+  });
+
   it("calls onClosed when animation finishes hiding", async () => {
     const onClosed = jest.fn();
     const { rerender } = await renderHook(

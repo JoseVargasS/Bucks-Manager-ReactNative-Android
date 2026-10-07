@@ -5,6 +5,7 @@ import Svg, { G, Line, Path, Text as SvgText } from "react-native-svg";
 import { type PieSlice } from "@/domain/bucksLogic";
 import { type Palette } from "@/theme/colors";
 import { useChartFade } from "./chartFade";
+import { usePieForm } from "@/hooks/usePieForm";
 import { PIE_GEOMETRY, arc, pt, trimLabel } from "@/utils/pieGeometry";
 import { usePieSweep } from "@/hooks/usePieSweep";
 import { PieSliceRow } from "./PieSliceRow";
@@ -85,6 +86,16 @@ export const PieChart = memo(function PieChart({
 
   usePieSweep(opacities, selectedKey);
 
+  const { progress, formed } = usePieForm(
+    // Content signature, not the array identity: background reloads rebuild
+    // the arrays with identical content and must not replay the formation.
+    useMemo(() => data.map((d) => `${d.label}:${d.value}`).join("|"), [data]),
+  );
+  const formedArcs = useMemo(
+    () => arcs.map((a) => ({ ...a, a0: a.a0 * progress, a1: a.a1 * progress })),
+    [arcs, progress],
+  );
+
   if (!data.length) return null;
 
   const selected = selectedIndex >= 0 ? merged[selectedIndex] : null;
@@ -102,7 +113,7 @@ export const PieChart = memo(function PieChart({
           viewBox={`0 0 ${PIE_GEOMETRY.svgWidth} ${PIE_GEOMETRY.svgHeight}`}
           preserveAspectRatio="xMidYMid meet"
         >
-          {arcs.map((a, i) => {
+          {formedArcs.map((a, i) => {
             const isSelected = a.slice.key === selectedKey;
             const r = isSelected
               ? PIE_GEOMETRY.outerRadius + PIE_GEOMETRY.selectedGrow
@@ -124,7 +135,7 @@ export const PieChart = memo(function PieChart({
               />
             );
           })}
-          {hasSelection && selected ? (
+          {formed && (hasSelection && selected ? (
             <G>
               <SvgText
                 x={PIE_GEOMETRY.cx}
@@ -181,8 +192,8 @@ export const PieChart = memo(function PieChart({
                 {totalLabel}
               </SvgText>
             </G>
-          )}
-          {labelPlacements.map((p) => {
+          ))}
+          {formed && labelPlacements.map((p) => {
             const tickInner = pt(
               PIE_GEOMETRY.cx,
               PIE_GEOMETRY.cy,

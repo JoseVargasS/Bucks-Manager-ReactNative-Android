@@ -1,5 +1,5 @@
 import { memo, useCallback, useLayoutEffect, useRef, useState } from "react";
-import { RefreshControl, ScrollView, View } from "react-native";
+import { Animated, RefreshControl, ScrollView, View } from "react-native";
 
 import { base } from "@/styles/baseStyles";
 import { dashboardStyles } from "@/components/screens/DashboardView.styles";
@@ -21,6 +21,7 @@ import { useDashboardData } from "@/hooks/useDashboardData";
 import { DashboardSummaryCards, type BubbleKind } from "@/components/dashboard/DashboardSummaryCards";
 import { DashboardPieSection } from "@/components/dashboard/DashboardPieSection";
 import { DashboardRecentList } from "@/components/dashboard/DashboardRecentList";
+import { useListFade } from "@/components/ui/listFade";
 import { DashboardBubbleContent } from "@/components/dashboard/DashboardBubbleContent";
 
 export const DashboardView = memo(function DashboardView({
@@ -107,6 +108,7 @@ export const DashboardView = memo(function DashboardView({
     (tx: Transaction) => onOpenDetail(tx),
     [onOpenDetail],
   );
+  const recentListStyle = useListFade(data.monthKey);
 
   return (
     <>
@@ -170,7 +172,7 @@ export const DashboardView = memo(function DashboardView({
           />
         )}
 
-        <View>
+        <Animated.View style={recentListStyle}>
           <Text
             style={{
               color: colors.text,
@@ -192,7 +194,7 @@ export const DashboardView = memo(function DashboardView({
             setTagBubble={setTagBubble}
             onOpenDetail={handleDetail}
           />
-        </View>
+        </Animated.View>
       </ScrollView>
 
       <DashboardBubble

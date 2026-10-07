@@ -156,13 +156,14 @@ export function TagEditorModal({
             transform: [{ translateY: -keyboardOffset }],
           }}
         >
-          <Animated.View
-            style={[
-              styles.recordModal,
-              { backgroundColor: colors.card },
-              transition.panelStyle,
-            ]}
-          >
+            <Animated.View
+              style={[
+                styles.recordModal,
+                { backgroundColor: colors.card },
+                transition.panelStyle,
+              ]}
+            >
+            <Animated.View style={transition.contentStyle}>
             <View style={[styles.recordHeader, { borderColor: colors.border }]}>
               <Text style={[styles.recordTitle, { color: colors.text }]}>
                 <MaterialCommunityIcons
@@ -225,6 +226,7 @@ export function TagEditorModal({
                 renderItem={renderTagItem}
               />
             </View>
+            </Animated.View>
           </Animated.View>
         </View>
       </Animated.View>

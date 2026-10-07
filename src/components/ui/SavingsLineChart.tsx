@@ -1,4 +1,5 @@
 import { memo, useCallback, useMemo, useState } from "react";
+import { Animated } from "react-native";
 import Svg, { Circle, G, Line, Path, Rect, Text as SvgText } from "react-native-svg";
 
 import { computeSavingsLinePoints, MONTH_NAMES, formatMoney, savingsNetBounds, type SavingsTrendMode } from "@/domain/bucksLogic";
@@ -6,6 +7,7 @@ import { UI_MONTH_NAMES } from "@/i18n";
 import { type Palette } from "@/theme/colors";
 import { T } from "@/theme/typography";
 import { compactNumber } from "@/utils/formats";
+import { useChartEnter } from "./chartFade";
 import { type SummaryRow } from "@/types";
 import { useAppFontFamily } from "./AppText";
 
@@ -34,6 +36,14 @@ export const SavingsLineChart = memo(function SavingsLineChart({
 }) {
   const fontFamily = useAppFontFamily();
   const [selectedIndex, setSelectedIndex] = useState<number>(-1);
+  const enterStyle = useChartEnter(
+    // Content signature, not the array identity: background reloads rebuild
+    // the arrays with identical content and must not replay the entrance.
+    useMemo(
+      () => `${mode}|` + rows.map((r) => `${r.monthYear}:${r.totalIncome}:${r.totalExpense}:${r.netMonthly}`).join("|"),
+      [rows, mode],
+    ),
+  );
   const displayRows = rows.slice(-12);
   const columnWidth = PLOT_W / Math.max(1, displayRows.length - 1 || 1);
   const rawMax = Math.max(1, ...displayRows.map((r) => Math.max(r.totalIncome, Math.abs(r.totalExpense), 1)));
@@ -108,6 +118,7 @@ export const SavingsLineChart = memo(function SavingsLineChart({
   });
 
   return (
+    <Animated.View style={enterStyle}>
     <Svg width="100%" height={190} viewBox={`0 0 ${CHART_W} 190`} style={{ marginTop: 12 }}>
       {isNet && (
         <Line x1={PLOT_LEFT} y1={zeroY} x2={CHART_W - 8} y2={zeroY} stroke={colors.borderStrong} strokeWidth={1} />
@@ -199,6 +210,7 @@ export const SavingsLineChart = memo(function SavingsLineChart({
         );
       })}
     </Svg>
+    </Animated.View>
   );
 });
 

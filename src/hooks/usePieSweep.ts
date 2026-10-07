@@ -8,13 +8,18 @@ const SWEEP_START_DELAY = 380;
 const SWEEP_IDLE_OPACITY = 0.94;
 const SWEEP_MAX_CYCLES = 3;
 
-/** Runs a finite highlight sweep across pie slices, then stops. */
+/** Runs a finite highlight sweep across pie slices on first mount only, then stops. */
 export function usePieSweep(opacities: Animated.Value[], selectedKey: string | null): void {
   const sweepToken = useRef(0);
+  const hasSweptRef = useRef(false);
 
   useEffect(() => {
     if (selectedKey !== null) return;
     if (opacities.length === 0) return;
+    // Data changes are covered by the shared chart entrance (useChartEnter);
+    // replaying the sweep on every change reads as lag, not polish.
+    if (hasSweptRef.current) return;
+    hasSweptRef.current = true;
     const token = ++sweepToken.current;
     const n = opacities.length;
     let i = 0;

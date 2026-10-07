@@ -10,6 +10,7 @@ import { T } from "@/theme/typography";
 import { compactNumber } from "@/utils/formats";
 import { useAppFontFamily } from "./AppText";
 import { useChartFade } from "./chartFade";
+import { useChartEnter } from "./chartFade";
 
 const AnimG = Animated.createAnimatedComponent(G);
 
@@ -57,6 +58,15 @@ export const BarChart = memo(function BarChart({
 
   const opacitiesRef = useChartFade(displayRows.length, selectedIndex);
 
+  const enterStyle = useChartEnter(
+    // Content signature, not the array identity: background reloads rebuild
+    // the arrays with identical content and must not replay the entrance.
+    useMemo(
+      () => rows.map((r) => `${r.monthYear}:${r.totalIncome}:${r.totalExpense}`).join("|"),
+      [rows],
+    ),
+  );
+
   const hitTargets = useMemo(() => {
     return displayRows.map((row, index) => {
       const groupWidth = barWidth * 2 + gap;
@@ -72,6 +82,7 @@ export const BarChart = memo(function BarChart({
   }, [displayRows, barWidth, columnWidth, gap, plotLeft, baseY, plotHeight]);
 
   return (
+    <Animated.View style={enterStyle}>
     <Svg width="100%" height={190} viewBox={`0 0 ${chartWidth} 190`} style={{ marginTop: 12 }}>
       {[0.25, 0.5, 0.75, 1].map((ratio) => {
         const y = baseY - plotHeight * ratio;
@@ -131,6 +142,7 @@ export const BarChart = memo(function BarChart({
         );
       })}
     </Svg>
+    </Animated.View>
   );
 });
 

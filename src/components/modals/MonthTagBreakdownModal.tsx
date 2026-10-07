@@ -104,8 +104,9 @@ export const MonthTagBreakdownModal = forwardRef<
     >
       <BlurView intensity={30} tint="dark" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
       <Pressable style={styles.optionBackdrop} onPress={close} />
-      <Animated.View style={[styles.modal, { backgroundColor: colors.card }, transition.panelStyle]}>
-        <View style={styles.header}>
+          <Animated.View style={[styles.modal, { backgroundColor: colors.card }, transition.panelStyle]}>
+            <Animated.View style={transition.contentStyle}>
+            <View style={styles.header}>
           <Text style={[styles.headerTitle, { color: colors.text }]}>
             {copy.monthlyTagBreakdownTitle} {monthLabel}
           </Text>
@@ -154,12 +155,13 @@ export const MonthTagBreakdownModal = forwardRef<
               </View>
             </>
           ) : (
-            <Text style={[styles.emptyText, { color: colors.muted, fontSize: 14 }]}>
-              {activeEmptyLabel}
-            </Text>
-          )}
-        </View>
-      </Animated.View>
+              <Text style={[styles.emptyText, { color: colors.muted, fontSize: 14 }]}>
+                {activeEmptyLabel}
+              </Text>
+            )}
+            </View>
+          </Animated.View>
+          </Animated.View>
     </Animated.View>
   );
 });

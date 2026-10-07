@@ -62,14 +62,15 @@ export function MergePromptModal({
         ]}
       >
         <Pressable style={styles.optionBackdrop} onPress={onClose} />
-        <Animated.View
-          style={[
-            styles.recordModal,
-            { backgroundColor: colors.card },
-            transition.panelStyle,
-          ]}
-        >
-          <View style={[styles.recordHeader, { borderColor: colors.border }]}>
+          <Animated.View
+            style={[
+              styles.recordModal,
+              { backgroundColor: colors.card },
+              transition.panelStyle,
+            ]}
+          >
+            <Animated.View style={transition.contentStyle}>
+            <View style={[styles.recordHeader, { borderColor: colors.border }]}>
             <Text style={[styles.recordTitle, { color: colors.text }]}>
               {copy.mergeTitle}
             </Text>
@@ -132,9 +133,10 @@ export function MergePromptModal({
                   {copy.mergeOption}
                 </Text>
               </Pressable>
+              </View>
             </View>
-          </View>
-        </Animated.View>
+            </Animated.View>
+          </Animated.View>
       </Animated.View>
     </Modal>
   );

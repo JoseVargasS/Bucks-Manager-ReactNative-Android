@@ -1,10 +1,11 @@
 import { memo, useMemo, useRef, useState } from "react";
-import { Dimensions, Modal, Pressable, View } from "react-native";
+import { Animated, Dimensions, Modal, Pressable, View } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { statCardStyles as styles } from "@/components/ui/StatCard.styles";
 import { type Palette } from "@/theme/colors";
 import { type MaterialIconName } from "@/types";
 import { Text } from "./AppText";
+import { useValueFade } from "./valueFade";
 import { T } from "@/theme/typography";
 import { RADIUS } from "@/theme/radii";
 
@@ -16,6 +17,7 @@ export const Kpi = memo(function Kpi({ title, value, icon, color, colors, toolti
   const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number } | null>(null);
   const screenW = useMemo(() => Dimensions.get("window").width, []);
   const popupLeft = tooltipPos ? Math.max(H_MARGIN, Math.min(tooltipPos.x, screenW - BUBBLE_W - H_MARGIN)) : 0;
+  const valueStyle = useValueFade(value);
   return (
     <>
     <View style={[styles.kpi, { backgroundColor: colors.card }]}>
@@ -37,7 +39,9 @@ export const Kpi = memo(function Kpi({ title, value, icon, color, colors, toolti
         </View>
         <MaterialCommunityIcons name={icon} size={18} color={color} style={{ opacity: 0.7 }} />
       </View>
-      <Text numberOfLines={1} style={[styles.kpiValue, { color, fontVariant: ["tabular-nums"] }]}>{value}</Text>
+      <Animated.View style={valueStyle}>
+        <Text numberOfLines={1} style={[styles.kpiValue, { color, fontVariant: ["tabular-nums"] }]}>{value}</Text>
+      </Animated.View>
     </View>
     {tooltipPos && (
       <Modal visible transparent animationType="none" onRequestClose={() => setTooltipPos(null)}>

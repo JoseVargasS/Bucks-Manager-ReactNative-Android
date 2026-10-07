@@ -90,13 +90,14 @@ export const OptionSheet = forwardRef<OptionSheetHandle, { colors: Palette }>(fu
       <BlurView intensity={30} tint="dark" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
       <Animated.View style={[styles.optionOverlay, { backgroundColor: colors.overlay }, transition.containerStyle]}>
         <Pressable style={styles.optionBackdrop} onPress={close} />
-        <Animated.View
-          style={[
-            optionSheetStylesMini.sheet,
-            { backgroundColor: colors.card },
-            transition.panelStyle,
-          ]}
-        >
+          <Animated.View
+            style={[
+              optionSheetStylesMini.sheet,
+              { backgroundColor: colors.card },
+              transition.panelStyle,
+            ]}
+          >
+          <Animated.View style={transition.contentStyle}>
           {/* Header — title + minimal close button (no background) */}
           <View style={styles.optionHeader}>
             <Text
@@ -309,7 +310,8 @@ export const OptionSheet = forwardRef<OptionSheetHandle, { colors: Palette }>(fu
               })}
             </ScrollView>
           )}
-         </Animated.View>
+          </Animated.View>
+          </Animated.View>
       </Animated.View>
     </Modal>
   );

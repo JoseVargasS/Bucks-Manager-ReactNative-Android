@@ -1,9 +1,11 @@
-import { memo, useCallback } from "react";
-import { Dimensions, Pressable, View } from "react-native";
+import { memo, useCallback, useEffect, useRef } from "react";
+import { Animated, Dimensions, Easing, Pressable, StyleSheet, View } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { formatMoney } from "@/domain/bucksLogic";
 import { formatCreatedTime, typeColor, typeFill, typeLabelFull } from "@/utils/formats";
 import { abbreviateTag, tagTextColor } from "@/utils/tags";
+import { useFreshCreatedAt } from "@/utils/freshRows";
+import { ANIM_ROW_FLASH } from "@/theme/constants";
 import { txStyles } from "@/styles/transactionRow";
 import { HighlightedText } from "@/components/ui/HighlightedText";
 import { type Palette } from "@/theme/colors";
@@ -69,6 +71,7 @@ export const TransactionRow = memo(function TransactionRow({
   const showPill = tx.type !== "GASTO NO FRECUENTE";
   const tags = (tx.tags || []).filter((t) => tagColorMap[t] || tagLabelMap[t]);
   const visibleTags = tags.slice(0, 2);
+  const fresh = useFreshCreatedAt(tx.createdAtMs);
   const hiddenTagCount = Math.max(0, tags.length - visibleTags.length);
 
   const handlePress = useCallback(() => onOpenDetail(tx), [onOpenDetail, tx]);
@@ -235,6 +238,50 @@ export const TransactionRow = memo(function TransactionRow({
           color={colors.muted}
         />
       )}
+      <FreshRowFlash active={fresh} color={colors.primarySoft} first={index === 0} last={index === sectionLength - 1} />
     </Pressable>
+  );
+});
+
+// One-shot entrance for just-created/edited rows: plays once per mount while
+// the row's createdAtMs is marked fresh (see freshRows). Recycled SectionList
+// instances render other txs whose marks read false; scroll never triggers it.
+const FreshRowFlash = memo(function FreshRowFlash({
+  active, color, first, last,
+}: {
+  active: boolean; color: string; first: boolean; last: boolean;
+}) {
+  const valueRef = useRef<Animated.Value | null>(null);
+  if (!valueRef.current) valueRef.current = new Animated.Value(active ? 0.55 : 0);
+  const playedRef = useRef(false);
+  useEffect(() => {
+    if (!active || playedRef.current || !valueRef.current) return;
+    playedRef.current = true;
+    const value = valueRef.current;
+    value.stopAnimation();
+    value.setValue(0.55);
+    Animated.timing(value, {
+      toValue: 0,
+      duration: ANIM_ROW_FLASH,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+  }, [active]);
+  if (!active) return null;
+  return (
+    <Animated.View
+      pointerEvents="none"
+      style={[
+        StyleSheet.absoluteFill,
+        {
+          backgroundColor: color,
+          opacity: valueRef.current,
+          borderTopLeftRadius: first ? RADIUS.xl : 0,
+          borderTopRightRadius: first ? RADIUS.xl : 0,
+          borderBottomLeftRadius: last ? RADIUS.xl : 0,
+          borderBottomRightRadius: last ? RADIUS.xl : 0,
+        },
+      ]}
+    />
   );
 });

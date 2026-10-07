@@ -62,6 +62,7 @@ export const SearchModal = forwardRef<SearchModalHandle, {
         <BlurView intensity={30} tint="dark" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
         <Pressable style={styles.optionBackdrop} onPress={close} />
         <Animated.View style={[styles.searchSheet, { backgroundColor: colors.card, paddingBottom: kbHeight }, transition.panelStyle]}>
+          <Animated.View style={transition.contentStyle}>
           <View style={[styles.searchGrabber, { backgroundColor: colors.border }]} />
           <View style={styles.searchHeader}>
             <View style={[styles.searchHeaderIcon, { backgroundColor: colors.primarySoft }]}>
@@ -76,6 +77,7 @@ export const SearchModal = forwardRef<SearchModalHandle, {
             </Pressable>
           </View>
           <SearchPage colors={colors} copy={copy} currencySymbol={currencySymbol} tags={tags} filters={localFilters} setFilters={setLocalFilters} onSubmit={() => { const filters = localFilters; pendingAction.current = () => onSubmit(filters); close(); }} onClear={() => { pendingAction.current = onClear; close(); }} />
+          </Animated.View>
         </Animated.View>
       </Animated.View>
   );

@@ -1,5 +1,5 @@
 import { memo } from "react";
-import { RefreshControl, ScrollView, View } from "react-native";
+import { Animated, RefreshControl, ScrollView, View } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { formatMoney, type SavingsTrendMode } from "@/domain/bucksLogic";
 import { type UiCopy } from "@/i18n";
@@ -14,6 +14,7 @@ import { PieChart } from "@/components/ui/PieChart";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { Text } from "@/components/ui/AppText";
 import { MonthTagBreakdownModal } from "@/components/modals/MonthTagBreakdownModal";
+import { useValueFade } from "@/components/ui/valueFade";
 import { SavingsLineChart } from "@/components/ui/SavingsLineChart";
 import { monthLabel } from "@/components/screens/summaryHelpers";
 import { Insight, Legend, CompositionContent } from "@/components/screens/SummarySubComponents";
@@ -37,6 +38,8 @@ export const SummaryView = memo(function SummaryView({ colors, copy, summaries, 
     trendMode, setTrendMode, tagBreakdownRef, isAllYears, topCategoriesPieData, yearOptions, kpiSegmentOptions,
     compSegmentOptions, trendSegmentOptions, subLabel,
   } = state;
+  const heroValue = formatMoney(totals.net, currencySymbol, 0);
+  const heroStyle = useValueFade(heroValue);
 
   return (
     <View style={{ flex: 1 }}>
@@ -54,9 +57,11 @@ export const SummaryView = memo(function SummaryView({ colors, copy, summaries, 
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
           <Text style={[{ color: colors.muted, textTransform: "uppercase" }, T.label]}>{isAllYears ? copy.totalBalance : copy.annualBalance}</Text>
         </View>
-        <Text numberOfLines={1} style={[{ color: totals.net >= 0 ? colors.primary : colors.expense, marginTop: 10 }, T.amountDisplay]}>
-          {formatMoney(totals.net, currencySymbol, 0)}
-        </Text>
+        <Animated.View style={heroStyle}>
+          <Text numberOfLines={1} style={[{ color: totals.net >= 0 ? colors.primary : colors.expense, marginTop: 10 }, T.amountDisplay]}>
+            {heroValue}
+          </Text>
+        </Animated.View>
         <View style={{ flexDirection: "row", gap: 10, marginTop: 18 }}>
           <Insight
             label={isAllYears ? copy.bestYear : copy.bestMonth}

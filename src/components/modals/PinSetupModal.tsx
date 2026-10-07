@@ -75,8 +75,9 @@ export function PinSetupModal({ visible, colors, copy, onClose, onSave }: {
     >
       <BlurView intensity={30} tint="dark" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
       <Pressable style={styles.optionBackdrop} onPress={onClose} />
-      <Animated.View style={[styles.recordModal, { backgroundColor: colors.card }, transition.panelStyle]}>
-        <View style={[styles.recordHeader, { borderColor: colors.border }]}>
+        <Animated.View style={[styles.recordModal, { backgroundColor: colors.card }, transition.panelStyle]}>
+          <Animated.View style={transition.contentStyle}>
+          <View style={[styles.recordHeader, { borderColor: colors.border }]}>
           <Text style={[styles.recordTitle, { color: colors.text }]}>
             <MaterialCommunityIcons name="shield-lock" size={19} color={colors.primary} />{" "}
             {copy.pinSetupTitle}
@@ -97,6 +98,7 @@ export function PinSetupModal({ visible, colors, copy, onClose, onSave }: {
             onFill={handleFill}
           />
         </View>
+        </Animated.View>
       </Animated.View>
     </Animated.View>
   );

@@ -34,6 +34,7 @@ import { useModalTransition } from "@/components/ui/useModalTransition";
 import { Text } from "@/components/ui/AppText";
 import { useTagMaps } from "@/hooks/useTagMaps";
 import { TransactionRow, type TagButtonRef } from "@/components/screens/TransactionRow";
+import { useListFade } from "@/components/ui/listFade";
 import { SelectionBar } from "@/components/screens/SelectionBar";
 import { TagBubblePopup, type TagBubble } from "@/components/screens/TagBubble";
 
@@ -293,6 +294,7 @@ export const ExpensesView = memo(function ExpensesView({
 
   const closeTagBubble = useCallback(() => setTagBubble(null), []);
   const currentTagBubble = tagBubble || displayTagBubble;
+  const listStyle = useListFade(`${month}|${year}|${searchActive}|${searchText}`);
 
   useLayoutEffect(() => {
     if (tagBubble) setDisplayTagBubble(tagBubble);
@@ -371,6 +373,7 @@ export const ExpensesView = memo(function ExpensesView({
 
   return (
     <View style={{ flex: 1 }}>
+      <Animated.View style={[{ flex: 1 }, listStyle]}>
       <AnimatedSectionList
         style={{ flex: 1 }}
         sections={sections}
@@ -402,6 +405,7 @@ export const ExpensesView = memo(function ExpensesView({
           { useNativeDriver: true, listener: handleScroll },
         )}
       />
+      </Animated.View>
 
       {topInset !== undefined && (
         <ExpensesStickyHeader

@@ -1,17 +1,21 @@
 import { memo } from "react";
-import { View } from "react-native";
+import { Animated, View } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { type Palette } from "@/theme/colors";
 import { type MaterialIconName } from "@/types";
 import { Text } from "@/components/ui/AppText";
+import { useValueFade } from "@/components/ui/valueFade";
 import { RADIUS } from "@/theme/radii";
 
 export const Insight = memo(function Insight({ label, value, icon, color, colors }: { label: string; value: string; icon: MaterialIconName; color: string; colors: Palette }) {
+  const valueStyle = useValueFade(value);
   return (
     <View style={{ flex: 1, minWidth: 0, backgroundColor: colors.input, borderRadius: RADIUS.lg, padding: 12 }}>
       <MaterialCommunityIcons name={icon} size={18} color={color} />
       <Text numberOfLines={1} style={{ color: colors.muted, fontSize: 11, fontWeight: "600", textTransform: "uppercase", marginTop: 8 }}>{label}</Text>
-      <Text numberOfLines={1} style={{ color: colors.text, fontSize: 15, fontWeight: "700", marginTop: 3, fontVariant: ["tabular-nums"] }}>{value}</Text>
+      <Animated.View style={valueStyle}>
+        <Text numberOfLines={1} style={{ color: colors.text, fontSize: 15, fontWeight: "700", marginTop: 3, fontVariant: ["tabular-nums"] }}>{value}</Text>
+      </Animated.View>
     </View>
   );
 });

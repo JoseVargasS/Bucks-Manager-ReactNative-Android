@@ -51,8 +51,9 @@ export function ExportModal({ visible, colors, copy, config, setConfig, minDate,
       <BlurView intensity={30} tint="dark" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
       <Animated.View style={[styles.modalOverlay, { backgroundColor: colors.overlay }, transition.containerStyle]}>
         <Pressable style={styles.optionBackdrop} onPress={onClose} />
-        <Animated.View style={[styles.modal, { backgroundColor: colors.card }, transition.panelStyle]}>
-          <ModalHeader title={copy.exportMovements} icon="file-export" colors={colors} onClose={onClose} />
+          <Animated.View style={[styles.modal, { backgroundColor: colors.card }, transition.panelStyle]}>
+            <Animated.View style={transition.contentStyle}>
+            <ModalHeader title={copy.exportMovements} icon="file-export" colors={colors} onClose={onClose} />
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 10 }} keyboardShouldPersistTaps="handled">
             <Text style={[styles.label, { color: colors.text }]}>{copy.format}</Text>
             <View style={styles.twoCols}>
@@ -116,6 +117,7 @@ export function ExportModal({ visible, colors, copy, config, setConfig, minDate,
             />
             <ActionRow colors={colors} onCancel={onClose} onSubmit={() => { pendingExport.current = config; onClose(); }} submitLabel={copy.exportAction} cancelLabel={copy.cancel} />
           </ScrollView>
+          </Animated.View>
         </Animated.View>
       </Animated.View>
 </Modal>

@@ -5,6 +5,12 @@ export const ANIM_SPLASH_DURATION = 220;
 export const ANIM_TAB_PAGER = 210;
 export const ANIM_HEADER_BTN_IN = 60;
 export const ANIM_HEADER_BTN_OUT = 60;
+export const ANIM_CHART_ENTER = 250;
+export const ANIM_PIE_FORM = 600;
+export const ANIM_MODAL_CONTENT = 220;
+export const ANIM_ROW_FLASH = 600;
+export const ANIM_VALUE_FADE = 200;
+export const ANIM_LIST_FADE = 150;
 
 export const NAV_BTN_SIZE = 40;
 export const NAV_BTN_HEIGHT = 42;

@@ -233,6 +233,7 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
         />
 
         <Animated.View ref={modalRef} collapsable={false} style={[styles.recordModal, { backgroundColor: colors.card }, transition.panelStyle]}>
+          <Animated.View style={transition.contentStyle}>
           <View style={[styles.recordHeader, { borderColor: colors.border }]}>
             <Text style={[styles.recordTitle, { color: colors.text }]}>
               <MaterialCommunityIcons name="calculator-variant" size={19} color={colors.info} /> {editingTx ? copy.editRecord : copy.newRecord}
@@ -413,6 +414,7 @@ export const TransactionModal = forwardRef<TransactionModalHandle, {
             </View>
           </ScrollView>
           </View>
+          </Animated.View>
 
           {tagsOpenFor && tagsReady && !showCreateTag && (
             <View
