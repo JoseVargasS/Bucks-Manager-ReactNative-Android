@@ -226,7 +226,7 @@ describe("preferencesOps", () => {
     });
   });
 
-  test("sanitizeUiPreferences defaults theme to dark when missing", () => {
+  test("sanitizeUiPreferences defaults theme to light when missing", () => {
     const result = sanitizeUiPreferences({
       v: 1,
       language: "en",
@@ -240,7 +240,7 @@ describe("preferencesOps", () => {
       currencySymbol: "$",
       fontPreference: "fredoka",
       colorScheme: "truepink",
-      theme: "dark",
+      theme: "light",
       fontSizeScale: 1,
     });
   });

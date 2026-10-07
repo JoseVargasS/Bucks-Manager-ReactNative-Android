@@ -23,7 +23,7 @@ const ColorSchemeContext = createContext<{
 const PaletteContext = createContext<Palette | null>(null);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setTheme] = useState<ThemeMode>("dark");
+  const [theme, setTheme] = useState<ThemeMode>("light");
   const [colorScheme, setColorSchemeState] =
     useState<ColorSchemePreference>("sky");
 

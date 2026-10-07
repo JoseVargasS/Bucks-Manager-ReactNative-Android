@@ -141,7 +141,7 @@ export function usePreferences(): PreferencesState {
   const [fontPreference, setFontPreference] = useState<FontPreference>("inter");
   const [fontSizeScale, setFontSizeScaleState] = useState<number>(DEFAULT_FONT_SIZE_SCALE);
   const [colorScheme, setColorSchemeState] = useState<ColorSchemePreference>(DEFAULT_COLOR_SCHEME);
-  const [theme, setThemeState] = useState<ThemeMode>("dark");
+  const [theme, setThemeState] = useState<ThemeMode>("light");
   const [needsCurrencyPick, setNeedsCurrencyPick] = useState(false);
 
   const copy: UiCopy = UI_COPY[language];
@@ -195,7 +195,7 @@ export function usePreferences(): PreferencesState {
     const validThemes: ThemeMode[] = ["dark", "light"];
     const nextTheme: ThemeMode = validThemes.includes(storedTheme as ThemeMode)
       ? (storedTheme as ThemeMode)
-      : "dark";
+      : "light";
     setThemeMode(nextTheme);
     setThemeState(nextTheme);
   }, [setColorScheme, setThemeMode]);
@@ -210,7 +210,7 @@ export function usePreferences(): PreferencesState {
       const validThemes: ThemeMode[] = ["dark", "light"];
       const nextTheme: ThemeMode = validThemes.includes(prefs.theme as ThemeMode)
         ? (prefs.theme as ThemeMode)
-        : "dark";
+        : "light";
       setLanguage(nextLanguage);
       setCurrencySymbol(nextCurrency);
       setAppFontPreference(nextFont);
@@ -283,14 +283,14 @@ export function usePreferences(): PreferencesState {
     setFontSizeScaleState(DEFAULT_FONT_SIZE_SCALE);
     setColorScheme(defaultScheme);
     setColorSchemeState(defaultScheme);
-    setThemeMode("dark");
-    setThemeState("dark");
+    setThemeMode("light");
+    setThemeState("light");
     persistPreference(LANGUAGE_KEY, defaultLang);
     persistPreference(CURRENCY_SYMBOL_KEY, "$");
     persistPreference(FONT_KEY, "inter");
     persistPreference(FONT_SIZE_SCALE_KEY, String(DEFAULT_FONT_SIZE_SCALE));
     persistPreference(COLOR_SCHEME_KEY, defaultScheme);
-    persistPreference(THEME_KEY, "dark");
+    persistPreference(THEME_KEY, "light");
   }, [setColorScheme, setThemeMode]);
 
   return {

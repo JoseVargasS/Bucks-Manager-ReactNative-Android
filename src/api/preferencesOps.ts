@@ -107,7 +107,7 @@ export function sanitizeUiPreferences(value: unknown): UiPreferences | null {
   const validThemes: ThemeMode[] = ["dark", "light"];
   const resolvedTheme: ThemeMode = validThemes.includes(theme as ThemeMode)
     ? (theme as ThemeMode)
-    : "dark";
+    : "light";
   // v2 sin fontSizeScale → migra a 1.0; v3 con escala validada
   const resolvedScale = sanitizeFontSizeScale(fontSizeScale ?? 1.0);
   return {
@@ -127,7 +127,7 @@ export const UI_PREFERENCES_INIT_JSON = JSON.stringify(
     currencySymbol: "S/",
     fontPreference: "inter",
     colorScheme: "sky",
-    theme: "dark",
+    theme: "light",
     fontSizeScale: 1.0,
   }),
 );
