@@ -60,3 +60,4 @@ coverage/
 
 # Play Store promo artwork (regenerable via template.html + shoot.mjs; screenshots contain personal data)
 store-listing/
+.codebase-memory/
