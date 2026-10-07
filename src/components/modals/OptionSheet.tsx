@@ -97,7 +97,7 @@ export const OptionSheet = forwardRef<OptionSheetHandle, { colors: Palette }>(fu
               transition.panelStyle,
             ]}
           >
-          <Animated.View style={transition.contentStyle}>
+          <Animated.View style={[transition.contentStyle, { flexShrink: 1 }]}>
           {/* Header — title + minimal close button (no background) */}
           <View style={styles.optionHeader}>
             <Text

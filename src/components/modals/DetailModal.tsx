@@ -77,7 +77,7 @@ export const DetailModal = forwardRef<DetailModalHandle, { colors: Palette; curr
         <BlurView intensity={30} tint="dark" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
         <Pressable style={styles.optionBackdrop} onPress={close} />
         <Animated.View style={[styles.detailModal, { backgroundColor: colors.card }, transition.panelStyle]}>
-          <Animated.View style={transition.contentStyle}>
+          <Animated.View style={[transition.contentStyle, { flexShrink: 1 }]}>
           <View style={[styles.recordHeader, { borderBottomWidth: 0 }]}>
             <Text style={[styles.recordTitle, { color: colors.text }]}>
               <MaterialCommunityIcons name="receipt-text" size={20} color={colors.warn} /> {copy.detailTitle}

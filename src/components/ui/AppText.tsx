@@ -8,7 +8,7 @@ import {
   type TextProps,
 } from "react-native";
 import { type FontPreference } from "@/types";
-import { FONT_FAMILIES, FONT_SIZE_SCALE } from "./fontConstants";
+import { FONT_FAMILIES, FONT_SIZE_SCALE, MAX_COMBINED_FONT_SCALE } from "./fontConstants";
 
 let fontFamily = FONT_FAMILIES.inter;
 let fontPreference: FontPreference = "inter";
@@ -67,11 +67,14 @@ function TextImpl({ style, ...props }: TextProps) {
   const preference = useAppFontPreference();
   const globalScale = useAppFontSizeScale();
   const prefScale = FONT_SIZE_SCALE[preference] || 1;
-  const combined = prefScale * globalScale;
+  const combined = Math.min(prefScale * globalScale, MAX_COMBINED_FONT_SCALE);
   if (combined !== 1) {
     const flat = StyleSheet.flatten(style);
     const baseSize = typeof flat?.fontSize === "number" ? flat.fontSize : 16;
-    const adjustedSize = Math.round(baseSize * combined);
+    // Sin redondeo a enteros: redondear aplastaba combinaciones distintas
+    // al mismo pixel (ej. 15 combinaciones caian a 11px en caption).
+    // RN renderiza fracciones sin problema.
+    const adjustedSize = baseSize * combined;
     return <NativeText {...props} style={[{ fontFamily: family }, style, { fontSize: adjustedSize }]} />;
   }
   return <NativeText {...props} style={[{ fontFamily: family }, style]} />;
@@ -82,11 +85,11 @@ const TextInputImpl = forwardRef<NativeTextInput, TextInputProps>(function TextI
   const preference = useAppFontPreference();
   const globalScale = useAppFontSizeScale();
   const prefScale = FONT_SIZE_SCALE[preference] || 1;
-  const combined = prefScale * globalScale;
+  const combined = Math.min(prefScale * globalScale, MAX_COMBINED_FONT_SCALE);
   if (combined !== 1) {
     const flat = StyleSheet.flatten(style);
     const baseSize = typeof flat?.fontSize === "number" ? flat.fontSize : 16;
-    const adjustedSize = Math.round(baseSize * combined);
+    const adjustedSize = baseSize * combined;
     return <NativeTextInput ref={ref} {...props} style={[{ fontFamily: family }, style, { fontSize: adjustedSize }]} />;
   }
   return <NativeTextInput ref={ref} {...props} style={[{ fontFamily: family }, style]} />;

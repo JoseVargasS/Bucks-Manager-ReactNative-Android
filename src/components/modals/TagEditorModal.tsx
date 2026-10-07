@@ -163,7 +163,7 @@ export function TagEditorModal({
                 transition.panelStyle,
               ]}
             >
-            <Animated.View style={transition.contentStyle}>
+            <Animated.View style={[transition.contentStyle, { flexShrink: 1 }]}>
             <View style={[styles.recordHeader, { borderColor: colors.border }]}>
               <Text style={[styles.recordTitle, { color: colors.text }]}>
                 <MaterialCommunityIcons

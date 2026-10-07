@@ -105,7 +105,7 @@ export const MonthTagBreakdownModal = forwardRef<
       <BlurView intensity={30} tint="dark" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
       <Pressable style={styles.optionBackdrop} onPress={close} />
           <Animated.View style={[styles.modal, { backgroundColor: colors.card }, transition.panelStyle]}>
-            <Animated.View style={transition.contentStyle}>
+            <Animated.View style={[transition.contentStyle, { flexShrink: 1 }]}>
             <View style={styles.header}>
           <Text style={[styles.headerTitle, { color: colors.text }]}>
             {copy.monthlyTagBreakdownTitle} {monthLabel}

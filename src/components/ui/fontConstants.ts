@@ -48,8 +48,28 @@ export type FontSizeScaleValue = (typeof FONT_SIZE_SCALE_LEVELS)[FontSizeScaleKe
 export const FONT_SIZE_SCALE_VALUES = Object.values(FONT_SIZE_SCALE_LEVELS) as FontSizeScaleValue[];
 export const DEFAULT_FONT_SIZE_SCALE: FontSizeScaleValue = 1.0;
 
+// Tope del producto prefScale * globalScale en AppText. Sin tope, el peor
+// caso (p. ej. patrickhand 1.12 x nivel xl 1.15 = 1.29x) supera el 1.15 que
+// toleran BottomNav/Header/modales/KPIs. En 1.2 no cambia ningún
+// comportamiento actual (comicsansms x 1.0 = 1.2 queda igual).
+export const MAX_COMBINED_FONT_SCALE = 1.2;
+
+// Corrección óptica por familia (x-height y peso visual relativos a inter,
+// que queda en el default 1.0 junto a intervariable). Se multiplica sobre el
+// nivel global en AppText: prefScale * globalScale.
 export const FONT_SIZE_SCALE: Partial<Record<FontPreference, number>> = {
+  dmsans: 1.04,
+  plusjakartasans: 1.03,
+  sora: 1.06,
+  fredoka: 0.94,
+  comicneue: 1.03,
+  patrickhand: 1.12,
   comicsansms: 1.2,
+  serif: 1.08,
+  condensed: 1.05,
+  light: 1.06,
+  casual: 1.1,
+  smallcaps: 1.1,
 };
 
 export const FONT_ICONS: Record<FontPreference, MaterialIconName> = {

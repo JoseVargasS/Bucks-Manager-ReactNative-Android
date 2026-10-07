@@ -52,7 +52,7 @@ export function ExportModal({ visible, colors, copy, config, setConfig, minDate,
       <Animated.View style={[styles.modalOverlay, { backgroundColor: colors.overlay }, transition.containerStyle]}>
         <Pressable style={styles.optionBackdrop} onPress={onClose} />
           <Animated.View style={[styles.modal, { backgroundColor: colors.card }, transition.panelStyle]}>
-            <Animated.View style={transition.contentStyle}>
+            <Animated.View style={[transition.contentStyle, { flexShrink: 1 }]}>
             <ModalHeader title={copy.exportMovements} icon="file-export" colors={colors} onClose={onClose} />
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 10 }} keyboardShouldPersistTaps="handled">
             <Text style={[styles.label, { color: colors.text }]}>{copy.format}</Text>

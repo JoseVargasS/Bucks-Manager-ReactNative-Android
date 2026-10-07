@@ -63,7 +63,7 @@ export function HistoryModal({ visible, entries, colors, currencySymbol, copy, o
       <Animated.View style={[styles.modalOverlay, { backgroundColor: colors.overlay }, transition.containerStyle]}>
         <Pressable style={styles.optionBackdrop} onPress={onClose} />
           <Animated.View style={[styles.recordModal, { backgroundColor: colors.card }, transition.panelStyle]}>
-            <Animated.View style={transition.contentStyle}>
+            <Animated.View style={[transition.contentStyle, { flexShrink: 1 }]}>
             <View style={[styles.recordHeader, { borderColor: colors.border }]}>
             <Text style={[styles.recordTitle, { color: colors.text }]}>
               <MaterialCommunityIcons name="delete-restore" size={19} color={colors.expense} /> {copy.history}

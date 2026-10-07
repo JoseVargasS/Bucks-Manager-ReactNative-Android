@@ -9,7 +9,10 @@ describe("fontConstants", () => {
 
   it("has scale overrides for specific fonts", () => {
     expect(FONT_SIZE_SCALE.comicsansms).toBe(1.2);
-    expect(FONT_SIZE_SCALE.dmsans).toBeUndefined();
+    expect(FONT_SIZE_SCALE.dmsans).toBe(1.04);
+    expect(FONT_SIZE_SCALE.patrickhand).toBe(1.12);
+    expect(FONT_SIZE_SCALE.inter).toBeUndefined();
+    expect(FONT_SIZE_SCALE.intervariable).toBeUndefined();
   });
 
   it("has icon mapping for all fonts", () => {
