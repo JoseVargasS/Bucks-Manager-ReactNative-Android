@@ -8,8 +8,10 @@
 
 ## Color
 
-- **Default scheme (cyprus)**: dark `#003530` Cyprus green shell with `#C8FF00` lime primary. Light `#F0EDE4` Sand bg with `#4A6500` olive primary. Botanical-museum, the calmest and most universal green in the catalogue.
-- **8 accent schemes** (kept maximally distinct so switching themes shows a real difference): cyprus, vulcanico, charcoalline, truepink, silver, sky, bridal, obsidian. Each has dark/light variants and redeclares every scheme token so scheme switches never leak the base value.
+- **Default scheme (sky)**: dark `#060a16` night-sky shell with `#58b8ff` blue primary. Light `#eef4fc` mist bg with `#1868b8` blue primary. Neutral and universal; new installs and new sheets start here.
+- **9 accent schemes** (kept maximally distinct so switching themes shows a real difference): cyprus, vulcanico, charcoalline, truepink, silver, sky, bridal, obsidian, arcilla. Each has dark/light variants and redeclares every scheme token so scheme switches never leak the base value.
+- **arcilla (Andean earth)**: dark `#241109` roasted-earth shell with `#E8B83A` maiz-gold primary. Light `#F3EAD9` raw-cream bg with `#7A4E0C` bronze primary. Grounded in the app icon quadrants (earth brown + gold chakana motif).
+- **Andean affinity pass**: sky primary is lapis `#4A90D9`/`#1E5FA8`, charcoalline shell is dusk maroon-violet with copper `#D98A4E`/`#8A4F1E` primary, silver primary is leaf green `#3ED598`/`#1E7A34`, arcilla expense is cochineal `#ff6f61` so the red reads on brown. Income/expense hues of the other schemes are untouched.
 - **Semantic colors**: Green for income, red for expense. Hue is tuned per scheme so the financial signal stays recognisable while harmonising with the accent.
 - **Palette resolution**: `getPalette` memoized per `(theme, scheme)` pair in a small LRU.
 - **WCAG AA**: every scheme's text-vs-bg and primary-vs-bg contrast is verified ≥ 4.5:1; semantic colors vs their card surface ≥ 4.5:1 (or ≥ 4.8:1 for non-text affordances on the warmer schemes).

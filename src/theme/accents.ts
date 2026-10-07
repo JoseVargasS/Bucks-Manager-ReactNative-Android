@@ -8,7 +8,8 @@ export type ColorSchemePreference =
   | "silver"
   | "sky"
   | "bridal"
-  | "obsidian";
+  | "obsidian"
+  | "arcilla";
 
 export const accents = accentsData as Record<
   ColorSchemePreference,

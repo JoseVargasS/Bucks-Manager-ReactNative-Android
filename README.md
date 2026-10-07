@@ -90,7 +90,7 @@ Supported transaction types:
 - UI chrome supports Spanish and English from Settings. User-entered transaction descriptions stay exactly as typed, and the Google Sheets transaction type contract remains unchanged.
 - Currency display uses the selected symbol from Settings and defaults from the device locale when possible.
 - The current native visual direction uses a blue-slate dark theme and soft warm-gray light theme.
-- The dark theme primary action color should use the app icon lime (`#C8FF00`) as the brand accent, not muted indigo. The light theme should use a pastel shell with lime/olive accents, not stark white or blue controls. Green and red are reserved for income and expense semantics.
+- The dark theme primary action color follows the active scheme's accent, not muted indigo. The light theme uses a pastel shell with warm scheme accents, not stark white or blue controls. Green and red are reserved for income and expense semantics.
 - Cards should use soft surfaces, consistent 14px radii, and minimal outer borders.
 - Inputs, selects, destructive actions, and internal separators may keep borders for affordance.
 - Financial amounts should use tabular numbers where supported.

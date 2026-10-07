@@ -37,9 +37,9 @@ describe("themeColors", () => {
 
   test("getPalette applies charcoalline scheme", () => {
     const d = getPalette("dark", "charcoalline");
-    expect(d.primary).toBe("#B6FF00");
+    expect(d.primary).toBe("#D98A4E");
     const l = getPalette("light", "charcoalline");
-    expect(l.primary).toBe("#4a5c04");
+    expect(l.primary).toBe("#8A4F1E");
   });
 
   test("getPalette applies truepink scheme", () => {
@@ -51,16 +51,16 @@ describe("themeColors", () => {
 
   test("getPalette applies silver scheme", () => {
     const d = getPalette("dark", "silver");
-    expect(d.primary).toBe("#2BEE34");
+    expect(d.primary).toBe("#3ED598");
     const l = getPalette("light", "silver");
-    expect(l.primary).toBe("#137016");
+    expect(l.primary).toBe("#1E7A34");
   });
 
   test("getPalette applies sky scheme", () => {
     const d = getPalette("dark", "sky");
-    expect(d.primary).toBe("#58b8ff");
+    expect(d.primary).toBe("#4A90D9");
     const l = getPalette("light", "sky");
-    expect(l.primary).toBe("#1868b8");
+    expect(l.primary).toBe("#1E5FA8");
   });
 
   test("getPalette applies bridal scheme", () => {
@@ -77,6 +77,13 @@ describe("themeColors", () => {
     expect(l.primary).toBe("#5A7A00");
   });
 
+  test("getPalette applies arcilla scheme", () => {
+    const d = getPalette("dark", "arcilla");
+    expect(d.primary).toBe("#E8B83A");
+    const l = getPalette("light", "arcilla");
+    expect(l.primary).toBe("#7A4E0C");
+  });
+
   test("getPalette caches and returns same reference", () => {
     const a = getPalette("dark", "sky");
     const b = getPalette("dark", "sky");
@@ -86,14 +93,14 @@ describe("themeColors", () => {
   test("getPalette evicts oldest entry when cache is full", () => {
     const schemes = [
       "cyprus", "vulcanico", "charcoalline", "truepink",
-      "silver", "sky", "bridal", "obsidian",
+      "silver", "sky", "bridal", "obsidian", "arcilla",
     ];
     const refs: any[] = [];
     for (const s of schemes) {
       refs.push(getPalette("dark", s as ColorSchemePreference));
       refs.push(getPalette("light", s as ColorSchemePreference));
     }
-    expect(refs.length).toBe(16);
+    expect(refs.length).toBe(18);
     const extra = getPalette("dark", "silver");
     expect(extra).toBeTruthy();
     const re = getPalette("dark", "cyprus");
@@ -117,19 +124,19 @@ describe("themeColors", () => {
   test("getPalette evicts oldest when cache overflows", () => {
     const schemes: ColorSchemePreference[] = [
       "cyprus", "vulcanico", "charcoalline", "truepink",
-      "silver", "sky", "bridal", "obsidian",
+      "silver", "sky", "bridal", "obsidian", "arcilla",
     ];
     for (const s of schemes) {
       getPalette("dark", s);
       getPalette("light", s);
     }
     const before = getPaletteCacheStats();
-    expect(before.size).toBe(16);
+    expect(before.size).toBe(18);
 
     const overflowed = getPalette("fallback" as "dark", "cyprus");
     expect(overflowed.bg).toBeDefined();
     const after = getPaletteCacheStats();
-    expect(after.size).toBe(16);
+    expect(after.size).toBe(18);
   });
 
   test("getPalette re-orders cache on access (LRU promotion)", () => {

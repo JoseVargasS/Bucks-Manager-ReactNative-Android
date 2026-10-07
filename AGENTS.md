@@ -216,7 +216,7 @@ The user works iteratively. An unsolicited commit creates noise, breaks their fl
 Use the mobile GAS workflow as the functional reference, but follow the current native visual system:
 
 - Dark theme uses a blue-slate shell, not green-black. Light theme uses soft warm gray backgrounds with white surfaces.
-- In dark theme, primary actions should use the app icon lime (`#C8FF00`) as the brand accent instead of muted indigo. Light theme should feel pastel and warm, with lime/olive accents instead of stark white surfaces or blue controls. Green and red are semantic only for income and expense states.
+- In dark theme, primary actions should follow the active scheme's `primary` accent instead of muted indigo. Light theme should feel pastel and warm, with scheme accents instead of stark white surfaces or blue controls. Green and red are semantic only for income and expense states.
 - KPI/stat cards use two-column mobile layouts, soft surfaces, 14px radius, and minimal outer borders.
 - Amounts and finance values must use tabular numbers (`fontVariant: ["tabular-nums"]`).
 - Typography is centralized in `src/theme/typography.ts` (`T` tokens). Do not use arbitrary `fontSize`/`fontWeight` inline. Use semantic tokens: `caption 11/500`, `metadata 12/500`, `label 13/600`, `body 15/400`, `bodyStrong 15/600`, `section 17/700`, `title 19/700`, `pageTitle 26/700`, `amountList 16/700`, `amountHero 20/700`, `amountKpi 24/700`, `amountStat 17/700`. Ratio ~1.2-1.25 between steps, fixed scale for app UI (not fluid clamp).

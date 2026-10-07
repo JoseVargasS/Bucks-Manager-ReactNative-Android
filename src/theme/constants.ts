@@ -104,4 +104,10 @@ export const COLOR_SCHEME_OPTIONS: Array<{
     labelEn: "Obsidian",
     icon: "moon-waning-crescent",
   },
+  {
+    value: "arcilla",
+    labelEs: "Arcilla",
+    labelEn: "Clay",
+    icon: "terrain",
+  },
 ];

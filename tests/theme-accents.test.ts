@@ -5,6 +5,7 @@ import type { ColorSchemePreference } from "@/theme/accents";
 const schemeNames: ColorSchemePreference[] = [
   "cyprus", "vulcanico", "charcoalline",
   "truepink", "silver", "sky", "bridal", "obsidian",
+  "arcilla",
 ];
 
 describe("accents", () => {

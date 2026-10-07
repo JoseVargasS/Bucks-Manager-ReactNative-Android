@@ -23,6 +23,7 @@ const FONT_PREFERENCES = Object.keys(FONT_FAMILIES) as FontPreference[];
 const COLOR_SCHEME_PREFERENCES: ColorSchemePreference[] = [
   "cyprus", "vulcanico", "charcoalline",
   "truepink", "silver", "sky", "bridal", "obsidian",
+  "arcilla",
 ];
 const DEFAULT_COLOR_SCHEME: ColorSchemePreference = "sky";
 const CURRENCY_OPTIONS_SET = new Set([
