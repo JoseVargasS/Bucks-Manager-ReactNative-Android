@@ -1,8 +1,6 @@
 import type { SummaryRow, Transaction } from "@/types";
 import { getMonthYear, parseLocalDate, monthYearToDate } from "@/utils/dateUtils";
 
-export type MonthSummary = SummaryRow;
-
 export function calculateMonthSummary(
   transactions: Transaction[],
   freqIncomeByMonth: Record<string, number>,

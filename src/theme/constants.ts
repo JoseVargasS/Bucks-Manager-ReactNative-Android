@@ -32,8 +32,8 @@ export const Z_INDEX_SEARCH = 1002;
 
 // Splash uses raw constants because it renders before ThemeProvider mounts.
 export const SPLASH_BG = "#000000";
-export const SPLASH_SPINNER = "#C8FF00";
-export const SPLASH_TEXT = "#f0ede4";
+export const ERROR_ACCENT = "#C8FF00";
+export const ERROR_TEXT = "#f0ede4";
 
 export const TOKEN_KEY = "bucks_google_access_token";
 export const SHEET_KEY = "bucks_spreadsheet_id";

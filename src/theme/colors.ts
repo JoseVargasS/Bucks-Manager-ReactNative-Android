@@ -134,12 +134,6 @@ export function getContrastRatio(fg: string, bg: string): number {
   const lo = Math.min(l1, l2);
   return (hi + 0.05) / (lo + 0.05);
 }
-export function meetsWCAG_AA(fg: string, bg: string): boolean {
-  return getContrastRatio(fg, bg) >= 4.5;
-}
-export function meetsWCAG_AA_Large(fg: string, bg: string): boolean {
-  return getContrastRatio(fg, bg) >= 3;
-}
 
 export const dark = {
   bg: "#003530",

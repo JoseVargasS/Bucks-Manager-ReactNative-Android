@@ -4,84 +4,6 @@ import { googleFetch, readValuesUrl, SHEETS } from "./googleFetch";
 import { parseTags } from "./sheetFormats";
 import { TAG_SEPARATOR } from "./sheetRows";
 
-export async function removeTagFromAllRows(
-  token: string,
-  spreadsheetId: string,
-  tagId: string,
-) {
-  const range = `${SHEET_NAMES.transactions}!F2:G`;
-  const data = await googleFetch<{ values?: unknown[][] }>(
-    token,
-    readValuesUrl(spreadsheetId, range),
-  );
-  const rows = data.values || [];
-  const updates: { range: string; values: string[][] }[] = [];
-  rows.forEach((row, index) => {
-    const raw = String(row[0] || "").trim();
-    const rawJson = String(row[1] || "").trim();
-    let tagsChanged = false;
-    let lineItemsChanged = false;
-
-    let tags = raw ? parseTags(raw) : [];
-    if (tags.includes(tagId)) {
-      tags = tags.filter((t) => t !== tagId);
-      tagsChanged = true;
-    }
-
-    let lineItemsJson = rawJson;
-    if (rawJson) {
-      try {
-        const parsed = JSON.parse(rawJson);
-        if (Array.isArray(parsed)) {
-          let changed = false;
-          const updated = parsed.map((li: Record<string, unknown>) => {
-            if (Array.isArray(li.tags) && (li.tags as string[]).includes(tagId)) {
-              changed = true;
-              return { ...li, tags: (li.tags as string[]).filter((t: string) => t !== tagId) };
-            }
-            return li;
-          });
-          if (changed) {
-            lineItemsJson = JSON.stringify(updated);
-            lineItemsChanged = true;
-          }
-        }
-      } catch { /* ignore parse errors */ }
-    }
-
-    const values: string[] = [];
-    if (tagsChanged) values.push(tags.join(TAG_SEPARATOR));
-    if (lineItemsChanged && tagsChanged) {
-      updates.push({
-        range: `${SHEET_NAMES.transactions}!F${index + 2}:G${index + 2}`,
-        values: [[tags.join(TAG_SEPARATOR), lineItemsJson]],
-      });
-    } else if (tagsChanged) {
-      updates.push({
-        range: `${SHEET_NAMES.transactions}!F${index + 2}`,
-        values: [[tags.join(TAG_SEPARATOR)]],
-      });
-    } else if (lineItemsChanged) {
-      updates.push({
-        range: `${SHEET_NAMES.transactions}!G${index + 2}`,
-        values: [[lineItemsJson]],
-      });
-    }
-  });
-  if (!updates.length) return;
-  await googleFetch(
-    token,
-    `${SHEETS}/${spreadsheetId}/values:batchUpdate`,
-    {
-      method: "POST",
-      body: JSON.stringify({
-        valueInputOption: "USER_ENTERED",
-        data: updates,
-      }),
-    },
-  );
-}
-
 /**
  * Batch version: removes multiple tagIds from all rows in a single GET+POST.
  * Processes all tagIds in one pass over the data, emitting one batchUpdate.
@@ -195,13 +117,4 @@ export async function writeTagsCatalog(token: string, spreadsheetId: string, tag
     method: "PUT",
     body: JSON.stringify({ values: [["TAGS CATALOGUE"], [JSON.stringify(tags)]] }),
   });
-}
-
-export async function mergeTagsToCatalog(token: string, spreadsheetId: string, localTags: Tag[]): Promise<void> {
-  const sheetTags = await readTagsCatalog(token, spreadsheetId);
-  const sheetIds = new Set(sheetTags.map((t) => t.id));
-  const newTags = localTags.filter((t) => !sheetIds.has(t.id));
-  if (!newTags.length) return;
-  const merged = [...sheetTags, ...newTags];
-  await writeTagsCatalog(token, spreadsheetId, merged);
 }

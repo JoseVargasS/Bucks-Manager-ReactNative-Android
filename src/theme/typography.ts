@@ -1,4 +1,4 @@
-import { StyleSheet, type TextStyle } from "react-native";
+import type { TextStyle } from "react-native";
 
 /**
  * Sistema tipográfico homogéneo — Quipu
@@ -33,27 +33,3 @@ export const TYPOGRAPHY = {
 };
 
 export const T = TYPOGRAPHY;
-
-// Helper para Text con variante + tabular opcional
-export const typographyStyles = StyleSheet.create({
-  caption: TYPOGRAPHY.caption as TextStyle,
-  tiny: TYPOGRAPHY.tiny as TextStyle,
-  overline: TYPOGRAPHY.overline as TextStyle,
-  metadata: TYPOGRAPHY.metadata as TextStyle,
-  label: TYPOGRAPHY.label as TextStyle,
-  labelMuted: TYPOGRAPHY.labelMuted as TextStyle,
-  body: TYPOGRAPHY.body as TextStyle,
-  bodyStrong: TYPOGRAPHY.bodyStrong as TextStyle,
-  input: TYPOGRAPHY.input as TextStyle,
-  section: TYPOGRAPHY.section as TextStyle,
-  title: TYPOGRAPHY.title as TextStyle,
-  pageTitle: TYPOGRAPHY.pageTitle as TextStyle,
-  pageSub: TYPOGRAPHY.pageSub as TextStyle,
-  amountList: TYPOGRAPHY.amountList as TextStyle,
-  amountHero: TYPOGRAPHY.amountHero as TextStyle,
-  amountKpi: TYPOGRAPHY.amountKpi as TextStyle,
-  amountDisplay: TYPOGRAPHY.amountDisplay as TextStyle,
-  amountStat: TYPOGRAPHY.amountStat as TextStyle,
-  chartLabel: TYPOGRAPHY.chartLabel as TextStyle,
-  chartValue: TYPOGRAPHY.chartValue as TextStyle,
-});

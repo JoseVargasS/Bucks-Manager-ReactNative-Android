@@ -10,7 +10,6 @@ export {
   moveTransaction,
 } from "./sheetRows";
 export {
-  removeTagFromAllRows,
   removeTagsFromAllRows,
   readTagsCatalog,
   writeTagsCatalog,

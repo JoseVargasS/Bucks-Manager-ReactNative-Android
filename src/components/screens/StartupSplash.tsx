@@ -1,9 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Animated, Easing, StyleSheet, View } from "react-native";
 import { VideoView, useVideoPlayer } from "expo-video";
-import { SPLASH_BG } from "@/theme/constants";
+import { SPLASH_BG, ANIM_SPLASH_DURATION } from "@/theme/constants";
 
-const EXIT_DURATION = 220;
 // ponytail: video ~1.0s, fallback 1600ms + playToEnd listener
 const VIDEO_FALLBACK_MS = 1600;
 
@@ -38,7 +37,7 @@ export function StartupSplash({ exiting = false, onExitComplete }: Props) {
     if (!canExit) return;
     Animated.timing(opacity, {
       toValue: 0,
-      duration: EXIT_DURATION,
+      duration: ANIM_SPLASH_DURATION,
       easing: Easing.in(Easing.quad),
       useNativeDriver: true,
     }).start(({ finished }) => {

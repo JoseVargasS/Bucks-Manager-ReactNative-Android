@@ -76,7 +76,7 @@ import { getErrorMessage, isAuthError } from "@/utils/errorHandler";
 import { clearDeletedTagIds } from "@/utils/tags";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { ConnectBanner } from "@/components/ui/ConnectBanner";
-import { ConnectingOverlay } from "@/components/ui/ConnectingOverlay";
+import { ConnectingOverlay, type ConnectionStatus } from "@/components/ui/ConnectingOverlay";
 import { MergePromptModal } from "@/components/modals/MergePromptModal";
 import { CurrencyPickerModal } from "@/components/modals/CurrencyPickerModal";
 import {
@@ -634,7 +634,7 @@ function AppContent() {
       />
       <View style={[styles.shell, styles.shellCompact, { paddingTop: 0 }]}>
         <ConnectingOverlay
-          status={connectionStatus as "scanning" | "loading" | "creating" | "merging" | "syncing" | null}
+          status={connectionStatus as ConnectionStatus}
           copy={{
             scanning: copy.connectingScanning,
             loading: copy.connectingLoading,

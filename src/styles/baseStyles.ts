@@ -103,6 +103,3 @@ export const base = StyleSheet.create({
     elevation: 8,
   },
 });
-
-/** Helper para sombras con color del tema activo — evita negro duro en light */
-export const themedShadow = (shadowColor: string) => ({ shadowColor });
